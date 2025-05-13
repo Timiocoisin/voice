@@ -168,24 +168,9 @@ class AgreementDialog(QDialog):
             }
         """)
         
-        # 去除关闭按钮阴影，若后续仍需阴影，可根据实际情况调整相关参数
-        # close_shadow = QGraphicsDropShadowEffect()
-        # close_shadow.setBlurRadius(8)
-        # close_shadow.setColor(QColor(0, 0, 0, 50))
-        # close_shadow.setOffset(0, 2)
-        # close_button.setGraphicsEffect(close_shadow)
-        
         close_button.clicked.connect(self.accept)
         close_button.setAlignment(Qt.AlignCenter)
         layout.addWidget(close_button, alignment=Qt.AlignCenter)
-
-        # 去除协议对话框阴影，若后续仍需阴影，可根据实际情况调整相关参数
-        # shadow = QGraphicsDropShadowEffect()
-        # shadow.setBlurRadius(15)
-        # shadow.setColor(QColor(0, 0, 0, 100))
-        # shadow.setOffset(0, 3)
-        # self.setGraphicsEffect(shadow)
-
         self.setLayout(layout)
 
 
