@@ -1,14 +1,15 @@
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                             QPushButton, QDialog, QLineEdit)
+from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QCursor, QPainter, QColor
 from gui.clickable_label import ClickableLabel
-from gui.agreement_dialog import AgreementDialog
+from modules.agreement_dialog import AgreementDialog
 
 class LoginDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        screen_width = self.screen_size(0.25)
+        screen_width = self.screen_size(0.2)
         self.setFixedSize(screen_width, int(screen_width * 1.2))
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -38,13 +39,6 @@ class LoginDialog(QDialog):
         header_layout.addStretch()
         content_layout.addLayout(header_layout)
 
-        label_style = """
-            font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 15px; 
-            font-weight: bold; 
-            color: #222;
-            letter-spacing: 1px;
-        """
         input_style = """
             QLineEdit {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
@@ -62,30 +56,39 @@ class LoginDialog(QDialog):
             }
         """
 
+        # 用户名输入框布局
         username_layout = QHBoxLayout()
-        username_label = QLabel("用户名")
-        username_label.setStyleSheet(label_style + " margin-right: 10px;")
-        username_layout.addWidget(username_label)
+        # 加载用户名图标
+        username_icon = QSvgWidget('icons/user.svg')  # 修改为加载 SVG 图标
+        username_icon.setFixedSize(30, 30)  # 设置图标大小
+        username_icon.setStyleSheet("margin-right: 10px;")
+        username_layout.addWidget(username_icon)
         username_input = QLineEdit()
         username_input.setPlaceholderText("请输入用户名")
         username_input.setStyleSheet(input_style)
         username_layout.addWidget(username_input)
         content_layout.addLayout(username_layout)
 
+        # 邮箱输入框布局
         email_layout = QHBoxLayout()
-        email_label = QLabel("邮箱")
-        email_label.setStyleSheet(label_style + " margin-right: 23px;")
-        email_layout.addWidget(email_label)
+        # 加载邮箱图标
+        email_icon = QSvgWidget('icons/email.svg')  # 修改为加载 SVG 图标
+        email_icon.setFixedSize(30, 30)  # 设置图标大小
+        email_icon.setStyleSheet("margin-right: 10px;")
+        email_layout.addWidget(email_icon)
         email_input = QLineEdit()
         email_input.setPlaceholderText("请输入邮箱")
         email_input.setStyleSheet(input_style)
         email_layout.addWidget(email_input)
         content_layout.addLayout(email_layout)
 
+        # 密码输入框布局
         password_layout = QHBoxLayout()
-        password_label = QLabel("密码")
-        password_label.setStyleSheet(label_style + " margin-right: 23px;")
-        password_layout.addWidget(password_label)
+        # 加载密码图标
+        password_icon = QSvgWidget('icons/password.svg')  # 修改为加载 SVG 图标
+        password_icon.setFixedSize(30, 30)  # 设置图标大小
+        password_icon.setStyleSheet("margin-right: 10px;")
+        password_layout.addWidget(password_icon)
         password_input = QLineEdit()
         password_input.setPlaceholderText("请输入密码")
         password_input.setEchoMode(QLineEdit.EchoMode.Password)

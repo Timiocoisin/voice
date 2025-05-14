@@ -1,32 +1,30 @@
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QLabel)
-from PyQt6.QtCore import Qt, QTimer, QEvent
-from gui.login_dialog import LoginDialog
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout)
+from PyQt6.QtCore import Qt, QTimer, QEvent, QRect, QRectF, QPoint
+from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QColor, QBrush
+from PyQt6.QtSvgWidgets import QSvgWidget
+from modules.login_dialog import LoginDialog
 
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("变声器")
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # 设置窗口背景透明
         self.setFixedSize(self.screen_size(0.8), self.screen_size(0.8, height=True))  # 窗口大小为屏幕的80%
-        self.setStyleSheet("""
-            QMainWindow {
-                background-color: #f0f0f0;
-            }
-        """)  # 修正了背景色设置
 
-        # 初始化主窗口UI组件
         self.initUI()
 
-        # 使用QTimer在主窗口显示后延迟3秒(3000毫秒)弹出登录对话框
         QTimer.singleShot(3000, self.show_login_dialog)
-        
-        # 存储登录对话框的引用
         self.login_dialog = None
-        
-        # 安装事件过滤器，处理点击主窗口收起协议对话框
         self.installEventFilter(self)
 
+        # 初始化拖动窗口的变量
+        self.dragging = False
+        self.offset = QPoint()
+        # 记录登录对话框相对于主窗口的偏移量
+        self.login_dialog_offset = QPoint()
+
     def screen_size(self, ratio, height=False):
-        """根据屏幕大小计算组件大小"""
         screen = QApplication.primaryScreen()
         size = screen.size()
         if height:
@@ -34,44 +32,95 @@ class MainWindow(QMainWindow):
         return int(size.width() * ratio)
 
     def initUI(self):
-        # 创建中央部件和布局
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(0, 0, 0, 0)
 
-        # 添加标题标签
-        title_label = QLabel("欢迎使用变声器")
-        title_label.setStyleSheet("font-size: 28px; font-weight: bold; color: #333; margin: 30px;")
-        title_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(title_label)
+        self.rounded_bg = RoundedBackgroundWidget()  # 使用自定义的背景绘制部件
+        self.rounded_bg.setObjectName("roundedBackground")
+        self.rounded_bg.setStyleSheet("""
+            #roundedBackground {
+                background-color: white;
+                border-radius: 20px;
+            }
+        """)
 
-        # 添加占位文本，实际使用时替换为你的功能UI
-        placeholder_text = QLabel("主界面内容区域 - 这里将显示变声器的主要功能")
-        placeholder_text.setStyleSheet("font-size: 20px; color: #666; margin: 30px;")
-        placeholder_text.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(placeholder_text)
+        rounded_layout = QVBoxLayout(self.rounded_bg)
+
+        # 创建顶部布局，用于放置关闭按钮
+        top_layout = QHBoxLayout()
+        top_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)  # 对齐到右上角
+
+        # 加载关闭图标
+        close_icon = QSvgWidget('icons/close.svg')
+        close_icon.setFixedSize(30, 30)  # 设置图标大小
+        close_icon.setStyleSheet("margin: 10px;")
+        close_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        close_icon.mousePressEvent = self.close_app
+        top_layout.addWidget(close_icon)
+
+        rounded_layout.addLayout(top_layout)
+
+        main_layout.addWidget(self.rounded_bg)
 
     def show_login_dialog(self):
-        # 创建并显示登录对话框
         self.login_dialog = LoginDialog(self)
         self.login_dialog.show()
+        # 记录登录对话框相对于主窗口的偏移量
+        self.login_dialog_offset = self.login_dialog.pos() - self.pos()
 
     def eventFilter(self, obj, event):
-        # 处理鼠标点击事件
         if event.type() == QEvent.Type.MouseButtonPress:
-            # 如果登录对话框和协议对话框都存在且可见
-            if (self.login_dialog and self.login_dialog.agreement_dialog 
-                and self.login_dialog.agreement_dialog.isVisible()):
-                # 检查点击是否发生在主窗口内
+            if (self.login_dialog and self.login_dialog.agreement_dialog
+                    and self.login_dialog.agreement_dialog.isVisible()):
                 if self.geometry().contains(event.globalPosition().toPoint()):
                     self.login_dialog.agreement_dialog.close()
-                    return True  # 拦截事件，不再继续处理
-                
-                # 检查点击是否发生在登录对话框内
+                    return True
                 if self.login_dialog.geometry().contains(event.globalPosition().toPoint()):
-                    # 如果点击登录对话框但不在协议对话框内，关闭协议对话框
                     if not self.login_dialog.agreement_dialog.geometry().contains(event.globalPosition().toPoint()):
                         self.login_dialog.agreement_dialog.close()
-                        return True  # 拦截事件，不再继续处理
-        
+                        return True
         return super().eventFilter(obj, event)
+
+    def close_app(self, event):
+        QApplication.quit()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = True
+            self.offset = event.globalPosition().toPoint() - self.pos()
+
+    def mouseMoveEvent(self, event):
+        if self.dragging:
+            new_pos = event.globalPosition().toPoint() - self.offset
+            self.move(new_pos)
+            # 更新登录对话框的位置
+            if self.login_dialog:
+                self.login_dialog.move(new_pos + self.login_dialog_offset)
+
+    def mouseReleaseEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+
+
+class RoundedBackgroundWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+        self.background_image = QPixmap('images/background.png')  # 加载背景图
+        self.radius = 20  # 圆角半径
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        # 绘制圆角背景
+        painter.setBrush(QBrush(Qt.GlobalColor.white))
+        painter.drawRoundedRect(self.rect(), self.radius, self.radius)
+
+        # 绘制背景图，自适应窗口大小，并裁剪为圆角矩形
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(self.rect()), self.radius, self.radius)  # 使用 QRectF
+        painter.setClipPath(path)
+        painter.drawPixmap(self.rect(), self.background_image)
