@@ -10,7 +10,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("变声器")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # 设置窗口背景透明
-        self.setFixedSize(self.screen_size(0.8), self.screen_size(0.8, height=True))  # 窗口大小为屏幕的80%
+        self.setFixedSize(self.screen_size(0.7), self.screen_size(0.6, height=True))  # 窗口大小为屏幕的80%
 
         self.initUI()
 

@@ -1,21 +1,30 @@
 from PyQt6.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
-                            QPushButton, QDialog, QLineEdit, QSpacerItem, QSizePolicy)
+                            QPushButton, QDialog, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox)
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent
 from PyQt6.QtGui import QCursor, QPainter, QColor
 from gui.clickable_label import ClickableLabel
 from modules.agreement_dialog import AgreementDialog
+from backend.validator import validate_email, validate_password
+from backend.email_sender import EmailSender, generate_verification_code
+from backend.verification_manager import VerificationManager
+from backend.timer_manager import TimerManager
+from backend.config import email_config
+from gui.custom_message_box import CustomMessageBox
 
 class LoginDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         screen_width = self.screen_size(0.2)
-        self.setFixedSize(screen_width, int(screen_width * 1.2))
+        self.setFixedSize(screen_width, int(screen_width * 1.1))
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
         self.agreement_dialog = None
         self.current_mode = "login"  # 默认当前模式为登录
+        self.verification_manager = VerificationManager()
+        self.email_sender = EmailSender(email_config)
+
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -117,6 +126,7 @@ class LoginDialog(QDialog):
             }
         """)
         self.get_verification_code_button.setVisible(False)  # 默认隐藏
+        self.get_verification_code_button.clicked.connect(self.send_verification_code)
         self.email_layout.addWidget(self.get_verification_code_button)
 
         # 验证码输入框布局
@@ -193,6 +203,7 @@ class LoginDialog(QDialog):
             }
         """)
         self.register_button.setVisible(False)
+        self.register_button.clicked.connect(self.register)
         content_layout.addWidget(self.register_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         agreement_layout = QHBoxLayout()
@@ -222,6 +233,8 @@ class LoginDialog(QDialog):
 
         main_layout.addWidget(content_widget)
         self.installEventFilter(self)
+
+        self.timer_manager = TimerManager(self.get_verification_code_button)
 
     def screen_size(self, ratio, height=False):
         screen = QApplication.primaryScreen()
@@ -306,3 +319,60 @@ class LoginDialog(QDialog):
             item = layout.itemAt(i)
             if item.widget():
                 item.widget().setVisible(visible)
+
+    def send_verification_code(self):
+        email = self.email_input.text()
+        if not validate_email(email):
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("请输入有效的邮箱地址")
+            msg_box.setWindowTitle("邮箱格式错误")
+            msg_box.exec()
+            return
+
+        code = generate_verification_code()
+        if self.email_sender.send_verification_code(email, code):
+            self.verification_manager.set_verification_code(email, code)
+            self.timer_manager.start_countdown()
+        else:
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("验证码邮件发送失败，请稍后重试")
+            msg_box.setWindowTitle("发送失败")
+            msg_box.exec()
+
+    def register(self):
+        email = self.email_input.text()
+        input_code = self.verification_code_input.text()
+        password = self.password_input.text()
+
+        if not validate_email(email):
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("请输入有效的邮箱地址")
+            msg_box.setWindowTitle("邮箱格式错误")
+            msg_box.exec()
+            return
+
+        if not validate_password(password):
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("密码应包含大小写字母、数字和特殊字符，长度至少8位")
+            msg_box.setWindowTitle("密码格式错误")
+            msg_box.exec()
+            return
+
+        if not self.verification_manager.verify_code(email, input_code):
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("验证码已过期或不正确，请重新获取")
+            msg_box.setWindowTitle("验证码错误")
+            msg_box.exec()
+            return
+
+        # 验证码和密码校验通过，进行注册操作
+        msg_box = CustomMessageBox()
+        msg_box.setIcon(QMessageBox.Icon.Information)
+        msg_box.setText("恭喜，注册成功！")
+        msg_box.setWindowTitle("注册成功")
+        msg_box.exec()
