@@ -1,3 +1,4 @@
+import logging
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                             QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
 from PyQt6.QtSvgWidgets import QSvgWidget
@@ -11,7 +12,11 @@ from backend.verification_manager import VerificationManager
 from backend.timer_manager import TimerManager
 from backend.config import email_config
 from gui.custom_message_box import CustomMessageBox
+from backend.database_manager import create_connection, create_user_table, insert_user_info, get_user_by_email
+import bcrypt
 
+# 配置日志记录
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class LoginDialog(QDialog):
     def __init__(self, parent=None):
@@ -482,6 +487,28 @@ class LoginDialog(QDialog):
             msg_box.exec()
             return
 
+        # 连接数据库
+        connection = create_connection()
+        if connection:
+            cursor = connection.cursor()
+            # 检查用户名是否已存在
+            query = "SELECT id FROM users WHERE username = %s"
+            cursor.execute(query, (username,))
+            result = cursor.fetchone()
+
+            if result:
+                msg_box = CustomMessageBox()
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setText("用户名已存在，请选择其他用户名")
+                msg_box.setWindowTitle("用户名冲突")
+                msg_box.exec()
+                connection.close()
+                return
+
+            create_user_table(connection)
+            insert_user_info(connection, username, email, password)
+            connection.close()
+
         # 模拟注册成功
         msg_box = CustomMessageBox()
         msg_box.setIcon(QMessageBox.Icon.Information)
@@ -514,11 +541,40 @@ class LoginDialog(QDialog):
             msg_box.exec()
             return
 
-        # 模拟登录成功
-        msg_box = CustomMessageBox()
-        msg_box.setIcon(QMessageBox.Icon.Information)
-        msg_box.setText("登录成功！")
-        msg_box.setWindowTitle("登录成功")
-        msg_box.exec()
-        self.clear_focus()  # 关闭前移除焦点
-        self.close()
+        # 连接数据库
+        connection = create_connection()
+        if connection:
+            cursor = connection.cursor()
+            # 查询用户的 id、username 和 password
+            query = "SELECT id, username, password FROM users WHERE email = %s"
+            cursor.execute(query, (email,))
+            result = cursor.fetchone()
+            connection.close()
+
+            if result:
+                user_id, username, hashed = result
+                hashed = hashed.encode('utf-8')  # 将字符串转换为字节类型
+                if bcrypt.checkpw(password.encode('utf-8'), hashed):
+                    # 输出登录成功的日志信息
+                    logging.info(f"用户 {username} 登录成功，ID: {user_id}")
+                    # 模拟登录成功
+                    msg_box = CustomMessageBox()
+                    msg_box.setIcon(QMessageBox.Icon.Information)
+                    msg_box.setText("登录成功！")
+                    msg_box.setWindowTitle("登录成功")
+                    msg_box.exec()
+                    self.clear_focus()  # 关闭前移除焦点
+                    self.close()
+                else:
+                    msg_box = CustomMessageBox()
+                    msg_box.setIcon(QMessageBox.Icon.Warning)
+                    msg_box.setText("密码错误，请重试")
+                    msg_box.setWindowTitle("登录失败")
+                    msg_box.exec()
+            else:
+                msg_box = CustomMessageBox()
+                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box.setText("用户不存在，请先注册")
+                msg_box.setWindowTitle("登录失败")
+                msg_box.exec()
+            connection.close()
