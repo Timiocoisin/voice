@@ -306,10 +306,3 @@ class LoginDialog(QDialog):
             item = layout.itemAt(i)
             if item.widget():
                 item.widget().setVisible(visible)
-
-if __name__ == "__main__":
-    import sys
-    app = QApplication(sys.argv)
-    login_dialog = LoginDialog()
-    login_dialog.show()
-    sys.exit(app.exec())    
