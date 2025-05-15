@@ -9,8 +9,8 @@ class MainWindow(QMainWindow):
         super().__init__()
         self.setWindowTitle("变声器")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)  # 设置窗口背景透明
-        self.setFixedSize(self.screen_size(0.7), self.screen_size(0.6, height=True))  # 窗口大小为屏幕的80%
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        self.setFixedSize(self.screen_size(0.7), self.screen_size(0.6, height=True))
 
         self.initUI()
 
@@ -21,8 +21,10 @@ class MainWindow(QMainWindow):
         # 初始化拖动窗口的变量
         self.dragging = False
         self.offset = QPoint()
-        # 记录登录对话框相对于主窗口的偏移量
         self.login_dialog_offset = QPoint()
+        
+        # 定义可拖动的顶部区域高度
+        self.draggable_height = 50  # 顶部50像素区域可拖动
 
     def screen_size(self, ratio, height=False):
         screen = QApplication.primaryScreen()
@@ -37,7 +39,7 @@ class MainWindow(QMainWindow):
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.rounded_bg = RoundedBackgroundWidget()  # 使用自定义的背景绘制部件
+        self.rounded_bg = RoundedBackgroundWidget()
         self.rounded_bg.setObjectName("roundedBackground")
         self.rounded_bg.setStyleSheet("""
             #roundedBackground {
@@ -50,11 +52,11 @@ class MainWindow(QMainWindow):
 
         # 创建顶部布局，用于放置关闭按钮
         top_layout = QHBoxLayout()
-        top_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)  # 对齐到右上角
+        top_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignRight)
 
         # 加载关闭图标
         close_icon = QSvgWidget('icons/close.svg')
-        close_icon.setFixedSize(30, 30)  # 设置图标大小
+        close_icon.setFixedSize(30, 30)
         close_icon.setStyleSheet("margin: 10px;")
         close_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         close_icon.mousePressEvent = self.close_app
@@ -67,7 +69,6 @@ class MainWindow(QMainWindow):
     def show_login_dialog(self):
         self.login_dialog = LoginDialog(self)
         self.login_dialog.show()
-        # 记录登录对话框相对于主窗口的偏移量
         self.login_dialog_offset = self.login_dialog.pos() - self.pos()
 
     def eventFilter(self, obj, event):
@@ -87,7 +88,8 @@ class MainWindow(QMainWindow):
         QApplication.quit()
 
     def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+        # 仅当鼠标点击在顶部可拖动区域时才允许拖动
+        if event.button() == Qt.MouseButton.LeftButton and event.pos().y() < self.draggable_height:
             self.dragging = True
             self.offset = event.globalPosition().toPoint() - self.pos()
 
@@ -95,7 +97,6 @@ class MainWindow(QMainWindow):
         if self.dragging:
             new_pos = event.globalPosition().toPoint() - self.offset
             self.move(new_pos)
-            # 更新登录对话框的位置
             if self.login_dialog:
                 self.login_dialog.move(new_pos + self.login_dialog_offset)
 
@@ -107,8 +108,8 @@ class MainWindow(QMainWindow):
 class RoundedBackgroundWidget(QWidget):
     def __init__(self):
         super().__init__()
-        self.background_image = QPixmap('images/background.png')  # 加载背景图
-        self.radius = 20  # 圆角半径
+        self.background_image = QPixmap('images/background.png')
+        self.radius = 20
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -121,6 +122,6 @@ class RoundedBackgroundWidget(QWidget):
 
         # 绘制背景图，自适应窗口大小，并裁剪为圆角矩形
         path = QPainterPath()
-        path.addRoundedRect(QRectF(self.rect()), self.radius, self.radius)  # 使用 QRectF
+        path.addRoundedRect(QRectF(self.rect()), self.radius, self.radius)
         painter.setClipPath(path)
         painter.drawPixmap(self.rect(), self.background_image)
