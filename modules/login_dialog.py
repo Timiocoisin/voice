@@ -1,3 +1,4 @@
+# modules/login_dialog.py
 import logging
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel, 
                             QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
@@ -14,6 +15,9 @@ from backend.config import email_config
 from gui.custom_message_box import CustomMessageBox
 from backend.database_manager import create_connection, create_user_table, insert_user_info, get_user_by_email
 import bcrypt
+from backend.token_utils import generate_token, verify_token
+from backend.token_storage import save_token, read_token
+from backend.login_status_manager import save_login_status
 
 # 配置日志记录
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -509,12 +513,6 @@ class LoginDialog(QDialog):
             insert_user_info(connection, username, email, password)
             connection.close()
 
-        # 模拟注册成功
-        msg_box = CustomMessageBox()
-        msg_box.setIcon(QMessageBox.Icon.Information)
-        msg_box.setText("恭喜，注册成功！")
-        msg_box.setWindowTitle("注册成功")
-        msg_box.exec()
         self.clear_focus()  # 关闭前移除焦点
         self.close()
 
@@ -557,12 +555,11 @@ class LoginDialog(QDialog):
                 if bcrypt.checkpw(password.encode('utf-8'), hashed):
                     # 输出登录成功的日志信息
                     logging.info(f"用户 {username} 登录成功，ID: {user_id}")
-                    # 模拟登录成功
-                    msg_box = CustomMessageBox()
-                    msg_box.setIcon(QMessageBox.Icon.Information)
-                    msg_box.setText("登录成功！")
-                    msg_box.setWindowTitle("登录成功")
-                    msg_box.exec()
+                    # 保存登录状态
+                    save_login_status(user_id, username)
+                    # 生成并保存令牌
+                    token = generate_token(email)
+                    save_token(token)
                     self.clear_focus()  # 关闭前移除焦点
                     self.close()
                 else:
@@ -577,4 +574,38 @@ class LoginDialog(QDialog):
                 msg_box.setText("用户不存在，请先注册")
                 msg_box.setWindowTitle("登录失败")
                 msg_box.exec()
+            connection.close()
+
+    def check_token(self):
+        """检查本地令牌的有效性"""
+        token = read_token()
+        if token:
+            payload = verify_token(token)
+            if payload:
+                email = payload['email']
+                # 自动登录用户
+                connection = create_connection()
+                if connection:
+                    user = get_user_by_email(connection, email)
+                    if user:
+                        # 输出自动登录成功的日志信息
+                        logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
+                        self.clear_focus()  # 关闭前移除焦点
+                        self.close()
+                    connection.close()
+                return True  # 返回令牌有效
+        return False  # 返回令牌无效
+
+    def auto_login(self, email):
+        """自动登录用户"""
+        connection = create_connection()
+        if connection:
+            user = get_user_by_email(connection, email)
+            if user:
+                # 输出自动登录成功的日志信息
+                logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
+                # 设置标志位
+                self.auto_logged_in = True
+                self.clear_focus()  # 关闭前移除焦点
+                self.close()
             connection.close()

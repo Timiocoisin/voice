@@ -3,6 +3,11 @@ from PyQt6.QtCore import Qt, QTimer, QEvent, QRect, QRectF, QPoint
 from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QColor, QBrush
 from PyQt6.QtSvgWidgets import QSvgWidget
 from modules.login_dialog import LoginDialog
+from backend.login_status_manager import check_login_status
+import logging
+
+# 配置日志记录
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -14,8 +19,13 @@ class MainWindow(QMainWindow):
 
         self.initUI()
 
-        QTimer.singleShot(3000, self.show_login_dialog)
-        self.login_dialog = None
+        # 创建登录对话框实例，但不立即显示
+        self.login_dialog = LoginDialog(self)
+
+        # 检查自动登录状态
+        QTimer.singleShot(1000, self.check_auto_login)
+
+
         self.installEventFilter(self)
 
         # 初始化拖动窗口的变量
@@ -67,9 +77,18 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.rounded_bg)
 
     def show_login_dialog(self):
-        self.login_dialog = LoginDialog(self)
-        self.login_dialog.show()
-        self.login_dialog_offset = self.login_dialog.pos() - self.pos()
+        is_logged_in, _, _ = check_login_status()
+        if not is_logged_in:
+            self.login_dialog = LoginDialog(self)
+            self.login_dialog.show()
+            self.login_dialog_offset = self.login_dialog.pos() - self.pos()
+
+    def check_auto_login(self):
+        """检查自动登录"""
+        if self.login_dialog.check_token():
+            pass
+        else:
+            QTimer.singleShot(1000, self.show_login_dialog)  # 如果自动登录失败，延迟显示登录对话框
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:

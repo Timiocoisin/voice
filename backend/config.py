@@ -5,3 +5,7 @@ email_config = {
     'sender_password': 'tguzxzmqbxptbbac',
     'sender_name': '语音转换系统'
 }
+
+SECRET_KEY = "691f257be4f462a2"
+
+ENCRYPTION_KEY = "QE_6CbrJ7eIMdVT_S4xPLszMr645ohkGims5qLqpSLI="
