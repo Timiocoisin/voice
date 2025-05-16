@@ -1,6 +1,6 @@
 import jwt
 import datetime
-from backend.config import SECRET_KEY
+from backend.config.config import SECRET_KEY
 
 def generate_token(email):
     """生成包含用户邮箱和过期时间的令牌"""

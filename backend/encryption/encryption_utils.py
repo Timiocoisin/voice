@@ -1,5 +1,5 @@
 from cryptography.fernet import Fernet
-from backend.config import ENCRYPTION_KEY
+from backend.config.config import ENCRYPTION_KEY
 
 def encrypt_file(data):
     """加密数据并返回加密后的字节流"""

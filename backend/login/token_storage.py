@@ -1,5 +1,5 @@
 import os
-from backend.encryption_utils import encrypt_file, decrypt_file
+from backend.encryption.encryption_utils import encrypt_file, decrypt_file
 
 # 定义存放 token.enc 的文件夹路径
 TOKEN_DIR = 'tokens'
