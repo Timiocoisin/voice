@@ -2,6 +2,7 @@ import mysql.connector
 import os
 import bcrypt
 from typing import Optional
+from PyQt6.QtGui import QPixmap, QIcon
 import logging
 
 # 配置日志记录
@@ -23,6 +24,10 @@ def create_connection() -> Optional[mysql.connector.MySQLConnection]:
         create_user_table(connection)
         # 确保用户 VIP 信息表存在
         create_user_vip_table(connection)
+        # 确保 logo 表存在
+        create_logo_table(connection)
+        # 确保公告表存在
+        create_announcement_table(connection)
 
         return connection
     except mysql.connector.Error as e:
@@ -51,20 +56,9 @@ def create_user_table(connection: mysql.connector.MySQLConnection) -> None:
         logging.error(f"创建用户表失败: {e}")
 
 
-def read_default_avatar() -> Optional[bytes]:
-    """读取默认头像文件并返回二进制数据"""
-    try:
-        avatar_path = "icons/head.ico"
-        if os.path.exists(avatar_path):
-            with open(avatar_path, 'rb') as file:
-                return file.read()
-        else:
-            logging.info("默认头像文件不存在，使用空白图片")
-            # 返回一个1x1像素的透明PNG作为默认头像
-            return b'\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\nIDAT\x08\xd7c`\x00\x00\x00\x02\x00\x01\xe2!\xbc3\x00\x00\x00\x00IEND\xaeB`\x82'
-    except Exception as e:
-        logging.error(f"读取默认头像失败: {e}")
-        return None
+def read_default_avatar(connection: mysql.connector.MySQLConnection) -> Optional[bytes]:
+    """读取默认头像文件并返回二进制数据，默认头像为 logos 表中 id 为 4 的 icon"""
+    return get_icon_by_id(connection, 4)
 
 
 def insert_user_info(
@@ -80,7 +74,7 @@ def insert_user_info(
 
         # 如果没有提供头像数据，使用默认头像
         if not avatar_data:
-            avatar_data = read_default_avatar()
+            avatar_data = read_default_avatar(connection)
 
         # 加密密码
         hashed = bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
@@ -166,3 +160,132 @@ def get_user_vip_info(connection: mysql.connector.MySQLConnection, user_id: int)
     except mysql.connector.Error as e:
         logging.info(f"查询用户 VIP 信息失败: {e}")
         return None
+
+
+def create_logo_table(connection: mysql.connector.MySQLConnection) -> None:
+    """创建 logo 表（如果不存在）"""
+    try:
+        cursor = connection.cursor()
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS logos (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            icon_data LONGBLOB NOT NULL,
+            comment VARCHAR(255) NULL COMMENT '图标注释信息'
+        )
+        """
+        cursor.execute(create_table_query)
+        connection.commit()
+    except mysql.connector.Error as e:
+        logging.error(f"创建 logo 表失败: {e}")
+
+
+def create_announcement_table(connection: mysql.connector.MySQLConnection) -> None:
+    """创建公告表（如果不存在）"""
+    try:
+        cursor = connection.cursor()
+        create_table_query = """
+        CREATE TABLE IF NOT EXISTS announcements (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            content TEXT NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+        )
+        """
+        cursor.execute(create_table_query)
+        connection.commit()
+    except mysql.connector.Error as e:
+        logging.error(f"创建公告表失败: {e}")
+
+
+def insert_logo(connection: mysql.connector.MySQLConnection, logo_data: bytes) -> bool:
+    """插入 logo 数据到数据库"""
+    try:
+        cursor = connection.cursor()
+        insert_query = "INSERT INTO logos (logo_data) VALUES (%s)"
+        cursor.execute(insert_query, (logo_data,))
+        connection.commit()
+        logging.info("logo 插入成功")
+        return True
+    except mysql.connector.Error as e:
+        logging.info(f"插入 logo 失败: {e}")
+        connection.rollback()
+        return False
+
+
+def get_latest_logo(connection: mysql.connector.MySQLConnection):
+    """获取最新的 logo 数据，这里获取 logos 表中 id 为 6 的 icon"""
+    return get_icon_by_id(connection, 6)
+
+
+def insert_announcement(connection: mysql.connector.MySQLConnection, content: str) -> bool:
+    """插入公告内容到数据库"""
+    try:
+        cursor = connection.cursor()
+        insert_query = "INSERT INTO announcements (content) VALUES (%s)"
+        cursor.execute(insert_query, (content,))
+        connection.commit()
+        logging.info("公告插入成功")
+        return True
+    except mysql.connector.Error as e:
+        logging.info(f"插入公告失败: {e}")
+        connection.rollback()
+        return False
+
+
+def get_latest_announcement(connection: mysql.connector.MySQLConnection):
+    """获取最新的公告内容"""
+    try:
+        cursor = connection.cursor()
+        query = "SELECT content FROM announcements ORDER BY id DESC LIMIT 1"
+        cursor.execute(query)
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        return None
+    except mysql.connector.Error as e:
+        logging.info(f"查询公告失败: {e}")
+        connection.rollback()
+        return False
+    
+def get_icon_by_id(connection: mysql.connector.MySQLConnection, icon_id: int):
+    """根据图标ID获取图标数据"""
+    try:
+        cursor = connection.cursor()
+        query = "SELECT icon_data FROM logos WHERE id = %s"
+        cursor.execute(query, (icon_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        logging.info(f"未找到ID为 {icon_id} 的图标")
+        return None
+    except mysql.connector.Error as e:
+        logging.error(f"查询图标 ID {icon_id} 失败: {e}")
+        return None
+
+
+
+def load_app_icon(icon_id: int) -> QIcon:
+    """从数据库加载应用程序图标"""
+    connection = create_connection()
+    icon = QIcon()
+    
+    if connection:
+        try:
+            # 获取图标二进制数据
+            icon_data = get_icon_by_id(connection, icon_id)
+            
+            if icon_data:
+                # 创建QPixmap并加载数据
+                pixmap = QPixmap()
+                if pixmap.loadFromData(icon_data):
+                    icon.addPixmap(pixmap, QIcon.Mode.Normal, QIcon.State.Off)
+                else:
+                    logging.error(f"图标数据无效（ID={icon_id}）")
+            else:
+                logging.warning(f"图标未找到（ID={icon_id}）")
+                
+        except Exception as e:
+            logging.error(f"加载图标时出错: {str(e)}")
+        finally:
+            connection.close()
+    
+    return icon

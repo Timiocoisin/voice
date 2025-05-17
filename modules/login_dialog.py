@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                 QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
 from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtCore import Qt, QEvent
+from PyQt6.QtCore import Qt, QEvent, QByteArray
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath
 from gui.clickable_label import ClickableLabel
 from modules.agreement_dialog import AgreementDialog
@@ -17,6 +17,7 @@ import bcrypt
 from backend.login.token_utils import generate_token, verify_token
 from backend.login.token_storage import save_token, read_token
 from backend.login.login_status_manager import save_login_status
+from backend.database.database_manager import get_icon_by_id
 import logging
 
 # 配置日志记录
@@ -98,10 +99,26 @@ class LoginDialog(QDialog):
 
         # 用户名输入框布局（注册专用）
         self.username_layout = QHBoxLayout()
-        username_icon = QSvgWidget('icons/user.svg')
-        username_icon.setFixedSize(30, 30)
-        username_icon.setStyleSheet("margin-right: 10px;")
-        self.username_layout.addWidget(username_icon)
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设用户名图标的 ID 为 11
+                icon_data = get_icon_by_id(connection, 11)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    username_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    username_icon.load(byte_array)
+                    username_icon.setFixedSize(30, 30)
+                    username_icon.setStyleSheet("margin-right: 10px;")
+                    self.username_layout.addWidget(username_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                connection.close()
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("请输入用户名")
         self.username_input.setStyleSheet(input_style)
@@ -110,10 +127,28 @@ class LoginDialog(QDialog):
 
         # 登录邮箱输入框布局
         self.login_email_layout = QHBoxLayout()
-        login_email_icon = QSvgWidget('icons/email.svg')
-        login_email_icon.setFixedSize(30, 30)
-        login_email_icon.setStyleSheet("margin-right: 10px;")
-        self.login_email_layout.addWidget(login_email_icon)
+        # 建立数据库连接
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设 email 图标的 ID 为 3
+                icon_data = get_icon_by_id(connection, 3)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    login_email_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    login_email_icon.load(byte_array)
+                    login_email_icon.setFixedSize(30, 30)
+                    login_email_icon.setStyleSheet("margin-right: 10px;")
+                    self.login_email_layout.addWidget(login_email_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                # 关闭数据库连接
+                connection.close()
         self.login_email_input = QLineEdit()
         self.login_email_input.setPlaceholderText("请输入邮箱")
         self.login_email_input.setStyleSheet(input_style)
@@ -144,10 +179,28 @@ class LoginDialog(QDialog):
 
         # 注册邮箱输入框布局
         self.register_email_layout = QHBoxLayout()
-        register_email_icon = QSvgWidget('icons/email.svg')
-        register_email_icon.setFixedSize(30, 30)
-        register_email_icon.setStyleSheet("margin-right: 10px;")
-        self.register_email_layout.addWidget(register_email_icon)
+        # 建立数据库连接
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设 email 图标的 ID 为 3
+                icon_data = get_icon_by_id(connection, 3)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    register_email_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    register_email_icon.load(byte_array)
+                    register_email_icon.setFixedSize(30, 30)
+                    register_email_icon.setStyleSheet("margin-right: 10px;")
+                    self.register_email_layout.addWidget(register_email_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                # 关闭数据库连接
+                connection.close()
         self.register_email_input = QLineEdit()
         self.register_email_input.setPlaceholderText("请输入邮箱")
         self.register_email_input.setStyleSheet(input_style)
@@ -178,10 +231,28 @@ class LoginDialog(QDialog):
 
         # 验证码输入框布局（共用）
         self.verification_code_layout = QHBoxLayout()
-        code_icon = QSvgWidget('icons/verification_code.svg')
-        code_icon.setFixedSize(30, 30)
-        code_icon.setStyleSheet("margin-right: 10px;")
-        self.verification_code_layout.addWidget(code_icon)
+        # 建立数据库连接
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设验证码图标的 ID 为 12
+                icon_data = get_icon_by_id(connection, 12)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    code_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    code_icon.load(byte_array)
+                    code_icon.setFixedSize(30, 30)
+                    code_icon.setStyleSheet("margin-right: 10px;")
+                    self.verification_code_layout.addWidget(code_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                # 关闭数据库连接
+                connection.close()
         self.verification_code_input = QLineEdit()
         self.verification_code_input.setPlaceholderText("请输入验证码")
         self.verification_code_input.setStyleSheet(input_style)
@@ -190,10 +261,28 @@ class LoginDialog(QDialog):
 
         # 登录密码输入框布局
         self.login_password_layout = QHBoxLayout()
-        login_password_icon = QSvgWidget('icons/password.svg')
-        login_password_icon.setFixedSize(30, 30)
-        login_password_icon.setStyleSheet("margin-right: 10px;")
-        self.login_password_layout.addWidget(login_password_icon)
+        # 建立数据库连接
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设密码图标的 ID 为 8
+                icon_data = get_icon_by_id(connection, 8)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    login_password_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    login_password_icon.load(byte_array)
+                    login_password_icon.setFixedSize(30, 30)
+                    login_password_icon.setStyleSheet("margin-right: 10px;")
+                    self.login_password_layout.addWidget(login_password_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                # 关闭数据库连接
+                connection.close()
         self.login_password_input = QLineEdit()
         self.login_password_input.setPlaceholderText("请输入密码")
         self.login_password_input.setEchoMode(QLineEdit.EchoMode.Password)
@@ -202,10 +291,28 @@ class LoginDialog(QDialog):
 
         # 注册密码输入框布局
         self.register_password_layout = QHBoxLayout()
-        register_password_icon = QSvgWidget('icons/password.svg')
-        register_password_icon.setFixedSize(30, 30)
-        register_password_icon.setStyleSheet("margin-right: 10px;")
-        self.register_password_layout.addWidget(register_password_icon)
+        # 建立数据库连接
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设密码图标的 ID 为 10
+                icon_data = get_icon_by_id(connection, 8)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    register_password_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    register_password_icon.load(byte_array)
+                    register_password_icon.setFixedSize(30, 30)
+                    register_password_icon.setStyleSheet("margin-right: 10px;")
+                    self.register_password_layout.addWidget(register_password_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                # 关闭数据库连接
+                connection.close()
         self.register_password_input = QLineEdit()
         self.register_password_input.setPlaceholderText("请输入密码")
         self.register_password_input.setEchoMode(QLineEdit.EchoMode.Password)

@@ -2,11 +2,12 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QGraphicsDropShadowEffect, QPushButton
 )
-from PyQt6.QtCore import Qt, QTimer, QEvent, QRect, QRectF, QPoint
+from PyQt6.QtCore import Qt, QTimer, QEvent, QRect, QRectF, QPoint, QByteArray
 from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QColor, QBrush
 from PyQt6.QtSvgWidgets import QSvgWidget
 from modules.login_dialog import LoginDialog
 from backend.login.login_status_manager import check_login_status
+from backend.database.database_manager import create_connection, get_latest_logo, get_latest_announcement, get_icon_by_id
 import logging
 
 # 配置日志记录
@@ -75,7 +76,22 @@ class MainWindow(QMainWindow):
 
         # --------------------- 添加Logo图标 ---------------------
         logo_label = QLabel()
-        logo_pixmap = QPixmap("icons/logo_main.ico")  # 加载ICO图标
+
+        # 从数据库获取 logo 数据
+        connection = create_connection()
+        if connection:
+            logo_data = get_latest_logo(connection)
+            if logo_data:
+                logo_pixmap = QPixmap()
+                logo_pixmap.loadFromData(logo_data)
+            else:
+                # 如果数据库中没有 logo 数据，使用空白图标
+                logo_pixmap = QPixmap()
+            connection.close()
+        else:
+            # 如果数据库连接失败，使用空白图标
+            logo_pixmap = QPixmap()
+
         logo_height = int(top_bar.height() * 2.5)  # 高度设为顶部栏的150%（可更大）
         logo_pixmap = logo_pixmap.scaled(
             logo_height * 100,       # 宽度设为高度的2倍（可自定义宽高比）
@@ -93,13 +109,32 @@ class MainWindow(QMainWindow):
         announcement_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # 公告左侧喇叭图标
-        speaker_icon = QSvgWidget('icons/sound.svg')
-        speaker_icon.setFixedSize(30, 30)  # 调整图标大小
-        speaker_icon.setStyleSheet("margin: 5px;")  # 添加内边距
-        announcement_layout.addWidget(speaker_icon)
+        connection = create_connection()
+        if connection:
+            try:
+                # 从数据库获取公告喇叭图标的二进制数据（ID 为 10）
+                icon_data = get_icon_by_id(connection, 10)
 
-        # 公告文本
-        announcement_text = "欢迎使用AI变声器，本产品支持多种音色转换和实时语音处理功能，让你的声音更加丰富多彩。"
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    speaker_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    speaker_icon.load(byte_array)
+                    speaker_icon.setFixedSize(30, 30)  # 调整图标大小
+                    speaker_icon.setStyleSheet("margin: 5px;")  # 添加内边距
+                    announcement_layout.addWidget(speaker_icon)
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                connection.close()
+
+        # 从数据库获取公告文本
+        connection = create_connection()
+        if connection:
+            announcement_text = get_latest_announcement(connection)
+            if not announcement_text:
+                announcement_text = "暂无公告."
+            connection.close()
         announcement_label = QLabel(announcement_text)
         announcement_label.setObjectName("announcementLabel")
         announcement_label.setStyleSheet("""
@@ -123,11 +158,24 @@ class MainWindow(QMainWindow):
         headset_spacer = QWidget()
         headset_spacer.setFixedWidth(20)  # 间距20px
         announcement_layout.addWidget(headset_spacer)
-        
-        headset_icon = QSvgWidget('icons/service.svg')
-        headset_icon.setFixedSize(30, 30)
-        headset_icon.setStyleSheet("margin: 5px;")
-        announcement_layout.addWidget(headset_icon)
+
+        connection = create_connection()
+        if connection:
+            try:
+                icon_data = get_icon_by_id(connection, 9)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    headset_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    headset_icon.load(byte_array)
+                    headset_icon.setFixedSize(30, 30)  # 调整图标大小
+                    headset_icon.setStyleSheet("margin: 5px;")  # 添加内边距
+                    announcement_layout.addWidget(headset_icon)
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                connection.close()
 
         top_bar_layout.addLayout(announcement_layout, stretch=1)  # 公告区域居中拉伸
 
@@ -161,21 +209,43 @@ class MainWindow(QMainWindow):
         avatar_username_layout.addLayout(self.user_info_layout)
         right_layout.addLayout(avatar_username_layout)
 
-        # 最小化图标
-        minimize_icon = QSvgWidget('icons/minimize.svg')
-        minimize_icon.setFixedSize(30, 30)
-        minimize_icon.setStyleSheet("margin: 10px;")
-        minimize_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        minimize_icon.mousePressEvent = self.minimize_app
-        right_layout.addWidget(minimize_icon)
+        # 建立数据库连接
+        connection = create_connection()
 
-        # 关闭图标
-        close_icon = QSvgWidget('icons/close.svg')
-        close_icon.setFixedSize(30, 30)
-        close_icon.setStyleSheet("margin: 10px;")
-        close_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        close_icon.mousePressEvent = self.close_app
-        right_layout.addWidget(close_icon)
+        if connection:
+            try:
+                # 获取最小化图标数据，假设其 ID 为 7
+                minimize_icon_data = get_icon_by_id(connection, 7)
+
+                if minimize_icon_data:
+                    # 创建 QSvgWidget 并加载最小化图标数据
+                    minimize_icon = QSvgWidget()
+                    byte_array = QByteArray(minimize_icon_data)
+                    minimize_icon.load(byte_array)
+                    minimize_icon.setFixedSize(30, 30)
+                    minimize_icon.setStyleSheet("margin: 10px;")
+                    minimize_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    minimize_icon.mousePressEvent = self.minimize_app
+                    right_layout.addWidget(minimize_icon)
+
+                # 获取关闭图标数据，假设其 ID 为 1
+                close_icon_data = get_icon_by_id(connection, 1)
+
+                if close_icon_data:
+                    # 创建 QSvgWidget 并加载关闭图标数据
+                    close_icon = QSvgWidget()
+                    byte_array = QByteArray(close_icon_data)
+                    close_icon.load(byte_array)
+                    close_icon.setFixedSize(30, 30)
+                    close_icon.setStyleSheet("margin: 10px;")
+                    close_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    close_icon.mousePressEvent = self.close_app
+                    right_layout.addWidget(close_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                connection.close()
 
         top_bar_layout.addLayout(right_layout)  # 添加到右侧
 
@@ -248,10 +318,28 @@ class MainWindow(QMainWindow):
         vip_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # 加载 VIP 图标
-        vip_icon = QSvgWidget('icons/vip.svg')
-        vip_icon.setFixedSize(40, 30)  # 统一图标大小
-        vip_icon.setStyleSheet("margin: 5px;")
-        vip_layout.addWidget(vip_icon)
+        # 建立数据库连接
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设 VIP 图标的 ID 为 13，根据实际情况修改
+                icon_data = get_icon_by_id(connection, 13)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    vip_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    vip_icon.load(byte_array)
+                    vip_icon.setFixedSize(40, 30)  # 统一图标大小
+                    vip_icon.setStyleSheet("margin: 5px;")
+                    # 假设 vip_layout 是已定义的布局
+                    vip_layout.addWidget(vip_icon)
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                connection.close()
 
         # 显示 VIP 状态
         vip_status_label = QLabel("非会员" if not is_vip else "会员")
@@ -277,10 +365,30 @@ class MainWindow(QMainWindow):
         diamond_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         # 加载钻石图标
-        diamond_icon = QSvgWidget('icons/diamond.svg')
-        diamond_icon.setFixedSize(30, 30)  # 统一图标大小
-        diamond_icon.setStyleSheet("margin: 5px;")
-        diamond_layout.addWidget(diamond_icon)
+        # 建立数据库连接
+        connection = create_connection()
+
+        if connection:
+            try:
+                # 假设钻石图标的 ID 为 2，根据实际情况修改
+                icon_data = get_icon_by_id(connection, 2)
+
+                if icon_data:
+                    # 创建 QSvgWidget 并加载图标数据
+                    diamond_icon = QSvgWidget()
+                    byte_array = QByteArray(icon_data)
+                    diamond_icon.load(byte_array)
+                    diamond_icon.setFixedSize(30, 30)  # 统一图标大小
+                    diamond_icon.setStyleSheet("margin: 5px;")
+                    # 假设 diamond_layout 是已定义的布局
+                    diamond_layout.addWidget(diamond_icon)
+                else:
+                    print("未找到钻石图标数据")
+
+            except Exception as e:
+                print(f"加载图标时出错: {str(e)}")
+            finally:
+                connection.close()
 
         # 显示钻石数量
         diamond_count_label = QLabel(f"剩余 {diamonds}")
