@@ -1,5 +1,3 @@
-# modules/login_dialog.py
-import logging
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                 QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
 from PyQt6.QtSvgWidgets import QSvgWidget
@@ -19,6 +17,7 @@ import bcrypt
 from backend.login.token_utils import generate_token, verify_token
 from backend.login.token_storage import save_token, read_token
 from backend.login.login_status_manager import save_login_status
+import logging
 
 # 配置日志记录
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -679,6 +678,9 @@ class LoginDialog(QDialog):
 
         # 显示用户名
         main_window.username_display_label.setText(username)
+
+        # 更新会员信息
+        main_window.update_membership_info(is_vip, diamonds)
 
         # 显示是否 VIP 和钻石数量，这里可以根据需求进一步完善显示逻辑
         logging.info(f"用户 {username} 是 VIP: {is_vip}, 钻石数量: {diamonds}")
