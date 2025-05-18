@@ -1,5 +1,5 @@
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                                QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
+                             QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent, QByteArray
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath
@@ -11,13 +11,11 @@ from backend.validation.verification_manager import VerificationManager
 from backend.timer.timer_manager import TimerManager
 from backend.config.config import email_config
 from gui.custom_message_box import CustomMessageBox
-from backend.database.database_manager import create_connection, create_user_table, insert_user_info, get_user_by_email, \
-    create_user_vip_table, insert_user_vip_info, get_user_vip_info
+from backend.database.database_manager import DatabaseManager
 import bcrypt
 from backend.login.token_utils import generate_token, verify_token
 from backend.login.token_storage import save_token, read_token
 from backend.login.login_status_manager import save_login_status
-from backend.database.database_manager import get_icon_by_id
 import logging
 
 # 配置日志记录
@@ -27,8 +25,11 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 class LoginDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
-        screen_width = self.screen_size(0.2)
-        self.setFixedSize(screen_width, int(screen_width * 1.1))
+        parent_width = parent.width()
+        parent_height = parent.height()
+        self.original_width = int(parent_width * 0.3)
+        self.original_height = min(int(parent_height * 0.5), parent_height - 40)
+        self.resize(self.original_width, self.original_height)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
@@ -36,6 +37,9 @@ class LoginDialog(QDialog):
         self.current_mode = "login"  # 默认当前模式为登录
         self.verification_manager = VerificationManager()
         self.email_sender = EmailSender(email_config)
+
+        # 初始化数据库管理器
+        self.db_manager = DatabaseManager()
 
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
@@ -99,26 +103,14 @@ class LoginDialog(QDialog):
 
         # 用户名输入框布局（注册专用）
         self.username_layout = QHBoxLayout()
-        connection = create_connection()
-
-        if connection:
-            try:
-                # 假设用户名图标的 ID 为 11
-                icon_data = get_icon_by_id(connection, 11)
-
-                if icon_data:
-                    # 创建 QSvgWidget 并加载图标数据
-                    username_icon = QSvgWidget()
-                    byte_array = QByteArray(icon_data)
-                    username_icon.load(byte_array)
-                    username_icon.setFixedSize(30, 30)
-                    username_icon.setStyleSheet("margin-right: 10px;")
-                    self.username_layout.addWidget(username_icon)
-
-            except Exception as e:
-                print(f"加载图标时出错: {str(e)}")
-            finally:
-                connection.close()
+        icon_data = self.db_manager.get_icon_by_id(11)
+        if icon_data:
+            username_icon = QSvgWidget()
+            byte_array = QByteArray(icon_data)
+            username_icon.load(byte_array)
+            username_icon.setFixedSize(30, 30)
+            username_icon.setStyleSheet("margin-right: 10px;")
+            self.username_layout.addWidget(username_icon)
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("请输入用户名")
         self.username_input.setStyleSheet(input_style)
@@ -127,28 +119,14 @@ class LoginDialog(QDialog):
 
         # 登录邮箱输入框布局
         self.login_email_layout = QHBoxLayout()
-        # 建立数据库连接
-        connection = create_connection()
-
-        if connection:
-            try:
-                # 假设 email 图标的 ID 为 3
-                icon_data = get_icon_by_id(connection, 3)
-
-                if icon_data:
-                    # 创建 QSvgWidget 并加载图标数据
-                    login_email_icon = QSvgWidget()
-                    byte_array = QByteArray(icon_data)
-                    login_email_icon.load(byte_array)
-                    login_email_icon.setFixedSize(30, 30)
-                    login_email_icon.setStyleSheet("margin-right: 10px;")
-                    self.login_email_layout.addWidget(login_email_icon)
-
-            except Exception as e:
-                print(f"加载图标时出错: {str(e)}")
-            finally:
-                # 关闭数据库连接
-                connection.close()
+        icon_data = self.db_manager.get_icon_by_id(3)
+        if icon_data:
+            login_email_icon = QSvgWidget()
+            byte_array = QByteArray(icon_data)
+            login_email_icon.load(byte_array)
+            login_email_icon.setFixedSize(30, 30)
+            login_email_icon.setStyleSheet("margin-right: 10px;")
+            self.login_email_layout.addWidget(login_email_icon)
         self.login_email_input = QLineEdit()
         self.login_email_input.setPlaceholderText("请输入邮箱")
         self.login_email_input.setStyleSheet(input_style)
@@ -179,28 +157,14 @@ class LoginDialog(QDialog):
 
         # 注册邮箱输入框布局
         self.register_email_layout = QHBoxLayout()
-        # 建立数据库连接
-        connection = create_connection()
-
-        if connection:
-            try:
-                # 假设 email 图标的 ID 为 3
-                icon_data = get_icon_by_id(connection, 3)
-
-                if icon_data:
-                    # 创建 QSvgWidget 并加载图标数据
-                    register_email_icon = QSvgWidget()
-                    byte_array = QByteArray(icon_data)
-                    register_email_icon.load(byte_array)
-                    register_email_icon.setFixedSize(30, 30)
-                    register_email_icon.setStyleSheet("margin-right: 10px;")
-                    self.register_email_layout.addWidget(register_email_icon)
-
-            except Exception as e:
-                print(f"加载图标时出错: {str(e)}")
-            finally:
-                # 关闭数据库连接
-                connection.close()
+        icon_data = self.db_manager.get_icon_by_id(3)
+        if icon_data:
+            register_email_icon = QSvgWidget()
+            byte_array = QByteArray(icon_data)
+            register_email_icon.load(byte_array)
+            register_email_icon.setFixedSize(30, 30)
+            register_email_icon.setStyleSheet("margin-right: 10px;")
+            self.register_email_layout.addWidget(register_email_icon)
         self.register_email_input = QLineEdit()
         self.register_email_input.setPlaceholderText("请输入邮箱")
         self.register_email_input.setStyleSheet(input_style)
@@ -231,28 +195,14 @@ class LoginDialog(QDialog):
 
         # 验证码输入框布局（共用）
         self.verification_code_layout = QHBoxLayout()
-        # 建立数据库连接
-        connection = create_connection()
-
-        if connection:
-            try:
-                # 假设验证码图标的 ID 为 12
-                icon_data = get_icon_by_id(connection, 12)
-
-                if icon_data:
-                    # 创建 QSvgWidget 并加载图标数据
-                    code_icon = QSvgWidget()
-                    byte_array = QByteArray(icon_data)
-                    code_icon.load(byte_array)
-                    code_icon.setFixedSize(30, 30)
-                    code_icon.setStyleSheet("margin-right: 10px;")
-                    self.verification_code_layout.addWidget(code_icon)
-
-            except Exception as e:
-                print(f"加载图标时出错: {str(e)}")
-            finally:
-                # 关闭数据库连接
-                connection.close()
+        icon_data = self.db_manager.get_icon_by_id(12)
+        if icon_data:
+            code_icon = QSvgWidget()
+            byte_array = QByteArray(icon_data)
+            code_icon.load(byte_array)
+            code_icon.setFixedSize(30, 30)
+            code_icon.setStyleSheet("margin-right: 10px;")
+            self.verification_code_layout.addWidget(code_icon)
         self.verification_code_input = QLineEdit()
         self.verification_code_input.setPlaceholderText("请输入验证码")
         self.verification_code_input.setStyleSheet(input_style)
@@ -261,28 +211,14 @@ class LoginDialog(QDialog):
 
         # 登录密码输入框布局
         self.login_password_layout = QHBoxLayout()
-        # 建立数据库连接
-        connection = create_connection()
-
-        if connection:
-            try:
-                # 假设密码图标的 ID 为 8
-                icon_data = get_icon_by_id(connection, 8)
-
-                if icon_data:
-                    # 创建 QSvgWidget 并加载图标数据
-                    login_password_icon = QSvgWidget()
-                    byte_array = QByteArray(icon_data)
-                    login_password_icon.load(byte_array)
-                    login_password_icon.setFixedSize(30, 30)
-                    login_password_icon.setStyleSheet("margin-right: 10px;")
-                    self.login_password_layout.addWidget(login_password_icon)
-
-            except Exception as e:
-                print(f"加载图标时出错: {str(e)}")
-            finally:
-                # 关闭数据库连接
-                connection.close()
+        icon_data = self.db_manager.get_icon_by_id(8)
+        if icon_data:
+            login_password_icon = QSvgWidget()
+            byte_array = QByteArray(icon_data)
+            login_password_icon.load(byte_array)
+            login_password_icon.setFixedSize(30, 30)
+            login_password_icon.setStyleSheet("margin-right: 10px;")
+            self.login_password_layout.addWidget(login_password_icon)
         self.login_password_input = QLineEdit()
         self.login_password_input.setPlaceholderText("请输入密码")
         self.login_password_input.setEchoMode(QLineEdit.EchoMode.Password)
@@ -291,28 +227,14 @@ class LoginDialog(QDialog):
 
         # 注册密码输入框布局
         self.register_password_layout = QHBoxLayout()
-        # 建立数据库连接
-        connection = create_connection()
-
-        if connection:
-            try:
-                # 假设密码图标的 ID 为 10
-                icon_data = get_icon_by_id(connection, 8)
-
-                if icon_data:
-                    # 创建 QSvgWidget 并加载图标数据
-                    register_password_icon = QSvgWidget()
-                    byte_array = QByteArray(icon_data)
-                    register_password_icon.load(byte_array)
-                    register_password_icon.setFixedSize(30, 30)
-                    register_password_icon.setStyleSheet("margin-right: 10px;")
-                    self.register_password_layout.addWidget(register_password_icon)
-
-            except Exception as e:
-                print(f"加载图标时出错: {str(e)}")
-            finally:
-                # 关闭数据库连接
-                connection.close()
+        icon_data = self.db_manager.get_icon_by_id(10)
+        if icon_data:
+            register_password_icon = QSvgWidget()
+            byte_array = QByteArray(icon_data)
+            register_password_icon.load(byte_array)
+            register_password_icon.setFixedSize(30, 30)
+            register_password_icon.setStyleSheet("margin-right: 10px;")
+            self.register_password_layout.addWidget(register_password_icon)
         self.register_password_input = QLineEdit()
         self.register_password_input.setPlaceholderText("请输入密码")
         self.register_password_input.setEchoMode(QLineEdit.EchoMode.Password)
@@ -484,6 +406,8 @@ class LoginDialog(QDialog):
             self.verification_code_input.clear()
             self.login_password_input.clear()
             self.clear_focus()
+            # 调整窗口大小
+            self.resize(self.original_width, self.original_height)
         elif mode == "register":
             # 注册模式样式
             self.user_login_label.setStyleSheet("""
@@ -516,6 +440,8 @@ class LoginDialog(QDialog):
             self.register_password_input.clear()
             self.username_input.clear()
             self.clear_focus()
+            # 调整窗口大小
+            self.resize(self.original_width, self.original_height)
 
     def clear_focus(self):
         """移除所有输入框的焦点"""
@@ -599,31 +525,25 @@ class LoginDialog(QDialog):
             msg_box.exec()
             return
 
-        # 连接数据库
-        connection = create_connection()
-        if connection:
-            cursor = connection.cursor()
-            # 检查用户名是否已存在
-            query = "SELECT id FROM users WHERE username = %s"
-            cursor.execute(query, (username,))
-            result = cursor.fetchone()
+        # 检查用户名是否已存在
+        if self.db_manager.get_user_by_email(email):
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("用户已存在，请直接登录")
+            msg_box.setWindowTitle("用户已存在")
+            msg_box.exec()
+            return
 
-            if result:
-                msg_box = CustomMessageBox()
-                msg_box.setIcon(QMessageBox.Icon.Warning)
-                msg_box.setText("用户名已存在，请选择其他用户名")
-                msg_box.setWindowTitle("用户名冲突")
-                msg_box.exec()
-                connection.close()
-                return
-
-            create_user_table(connection)
-            create_user_vip_table(connection)
-            insert_user_info(connection, username, email, password)
-            connection.close()
-
-        self.clear_focus()  # 关闭前移除焦点
-        self.close()
+        # 插入用户信息
+        if self.db_manager.insert_user_info(username, email, password):
+            self.clear_focus()  # 关闭前移除焦点
+            self.close()
+        else:
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("注册失败，请稍后重试")
+            msg_box.setWindowTitle("注册失败")
+            msg_box.exec()
 
     def login(self):
         email = self.login_email_input.text()
@@ -648,121 +568,61 @@ class LoginDialog(QDialog):
             msg_box.exec()
             return
 
-        # 连接数据库
-        connection = create_connection()
-        if connection:
-            cursor = connection.cursor()
-            # 查询用户的 id、username 和 password
-            query = "SELECT id, username, password, avatar FROM users WHERE email = %s"
-            cursor.execute(query, (email,))
-            result = cursor.fetchone()
-            connection.close()
+        user = self.db_manager.get_user_by_email(email)
+        if user:
+            hashed = user['password'].encode('utf-8')
+            if bcrypt.checkpw(password.encode('utf-8'), hashed):
+                logging.info(f"用户 {user['username']} 登录成功，ID: {user['id']}")
+                save_login_status(user['id'], user['username'])
+                token = generate_token(email)
+                save_token(token)
 
-            if result:
-                user_id, username, hashed, avatar = result
-                hashed = hashed.encode('utf-8')  # 将字符串转换为字节类型
+                vip_info = self.db_manager.get_user_vip_info(user['id'])
+                if vip_info:
+                    is_vip = vip_info['is_vip']
+                    diamonds = vip_info['diamonds']
+                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
 
-                if bcrypt.checkpw(password.encode('utf-8'), hashed):
-                    # 输出登录成功的日志信息
-                    logging.info(f"用户 {username} 登录成功，ID: {user_id}")
-                    # 保存登录状态
-                    save_login_status(user_id, username)
-                    # 生成并保存令牌
-                    token = generate_token(email)
-                    save_token(token)
-
-                    # 查询用户 VIP 信息
-                    connection = create_connection()
-                    if connection:
-                        vip_info = get_user_vip_info(connection, user_id)
-                        connection.close()
-                        if vip_info:
-                            is_vip = vip_info['is_vip']
-                            diamonds = vip_info['diamonds']
-                            # 更新界面显示用户头像、用户名、是否 VIP 和钻石数量
-                            self.update_user_info(avatar, username, is_vip, diamonds)
-
-                    self.clear_focus()  # 关闭前移除焦点
-                    self.close()
-                else:
-                    msg_box = CustomMessageBox()
-                    msg_box.setIcon(QMessageBox.Icon.Warning)
-                    msg_box.setText("密码错误，请重试")
-                    msg_box.setWindowTitle("登录失败")
-                    msg_box.exec()
+                self.clear_focus()  # 关闭前移除焦点
+                self.close()
             else:
                 msg_box = CustomMessageBox()
                 msg_box.setIcon(QMessageBox.Icon.Warning)
-                msg_box.setText("用户不存在，请先注册")
+                msg_box.setText("密码错误，请重试")
                 msg_box.setWindowTitle("登录失败")
                 msg_box.exec()
-            connection.close()
+        else:
+            msg_box = CustomMessageBox()
+            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box.setText("用户不存在，请先注册")
+            msg_box.setWindowTitle("登录失败")
+            msg_box.exec()
 
     def check_token(self):
-        """检查本地令牌的有效性"""
         token = read_token()
         if token:
             payload = verify_token(token)
             if payload:
                 email = payload['email']
-                # 自动登录用户
-                connection = create_connection()
-                if connection:
-                    user = get_user_by_email(connection, email)
-                    if user:
-                        user_id = user['id']
-                        username = user['username']
-                        avatar = user['avatar']
-                        # 输出自动登录成功的日志信息
-                        logging.info(f"用户 {username} 自动登录成功，ID: {user_id}")
-                        # 设置标志位
-                        self.auto_logged_in = True
+                user = self.db_manager.get_user_by_email(email)
+                if user:
+                    logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
+                    save_login_status(user['id'], user['username'])
 
-                        # 查询用户 VIP 信息
-                        vip_info = get_user_vip_info(connection, user_id)
-                        if vip_info:
-                            is_vip = vip_info['is_vip']
-                            diamonds = vip_info['diamonds']
-                            # 更新界面显示用户头像、用户名、是否 VIP 和钻石数量
-                            self.update_user_info(avatar, username, is_vip, diamonds)
+                    vip_info = self.db_manager.get_user_vip_info(user['id'])
+                    if vip_info:
+                        is_vip = vip_info['is_vip']
+                        diamonds = vip_info['diamonds']
+                        self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
 
-                        self.clear_focus()  # 关闭前移除焦点
-                        self.close()
-                    connection.close()
-                return True  # 返回令牌有效
-        return False  # 返回令牌无效
-
-    def auto_login(self, email):
-        """自动登录用户"""
-        connection = create_connection()
-        if connection:
-            user = get_user_by_email(connection, email)
-            if user:
-                user_id = user['id']
-                username = user['username']
-                avatar = user['avatar']
-                # 输出自动登录成功的日志信息
-                logging.info(f"用户 {username} 自动登录成功，ID: {user_id}")
-                # 设置标志位
-                self.auto_logged_in = True
-
-                # 查询用户 VIP 信息
-                vip_info = get_user_vip_info(connection, user_id)
-                if vip_info:
-                    is_vip = vip_info['is_vip']
-                    diamonds = vip_info['diamonds']
-                    # 更新界面显示用户头像、用户名、是否 VIP 和钻石数量
-                    self.update_user_info(avatar, username, is_vip, diamonds)
-
-                self.clear_focus()  # 关闭前移除焦点
-                self.close()
-            connection.close()
+                    self.clear_focus()  # 关闭前移除焦点
+                    self.close()
+                    return True
+        return False
 
     def update_user_info(self, avatar, username, is_vip, diamonds):
-        # 获取主窗口
         main_window = self.parent()
 
-        # 显示用户头像为圆形
         if avatar:
             image = QImage.fromData(avatar)
             pixmap = QPixmap.fromImage(image)
@@ -776,18 +636,12 @@ class LoginDialog(QDialog):
             painter.setClipPath(path)
             painter.drawPixmap(0, 0, pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio))
             painter.end()
-            # 使用平滑缩放模式
             main_window.user_avatar_label.setPixmap(cropped_pixmap.scaled(
-                main_window.user_avatar_label.size(), 
-                Qt.AspectRatioMode.KeepAspectRatio, 
+                main_window.user_avatar_label.size(),
+                Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             ))
 
-        # 显示用户名
         main_window.username_display_label.setText(username)
-
-        # 更新会员信息
         main_window.update_membership_info(is_vip, diamonds)
-
-        # 显示是否 VIP 和钻石数量，这里可以根据需求进一步完善显示逻辑
         logging.info(f"用户 {username} 是 VIP: {is_vip}, 钻石数量: {diamonds}")

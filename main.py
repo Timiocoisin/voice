@@ -2,8 +2,9 @@ import sys
 from PyQt6.QtWidgets import QApplication
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap
-from gui.main_window import MainWindow 
-from backend.database.database_manager import create_connection, get_icon_by_id, load_app_icon
+from PyQt6.QtCore import QByteArray  # 引入 QByteArray
+from gui.main_window import MainWindow
+from backend.database.database_manager import DatabaseManager
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -16,11 +17,25 @@ if __name__ == "__main__":
     )
     
     app = QApplication(sys.argv)
-    
-    # 从数据库加载ID=5的图标（软件Logo）
-    app_icon = load_app_icon(5)
-    
-    # 设置窗口图标（若加载失败则使用系统默认）
+    db_manager = DatabaseManager()
+
+    app_icon_data = db_manager.get_icon_by_id(5)
+
+    # 如果获取到的图标数据是字节类型，则将其转换为 QIcon
+    if app_icon_data:
+        # 将字节数据转换为 QByteArray
+        byte_array = QByteArray(app_icon_data)
+        pixmap = QPixmap()
+        if pixmap.loadFromData(byte_array):  # 使用 QByteArray 加载图像
+            app_icon = QIcon(pixmap)
+        else:
+            logging.error("加载图标数据失败，使用默认图标")
+            app_icon = QIcon()  # 使用默认图标
+    else:
+        logging.warning("未能从数据库加载图标，使用默认图标")
+        app_icon = QIcon()  # 使用默认图标
+
+    # 设置窗口图标
     app.setWindowIcon(app_icon)
     
     window = MainWindow() 

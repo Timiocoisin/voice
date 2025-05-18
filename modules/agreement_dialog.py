@@ -6,7 +6,9 @@ class AgreementDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle("用户协议")
-        self.setFixedSize(600, 1000)
+        parent_height = parent.height()
+        max_height = parent_height + 100
+        self.setFixedSize(600, max_height)
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
 
