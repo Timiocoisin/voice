@@ -140,7 +140,7 @@ class DatabaseManager:
         """根据邮箱查询用户信息"""
         try:
             cursor = self.connection.cursor(dictionary=True)
-            query = "SELECT id, username, avatar FROM users WHERE email = %s"
+            query = "SELECT id, username, password, avatar FROM users WHERE email = %s"
             cursor.execute(query, (email,))
             return cursor.fetchone()  # 返回包含用户头像的结果
         except mysql.connector.Error as e:

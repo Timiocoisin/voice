@@ -536,6 +536,20 @@ class LoginDialog(QDialog):
 
         # 插入用户信息
         if self.db_manager.insert_user_info(username, email, password):
+            # 注册成功后，模拟登录操作
+            user = self.db_manager.get_user_by_email(email)
+            if user:
+                logging.info(f"用户 {user['username']} 注册成功，ID: {user['id']}")
+                save_login_status(user['id'], user['username'])
+                token = generate_token(email)
+                save_token(token)
+
+                vip_info = self.db_manager.get_user_vip_info(user['id'])
+                if vip_info:
+                    is_vip = vip_info['is_vip']
+                    diamonds = vip_info['diamonds']
+                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
+
             self.clear_focus()  # 关闭前移除焦点
             self.close()
         else:

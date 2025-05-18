@@ -79,10 +79,10 @@ class MainWindow(QMainWindow):
         """创建顶部导航栏"""
         top_bar = QWidget()
         top_bar.setStyleSheet("background-color: transparent;")
-        top_bar.setFixedHeight(70)
+        top_bar.setFixedHeight(50)  # 调整顶部导航栏高度，使其更紧凑
 
         top_bar_layout = QHBoxLayout(top_bar)
-        top_bar_layout.setContentsMargins(20, 0, 20, 0)
+        top_bar_layout.setContentsMargins(10, 0, 10, 0)  # 减小外边距
         top_bar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # 添加Logo图标
@@ -92,6 +92,7 @@ class MainWindow(QMainWindow):
         # 公告显示区域
         announcement_layout = self.create_announcement_layout()
         top_bar_layout.addLayout(announcement_layout, stretch=1)
+        top_bar_layout.addSpacing(20)  # 添加20像素间距
 
         # 右侧功能按钮
         right_layout = self.create_right_layout(top_bar)
@@ -102,7 +103,7 @@ class MainWindow(QMainWindow):
     def create_logo_label(self, parent_widget):
         """创建Logo标签"""
         logo_label = QLabel()
-        
+
         # 从数据库获取 logo 数据
         logo_data = self.db_manager.get_latest_logo()
         if logo_data:
@@ -112,16 +113,16 @@ class MainWindow(QMainWindow):
             logo_pixmap = QPixmap()
 
         # 调整Logo大小
-        logo_height = int(parent_widget.height() * 2.5)
+        logo_height = int(parent_widget.height() * 1.5)  # 调整Logo高度比例
         logo_pixmap = logo_pixmap.scaled(
-            logo_height * 100,
-            logo_height, 
+            logo_height * 2,  # 调整Logo宽度比例
+            logo_height,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
         logo_label.setPixmap(logo_pixmap)
-        logo_label.setStyleSheet("margin-right: 20px;")
-        
+        logo_label.setStyleSheet("margin-right: 10px;")  # 减小右侧间距
+
         return logo_label
 
     def create_announcement_layout(self):
@@ -131,7 +132,7 @@ class MainWindow(QMainWindow):
         announcement_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # 公告左侧喇叭图标
-        speaker_icon = self.create_svg_widget(10, 30, 30, "margin: 5px;")
+        speaker_icon = self.create_svg_widget(10, 25, 25, "margin: 5px;")  # 减小图标大小
         if speaker_icon:
             announcement_layout.addWidget(speaker_icon)
 
@@ -146,29 +147,31 @@ class MainWindow(QMainWindow):
         announcement_label.setStyleSheet("""
             #announcementLabel {
                 background-color: rgba(245, 245, 245, 0.9);
-                border-radius: 15px;
-                padding: 5px 12px;
+                border-radius: 10px;  
+                padding: 3px 8px;  
                 font-family: "Microsoft YaHei", "Roboto", "Arial";
-                font-size: 16px;
+                font-size: 14px;  
                 color: #333333;
-                max-width: 800px;
-                min-width: 200px;
+                max-width: 600px;  
+                min-width: 150px; 
             }
         """)
         announcement_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         announcement_label.setWordWrap(False)
-        announcement_label.setFixedHeight(30)
+        announcement_label.setFixedHeight(25)  # 减小高度
         announcement_layout.addWidget(announcement_label, stretch=1)
 
         # 间距
         headset_spacer = QWidget()
-        headset_spacer.setFixedWidth(20)
+        headset_spacer.setFixedWidth(10)  # 减小间距
         announcement_layout.addWidget(headset_spacer)
 
         # 公告右侧耳机图标
-        headset_icon = self.create_svg_widget(9, 30, 30, "margin: 5px;")
+        headset_icon = self.create_svg_widget(9, 25, 25, "margin: 5px;")  # 减小图标大小
         if headset_icon:
             announcement_layout.addWidget(headset_icon)
+
+        announcement_layout.addSpacing(20)
 
         return announcement_layout
 
@@ -180,42 +183,42 @@ class MainWindow(QMainWindow):
 
         # 头像和用户名布局
         self.user_info_layout = QHBoxLayout()
-        self.user_info_layout.setSpacing(20)
-        
+        self.user_info_layout.setSpacing(10)  # 减小间距
+
         # 头像标签
         self.user_avatar_label = QLabel()
-        avatar_size = int(parent_widget.height() * 0.8)
+        avatar_size = int(parent_widget.height() * 0.6)  # 减小头像大小
         self.user_avatar_label.setFixedSize(avatar_size, avatar_size)
         self.user_info_layout.addWidget(self.user_avatar_label)
-        
+
         # 用户名标签
         self.username_display_label = QLabel()
         self.username_display_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "Roboto", "Arial";
-                font-size: 18px;
+                font-size: 16px; 
                 font-weight: bold;
                 color: #333333;
             }
         """)
         self.user_info_layout.addWidget(self.username_display_label)
-        
+
         # 头像和用户名的垂直布局
         avatar_username_layout = QVBoxLayout()
         avatar_username_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        avatar_username_layout.setContentsMargins(0, 5, 0, 5)
+        avatar_username_layout.setContentsMargins(0, 3, 0, 3)  # 减小上下间距
         avatar_username_layout.addLayout(self.user_info_layout)
         right_layout.addLayout(avatar_username_layout)
 
         # 最小化图标
-        minimize_icon = self.create_svg_widget(7, 30, 30, "margin: 10px;")
+        minimize_icon = self.create_svg_widget(7, 25, 25, "margin: 5px;")  # 减小图标大小
         if minimize_icon:
             minimize_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             minimize_icon.mousePressEvent = self.minimize_app
             right_layout.addWidget(minimize_icon)
 
         # 关闭图标
-        close_icon = self.create_svg_widget(1, 30, 30, "margin: 10px;")
+        close_icon = self.create_svg_widget(1, 25, 25, "margin: 5px;")  # 减小图标大小
         if close_icon:
             close_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             close_icon.mousePressEvent = self.close_app
@@ -228,7 +231,7 @@ class MainWindow(QMainWindow):
         icon_data = self.db_manager.get_icon_by_id(icon_id)
         if not icon_data:
             return None
-            
+
         svg_widget = QSvgWidget()
         svg_widget.load(QByteArray(icon_data))
         svg_widget.setFixedSize(width, height)
