@@ -1,9 +1,8 @@
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
-    QGraphicsDropShadowEffect
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect, QGridLayout
 )
-from PyQt6.QtCore import Qt, QTimer, QEvent, QPoint, QByteArray, QRectF
 from PyQt6.QtSvgWidgets import QSvgWidget
+from PyQt6.QtCore import Qt, QTimer, QEvent, QPoint, QByteArray, QRectF
 from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QBrush, QColor
 from modules.login_dialog import LoginDialog
 from backend.login.login_status_manager import check_login_status
@@ -12,6 +11,7 @@ import logging
 
 # 配置日志记录
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -53,14 +53,14 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.setContentsMargins(20, 20, 20, 20)
 
         # 圆角背景窗口
-        self.rounded_bg = RoundedBackgroundWidget()
+        self.rounded_bg = RoundedBackgroundWidget(self.db_manager)
         self.rounded_bg.setObjectName("roundedBackground")
         self.rounded_bg.setStyleSheet("""
             #roundedBackground {
-                background-color: white;
+                background-color: transparent;
                 border-radius: 20px;
             }
         """)
@@ -73,7 +73,84 @@ class MainWindow(QMainWindow):
         top_bar = self.create_top_bar()
         rounded_layout.addWidget(top_bar)
 
+        # 创建三列布局
+        grid_layout = QGridLayout()
+        grid_layout.setContentsMargins(15, 15, 15, 15)
+        grid_layout.setHorizontalSpacing(20)  # 列间距
+        grid_layout.setVerticalSpacing(15)    # 行间距
+
+        # 按行优先顺序添加板块（row, column, rowSpan, columnSpan）
+        grid_layout.addWidget(self.create_section_widget(0), 0, 0)  # 板块1（第1行第1列）
+        grid_layout.addWidget(self.create_section_widget(1), 0, 1)  # 板块2（第1行第2列）
+        grid_layout.addWidget(self.create_section_widget(2), 0, 2)  # 板块3（第1行第3列）
+        grid_layout.addWidget(self.create_section_widget(3), 1, 0)  # 板块4（第2行第1列）
+        grid_layout.addWidget(self.create_section_widget(4), 1, 1)  # 板块5（第2行第2列）
+        grid_layout.addWidget(self.create_section_widget(5), 1, 2)  # 板块6（第2行第3列）
+
+        grid_layout.setColumnStretch(0, 1)  # 左侧列权重1
+        grid_layout.setColumnStretch(1, 3)  # 中间列权重3
+        grid_layout.setColumnStretch(2, 1)  # 右侧列权重1
+
+        rounded_layout.addLayout(grid_layout, stretch=3)
+
+        # 底部红色导航栏模块
+        bottom_bar = self.create_bottom_bar()
+        rounded_layout.addWidget(bottom_bar)
+
         main_layout.addWidget(self.rounded_bg)
+
+        main_layout.addWidget(self.rounded_bg)
+
+    def create_bottom_bar(self):
+        """创建底部红色导航栏模块"""
+        bottom_bar = QWidget()
+        bottom_bar.setStyleSheet("""
+            QWidget {
+                background-color: rgba(255, 255, 255, 180);
+                border-radius: 10px;
+                padding: 10px;
+            }
+        """)
+        
+        # 底部导航栏内容
+        title = QLabel("底部导航栏")
+        title.setStyleSheet("""
+            QLabel {
+                background-color: rgba(255, 255, 255, 180);
+                font-weight: bold;
+                font-size: 16px;
+                text-align: center;
+            }
+        """)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        
+        layout = QHBoxLayout(bottom_bar)
+        layout.addWidget(title)
+        
+        return bottom_bar
+
+    def create_section_widget(self, index):
+        section_widget = QWidget()
+        section_widget.setStyleSheet(f"""
+            QWidget {{
+                background-color: rgba(255, 255, 255, 180);
+                border: none;
+                border-radius: 10px;
+                padding: 15px;
+            }}
+        """)
+        
+        title = QLabel(f"板块 {index + 1}")
+        title.setStyleSheet("font-weight: bold; font-size: 16px;")
+        
+        content = QLabel(f"这是板块 {index + 1} 的内容")
+        
+        layout = QVBoxLayout(section_widget)
+        layout.addWidget(title)
+        layout.addWidget(content)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        
+        return section_widget
 
     def create_top_bar(self):
         """创建顶部导航栏"""
@@ -386,10 +463,17 @@ class MainWindow(QMainWindow):
 
 
 class RoundedBackgroundWidget(QWidget):
-    def __init__(self):
+    def __init__(self, db_manager):
         super().__init__()
-        self.background_image = QPixmap('images/background.png')
         self.radius = 20
+
+        # 从数据库获取背景图片
+        background_image_data = db_manager.get_icon_by_id(14)
+        if background_image_data:
+            self.background_image = QPixmap()
+            self.background_image.loadFromData(background_image_data)
+        else:
+            self.background_image = QPixmap()
 
         # 添加阴影效果
         self.shadow = QGraphicsDropShadowEffect(self)
