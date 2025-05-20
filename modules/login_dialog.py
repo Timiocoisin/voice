@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                             QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
+                                QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QWidget)
 from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtCore import Qt, QEvent, QByteArray, pyqtSignal
+from PyQt6.QtCore import Qt, QEvent, QByteArray
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath
 from gui.clickable_label import ClickableLabel
 from modules.agreement_dialog import AgreementDialog
@@ -23,8 +23,6 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class LoginDialog(QDialog):
-    login_success = pyqtSignal()
-
     def __init__(self, parent=None):
         super().__init__(parent)
         parent_width = parent.width()
@@ -545,9 +543,12 @@ class LoginDialog(QDialog):
                     diamonds = vip_info['diamonds']
                     self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
 
+            # 隐藏蒙版
+            if self.parent():
+                self.parent().mask_widget.setVisible(False)
+
             self.clear_focus()  # 关闭前移除焦点
-            self.close()
-            self.login_success.emit()
+            self.accept()  # 关闭登录对话框
         else:
             msg_box = CustomMessageBox(self.parent())
             msg_box.setText("注册失败，请稍后重试")
@@ -590,9 +591,12 @@ class LoginDialog(QDialog):
                     diamonds = vip_info['diamonds']
                     self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
 
+                # 隐藏蒙版
+                if self.parent():
+                    self.parent().mask_widget.setVisible(False)
+
                 self.clear_focus()  # 关闭前移除焦点
-                self.close()
-                self.login_success.emit()
+                self.accept()  # 关闭登录对话框
             else:
                 msg_box = CustomMessageBox(self.parent())
                 msg_box.setText("密码错误，请重试")
@@ -621,9 +625,12 @@ class LoginDialog(QDialog):
                         diamonds = vip_info['diamonds']
                         self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
 
+                    # 隐藏蒙版
+                    if self.parent():
+                        self.parent().mask_widget.setVisible(False)
+
                     self.clear_focus()  # 关闭前移除焦点
-                    self.close()
-                    self.login_success.emit()
+                    self.accept()  # 关闭登录对话框
                     return True
         return False
 

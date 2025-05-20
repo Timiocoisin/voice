@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect, QGridLayout
 )
 from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtCore import Qt, QTimer, QEvent, QPoint, QByteArray, QRectF
+from PyQt6.QtCore import Qt, QEvent, QPoint, QByteArray, QRectF
 from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QBrush, QColor
 from modules.login_dialog import LoginDialog
 from backend.login.login_status_manager import check_login_status
@@ -382,7 +382,7 @@ class MainWindow(QMainWindow):
             # 自动登录成功，隐藏蒙版
             self.mask_widget.setVisible(False)
         else:
-            QTimer.singleShot(1000, self.show_login_dialog)  # 如果自动登录失败，延迟显示登录对话框
+            self.show_login_dialog()
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.Type.MouseButtonPress:
