@@ -1,5 +1,7 @@
+# 文件 1：main_window.py
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect, QGridLayout
+    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect, QGridLayout,
+    QFileDialog, QMessageBox
 )
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent, QPoint, QByteArray, QRectF
@@ -7,7 +9,11 @@ from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QBrush, QColor
 from modules.login_dialog import LoginDialog
 from backend.login.login_status_manager import check_login_status
 from backend.database.database_manager import DatabaseManager
+from backend.login.token_storage import  read_token
+from backend.login.token_utils import verify_token
+from backend.login.login_status_manager import check_login_status, save_login_status
 import logging
+
 
 # 配置日志记录
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -30,6 +36,9 @@ class MainWindow(QMainWindow):
 
         # 初始化数据库管理器
         self.db_manager = DatabaseManager()
+
+        # 初始化用户ID
+        self.user_id = None
 
         self.initUI()
 
@@ -309,6 +318,7 @@ class MainWindow(QMainWindow):
         self.user_avatar_label = QLabel()
         avatar_size = int(parent_widget.height() * 0.9)  # 减小头像大小
         self.user_avatar_label.setFixedSize(avatar_size, avatar_size)
+        self.user_avatar_label.mousePressEvent = self.upload_avatar  # 添加头像点击事件
         self.user_info_layout.addWidget(self.user_avatar_label)
 
         # 用户名标签
@@ -378,9 +388,24 @@ class MainWindow(QMainWindow):
 
     def check_auto_login(self):
         """检查自动登录"""
-        if self.login_dialog.check_token():
-            # 自动登录成功，隐藏蒙版
-            self.mask_widget.setVisible(False)
+        token = read_token()
+        if token:
+            payload = verify_token(token)
+            if payload:
+                email = payload['email']
+                user = self.db_manager.get_user_by_email(email)
+                if user:
+                    logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
+                    save_login_status(user['id'], user['username'])
+
+                    vip_info = self.db_manager.get_user_vip_info(user['id'])
+                    if vip_info:
+                        is_vip = vip_info['is_vip']
+                        diamonds = vip_info['diamonds']
+                        self.update_membership_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
+
+                    # 隐藏蒙版
+                    self.mask_widget.setVisible(False)
         else:
             self.show_login_dialog()
 
@@ -422,7 +447,7 @@ class MainWindow(QMainWindow):
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
 
-    def update_membership_info(self, is_vip, diamonds):
+    def update_membership_info(self, avatar_data, username, is_vip, diamonds, user_id=None):
         """更新会员信息显示"""
         # 清空现有会员信息
         while self.user_info_layout.count():
@@ -496,6 +521,48 @@ class MainWindow(QMainWindow):
 
         membership_layout.addLayout(diamond_layout)
         self.user_info_layout.addLayout(membership_layout, stretch=0)
+
+        # 更新用户ID
+        self.user_id = user_id
+
+        # 如果有头像数据，更新头像显示
+        if avatar_data:
+            self.update_user_avatar_display(avatar_data)
+
+    def upload_avatar(self, event):
+        """上传头像"""
+        if self.user_id:
+            file_path, _ = QFileDialog.getOpenFileName(self, "选择头像", "", "Images (*.png *.jpg *.jpeg *.bmp)")
+            if file_path:
+                with open(file_path, "rb") as file:
+                    avatar_data = file.read()
+                    if self.db_manager.update_user_avatar(self.user_id, avatar_data):
+                        # 更新成功后，重新加载头像显示
+                        self.update_user_avatar_display(avatar_data)
+                    else:
+                        QMessageBox.warning(self, "更新失败", "头像更新失败，请稍后重试")
+        else:
+            QMessageBox.warning(self, "未登录", "请先登录后再尝试上传头像")
+
+    def update_user_avatar_display(self, avatar_data):
+        """更新头像显示"""
+        pixmap = QPixmap()
+        pixmap.loadFromData(avatar_data)
+        size = min(pixmap.width(), pixmap.height())
+        cropped_pixmap = QPixmap(size, size)
+        cropped_pixmap.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(cropped_pixmap)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        path = QPainterPath()
+        path.addEllipse(0, 0, size, size)
+        painter.setClipPath(path)
+        painter.drawPixmap(0, 0, pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio))
+        painter.end()
+        self.user_avatar_label.setPixmap(cropped_pixmap.scaled(
+            self.user_avatar_label.size(),
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        ))
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

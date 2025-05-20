@@ -1,3 +1,4 @@
+# 文件 3：login_dialog.py
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                 QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QWidget)
 from PyQt6.QtSvgWidgets import QSvgWidget
@@ -541,14 +542,14 @@ class LoginDialog(QDialog):
                 if vip_info:
                     is_vip = vip_info['is_vip']
                     diamonds = vip_info['diamonds']
-                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
+                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
 
-            # 隐藏蒙版
-            if self.parent():
-                self.parent().mask_widget.setVisible(False)
+                # 隐藏蒙版
+                if self.parent():
+                    self.parent().mask_widget.setVisible(False)
 
-            self.clear_focus()  # 关闭前移除焦点
-            self.accept()  # 关闭登录对话框
+                self.clear_focus()  # 关闭前移除焦点
+                self.accept()  # 关闭登录对话框
         else:
             msg_box = CustomMessageBox(self.parent())
             msg_box.setText("注册失败，请稍后重试")
@@ -589,7 +590,7 @@ class LoginDialog(QDialog):
                 if vip_info:
                     is_vip = vip_info['is_vip']
                     diamonds = vip_info['diamonds']
-                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
+                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
 
                 # 隐藏蒙版
                 if self.parent():
@@ -623,7 +624,7 @@ class LoginDialog(QDialog):
                     if vip_info:
                         is_vip = vip_info['is_vip']
                         diamonds = vip_info['diamonds']
-                        self.update_user_info(user['avatar'], user['username'], is_vip, diamonds)
+                        self.update_user_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
 
                     # 隐藏蒙版
                     if self.parent():
@@ -634,7 +635,7 @@ class LoginDialog(QDialog):
                     return True
         return False
 
-    def update_user_info(self, avatar, username, is_vip, diamonds):
+    def update_user_info(self, avatar, username, is_vip, diamonds, user_id=None):
         main_window = self.parent()
 
         if avatar:
@@ -657,5 +658,5 @@ class LoginDialog(QDialog):
             ))
 
         main_window.username_display_label.setText(username)
-        main_window.update_membership_info(is_vip, diamonds)
+        main_window.update_membership_info(avatar, username, is_vip, diamonds, user_id)
         logging.info(f"用户 {username} 是 VIP: {is_vip}, 钻石数量: {diamonds}")

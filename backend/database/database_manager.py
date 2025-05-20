@@ -1,8 +1,6 @@
 import mysql.connector
-import os
 import bcrypt
 from typing import Optional
-from PyQt6.QtGui import QPixmap, QIcon
 import logging
 
 # 配置日志记录
@@ -211,6 +209,24 @@ class DatabaseManager:
             return None
         except mysql.connector.Error as e:
             logging.info(f"查询公告失败: {e}")
+            self.connection.rollback()
+            return False
+        
+    def update_user_avatar(self, user_id: int, avatar_data: bytes) -> bool:
+        """更新用户头像"""
+        try:
+            cursor = self.connection.cursor()
+            update_query = """
+            UPDATE users
+            SET avatar = %s
+            WHERE id = %s
+            """
+            cursor.execute(update_query, (avatar_data, user_id))
+            self.connection.commit()
+            logging.info(f"用户 {user_id} 的头像已更新")
+            return True
+        except mysql.connector.Error as e:
+            logging.error(f"更新用户头像失败: {e}")
             self.connection.rollback()
             return False
 
