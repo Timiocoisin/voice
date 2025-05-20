@@ -28,12 +28,6 @@ if __name__ == "__main__":
         pixmap = QPixmap()
         if pixmap.loadFromData(byte_array):  # 使用 QByteArray 加载图像
             app_icon = QIcon(pixmap)
-        else:
-            logging.error("加载图标数据失败，使用默认图标")
-            app_icon = QIcon()  # 使用默认图标
-    else:
-        logging.warning("未能从数据库加载图标，使用默认图标")
-        app_icon = QIcon()  # 使用默认图标
 
     # 设置窗口图标
     app.setWindowIcon(app_icon)

@@ -1,7 +1,7 @@
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                              QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QMessageBox, QWidget)
 from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtCore import Qt, QEvent, QByteArray
+from PyQt6.QtCore import Qt, QEvent, QByteArray, pyqtSignal
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath
 from gui.clickable_label import ClickableLabel
 from modules.agreement_dialog import AgreementDialog
@@ -23,6 +23,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 
 class LoginDialog(QDialog):
+    login_success = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         parent_width = parent.width()
@@ -465,8 +467,7 @@ class LoginDialog(QDialog):
             timer_manager = self.register_timer_manager
 
         if not validate_email(email):
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("请输入有效的邮箱地址")
             msg_box.setWindowTitle("邮箱格式错误")
             msg_box.exec()
@@ -477,8 +478,7 @@ class LoginDialog(QDialog):
             self.verification_manager.set_verification_code(email, code)
             timer_manager.start_countdown()
         else:
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("验证码邮件发送失败，请稍后重试")
             msg_box.setWindowTitle("发送失败")
             msg_box.exec()
@@ -491,8 +491,7 @@ class LoginDialog(QDialog):
 
         # 校验用户名
         if not username:
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("请输入用户名")
             msg_box.setWindowTitle("用户名缺失")
             msg_box.exec()
@@ -500,8 +499,7 @@ class LoginDialog(QDialog):
 
         # 校验邮箱
         if not validate_email(email):
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("请输入有效的邮箱地址")
             msg_box.setWindowTitle("邮箱格式错误")
             msg_box.exec()
@@ -509,8 +507,7 @@ class LoginDialog(QDialog):
 
         # 校验密码
         if not validate_password(password):
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("密码应包含大小写字母、数字和特殊字符，长度至少8位")
             msg_box.setWindowTitle("密码格式错误")
             msg_box.exec()
@@ -518,8 +515,7 @@ class LoginDialog(QDialog):
 
         # 校验验证码
         if not self.verification_manager.verify_code(email, input_code):
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("验证码已过期或不正确，请重新获取")
             msg_box.setWindowTitle("验证码错误")
             msg_box.exec()
@@ -528,7 +524,6 @@ class LoginDialog(QDialog):
         # 检查用户名是否已存在
         if self.db_manager.get_user_by_email(email):
             msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
             msg_box.setText("用户已存在，请直接登录")
             msg_box.setWindowTitle("用户已存在")
             msg_box.exec()
@@ -552,9 +547,9 @@ class LoginDialog(QDialog):
 
             self.clear_focus()  # 关闭前移除焦点
             self.close()
+            self.login_success.emit()
         else:
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("注册失败，请稍后重试")
             msg_box.setWindowTitle("注册失败")
             msg_box.exec()
@@ -566,8 +561,7 @@ class LoginDialog(QDialog):
 
         # 校验邮箱
         if not validate_email(email):
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("请输入有效的邮箱地址")
             msg_box.setWindowTitle("邮箱格式错误")
             msg_box.exec()
@@ -575,8 +569,7 @@ class LoginDialog(QDialog):
 
         # 校验验证码
         if not self.verification_manager.verify_code(email, input_code):
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("验证码已过期或不正确，请重新获取")
             msg_box.setWindowTitle("验证码错误")
             msg_box.exec()
@@ -599,15 +592,14 @@ class LoginDialog(QDialog):
 
                 self.clear_focus()  # 关闭前移除焦点
                 self.close()
+                self.login_success.emit()
             else:
-                msg_box = CustomMessageBox()
-                msg_box.setIcon(QMessageBox.Icon.Warning)
+                msg_box = CustomMessageBox(self.parent())
                 msg_box.setText("密码错误，请重试")
                 msg_box.setWindowTitle("登录失败")
                 msg_box.exec()
         else:
-            msg_box = CustomMessageBox()
-            msg_box.setIcon(QMessageBox.Icon.Warning)
+            msg_box = CustomMessageBox(self.parent())
             msg_box.setText("用户不存在，请先注册")
             msg_box.setWindowTitle("登录失败")
             msg_box.exec()
@@ -631,6 +623,7 @@ class LoginDialog(QDialog):
 
                     self.clear_focus()  # 关闭前移除焦点
                     self.close()
+                    self.login_success.emit()
                     return True
         return False
 

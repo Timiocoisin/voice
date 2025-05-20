@@ -36,6 +36,11 @@ class MainWindow(QMainWindow):
         # 创建登录对话框实例，但不立即显示
         self.login_dialog = LoginDialog(self)
 
+        # 创建蒙版控件
+        self.mask_widget = QWidget(self)
+        self.mask_widget.setStyleSheet("background-color: rgba(50, 50, 50, 150);")
+        self.mask_widget.setVisible(False)
+
         # 检查自动登录状态
         self.check_auto_login()
 
@@ -73,31 +78,70 @@ class MainWindow(QMainWindow):
         top_bar = self.create_top_bar()
         rounded_layout.addWidget(top_bar)
 
-        # 创建三列布局
-        grid_layout = QGridLayout()
-        grid_layout.setContentsMargins(15, 15, 15, 15)
-        grid_layout.setHorizontalSpacing(20)  # 列间距
-        grid_layout.setVerticalSpacing(15)    # 行间距
+        # 创建主内容区域
+        main_content_widget = QWidget()
+        main_content_layout = QVBoxLayout(main_content_widget)
+        main_content_layout.setContentsMargins(15, 15, 15, 15)
+        main_content_layout.setSpacing(15)  # 行间距
 
-        # 按行优先顺序添加板块（row, column, rowSpan, columnSpan）
-        grid_layout.addWidget(self.create_section_widget(0), 0, 0)  # 板块1（第1行第1列）
-        grid_layout.addWidget(self.create_section_widget(1), 0, 1)  # 板块2（第1行第2列）
-        grid_layout.addWidget(self.create_section_widget(2), 0, 2)  # 板块3（第1行第3列）
-        grid_layout.addWidget(self.create_section_widget(3), 1, 0)  # 板块4（第2行第1列）
-        grid_layout.addWidget(self.create_section_widget(4), 1, 1)  # 板块5（第2行第2列）
-        grid_layout.addWidget(self.create_section_widget(5), 1, 2)  # 板块6（第2行第3列）
+        # 创建独立的行布局和板块
+        # 第一行
+        row1_widget = QWidget()
+        row1_layout = QHBoxLayout(row1_widget)
+        row1_layout.setContentsMargins(0, 0, 0, 0)
+        row1_layout.setSpacing(20)  # 列间距
 
-        grid_layout.setColumnStretch(0, 1)  # 左侧列权重1
-        grid_layout.setColumnStretch(1, 3)  # 中间列权重3
-        grid_layout.setColumnStretch(2, 1)  # 右侧列权重1
+        # 板块1 - 独立布局
+        section1 = self.create_section_widget(0)
+        section1_layout = QVBoxLayout()
+        section1_layout.addWidget(section1)
+        row1_layout.addLayout(section1_layout, 1)  # 权重1
 
-        rounded_layout.addLayout(grid_layout, stretch=3)
+        # 板块2 - 独立布局
+        section2 = self.create_section_widget(1)
+        section2_layout = QVBoxLayout()
+        section2_layout.addWidget(section2)
+        row1_layout.addLayout(section2_layout, 3)  # 权重3
+
+        # 板块3 - 独立布局
+        section3 = self.create_section_widget(2)
+        section3_layout = QVBoxLayout()
+        section3_layout.addWidget(section3)
+        row1_layout.addLayout(section3_layout, 1)  # 权重1
+
+        main_content_layout.addWidget(row1_widget)
+
+        # 第二行
+        row2_widget = QWidget()
+        row2_layout = QHBoxLayout(row2_widget)
+        row2_layout.setContentsMargins(0, 0, 0, 0)
+        row2_layout.setSpacing(20)  # 列间距
+
+        # 板块4 - 独立布局
+        section4 = self.create_section_widget(3)
+        section4_layout = QVBoxLayout()
+        section4_layout.addWidget(section4)
+        row2_layout.addLayout(section4_layout, 1)  # 权重1
+
+        # 板块5 - 独立布局
+        section5 = self.create_section_widget(4)
+        section5_layout = QVBoxLayout()
+        section5_layout.addWidget(section5)
+        row2_layout.addLayout(section5_layout, 3)  # 权重3
+
+        # 板块6 - 独立布局
+        section6 = self.create_section_widget(5)
+        section6_layout = QVBoxLayout()
+        section6_layout.addWidget(section6)
+        row2_layout.addLayout(section6_layout, 1)  # 权重1
+
+        main_content_layout.addWidget(row2_widget)
+
+        rounded_layout.addWidget(main_content_widget, stretch=3)
 
         # 底部红色导航栏模块
         bottom_bar = self.create_bottom_bar()
         rounded_layout.addWidget(bottom_bar)
-
-        main_layout.addWidget(self.rounded_bg)
 
         main_layout.addWidget(self.rounded_bg)
 
@@ -111,7 +155,7 @@ class MainWindow(QMainWindow):
                 padding: 10px;
             }
         """)
-        
+
         # 底部导航栏内容
         title = QLabel("底部导航栏")
         title.setStyleSheet("""
@@ -123,10 +167,10 @@ class MainWindow(QMainWindow):
             }
         """)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        
+
         layout = QHBoxLayout(bottom_bar)
         layout.addWidget(title)
-        
+
         return bottom_bar
 
     def create_section_widget(self, index):
@@ -139,22 +183,23 @@ class MainWindow(QMainWindow):
                 padding: 15px;
             }}
         """)
-        
+
         title = QLabel(f"板块 {index + 1}")
         title.setStyleSheet("font-weight: bold; font-size: 16px;")
-        
+
         content = QLabel(f"这是板块 {index + 1} 的内容")
-        
+
         layout = QVBoxLayout(section_widget)
         layout.addWidget(title)
         layout.addWidget(content)
         layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-        
+
         return section_widget
 
     def create_top_bar(self):
         """创建顶部导航栏"""
         top_bar = QWidget()
+        top_bar.setObjectName("topBar")
         top_bar.setStyleSheet("background-color: transparent;")
         top_bar.setFixedHeight(50)  # 调整顶部导航栏高度，使其更紧凑
 
@@ -186,19 +231,17 @@ class MainWindow(QMainWindow):
         if logo_data:
             logo_pixmap = QPixmap()
             logo_pixmap.loadFromData(logo_data)
-        else:
-            logo_pixmap = QPixmap()
 
         # 调整Logo大小
-        logo_height = int(parent_widget.height() * 1.5)  # 调整Logo高度比例
+        logo_height = int(parent_widget.height() * 2.5)  # 调整Logo高度比例
         logo_pixmap = logo_pixmap.scaled(
-            logo_height * 2,  # 调整Logo宽度比例
+            logo_height * 3,  # 调整Logo宽度比例
             logo_height,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         )
         logo_label.setPixmap(logo_pixmap)
-        logo_label.setStyleSheet("margin-right: 10px;")  # 减小右侧间距
+        logo_label.setStyleSheet("margin-right: 15px;")
 
         return logo_label
 
@@ -264,7 +307,7 @@ class MainWindow(QMainWindow):
 
         # 头像标签
         self.user_avatar_label = QLabel()
-        avatar_size = int(parent_widget.height() * 0.6)  # 减小头像大小
+        avatar_size = int(parent_widget.height() * 0.9)  # 减小头像大小
         self.user_avatar_label.setFixedSize(avatar_size, avatar_size)
         self.user_info_layout.addWidget(self.user_avatar_label)
 
@@ -329,10 +372,15 @@ class MainWindow(QMainWindow):
 
             self.login_dialog_offset = self.login_dialog.pos() - self.pos()
 
+            # 显示蒙版
+            self.mask_widget.setGeometry(0, 0, self.width(), self.height())
+            self.mask_widget.setVisible(True)
+
     def check_auto_login(self):
         """检查自动登录"""
         if self.login_dialog.check_token():
-            pass
+            # 自动登录成功，隐藏蒙版
+            self.mask_widget.setVisible(False)
         else:
             QTimer.singleShot(1000, self.show_login_dialog)  # 如果自动登录失败，延迟显示登录对话框
 
@@ -460,6 +508,9 @@ class MainWindow(QMainWindow):
             center_x = self.x() + (self.width() - dialog_width) // 2
             center_y = self.y() + (self.height() - dialog_height) // 2
             self.login_dialog.move(center_x, center_y)
+
+        # 调整蒙版大小
+        self.mask_widget.setGeometry(0, 0, self.width(), self.height())
 
 
 class RoundedBackgroundWidget(QWidget):
