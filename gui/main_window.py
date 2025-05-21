@@ -19,6 +19,7 @@ import logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
+
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
