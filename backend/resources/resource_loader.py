@@ -13,23 +13,25 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # 获取项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 RESOURCES_DIR = PROJECT_ROOT / "resources"
+ICONS_DIR = RESOURCES_DIR / "icons"
+IMAGES_DIR = RESOURCES_DIR / "images"
 
-# 图标ID到文件名的映射
+# 图标ID到文件路径的映射（相对路径，会在对应的目录下查找）
 ICON_MAPPING = {
-    1: "close.svg",          # 关闭图标
-    2: "diamond.svg",        # 钻石图标
-    3: "email.svg",          # 邮箱图标
-    4: "default_avatar.png", # 默认头像
-    5: "app_icon.png",       # 应用图标
-    6: "logo.png",           # Logo
-    7: "minimize.svg",       # 最小化图标
-    8: "password.svg",       # 密码图标
-    9: "headset.svg",        # 耳机图标
-    10: "speaker.svg",       # 喇叭图标/注册密码图标
-    11: "username.svg",      # 用户名图标
-    12: "code.svg",          # 验证码图标
-    13: "vip.svg",           # VIP图标
-    14: "background.jpg",    # 背景图片
+    1: ("icons", "close.svg"),          # 关闭图标
+    2: ("icons", "diamond.svg"),        # 钻石图标
+    3: ("icons", "email.svg"),          # 邮箱图标
+    4: ("images", "default_avatar.png"), # 默认头像
+    5: ("images", "app_icon.png"),       # 应用图标
+    6: ("images", "logo.png"),           # Logo
+    7: ("icons", "minimize.svg"),        # 最小化图标
+    8: ("icons", "password.svg"),        # 密码图标
+    9: ("icons", "headset.svg"),         # 耳机图标
+    10: ("icons", "speaker.svg"),        # 喇叭图标/注册密码图标
+    11: ("icons", "username.svg"),       # 用户名图标
+    12: ("icons", "code.svg"),           # 验证码图标
+    13: ("icons", "vip.svg"),            # VIP图标
+    14: ("images", "background.jpg"),    # 背景图片
 }
 
 
@@ -47,8 +49,16 @@ def get_resource_path(icon_id: int) -> Optional[Path]:
         logging.warning(f"未找到图标ID {icon_id} 的映射")
         return None
     
-    filename = ICON_MAPPING[icon_id]
-    file_path = RESOURCES_DIR / filename
+    subdir, filename = ICON_MAPPING[icon_id]
+    
+    # 根据子目录类型选择对应的目录
+    if subdir == "icons":
+        file_path = ICONS_DIR / filename
+    elif subdir == "images":
+        file_path = IMAGES_DIR / filename
+    else:
+        # 兼容旧格式，直接放在 resources 根目录
+        file_path = RESOURCES_DIR / filename
     
     if not file_path.exists():
         logging.warning(f"资源文件不存在: {file_path}")
