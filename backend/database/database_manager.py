@@ -2,6 +2,7 @@ import mysql.connector
 import bcrypt
 from typing import Optional
 import logging
+from backend.resources import get_default_avatar
 
 # 配置日志记录
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -175,8 +176,8 @@ class DatabaseManager:
             return None
 
     def read_default_avatar(self) -> Optional[bytes]:
-        """读取默认头像文件并返回二进制数据，默认头像为 logos 表中 id 为 4 的 icon"""
-        return self.get_icon_by_id(4)
+        """读取默认头像文件并返回二进制数据，从本地文件加载"""
+        return get_default_avatar()
 
     def get_icon_by_id(self, icon_id: int):
         """根据图标ID获取图标数据"""

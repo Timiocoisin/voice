@@ -13,6 +13,7 @@ from backend.timer.timer_manager import TimerManager
 from backend.config.config import email_config
 from gui.custom_message_box import CustomMessageBox
 from backend.database.database_manager import DatabaseManager
+from backend.resources import load_icon_data
 import bcrypt
 from backend.login.token_utils import generate_token, verify_token
 from backend.login.token_storage import save_token, read_token
@@ -104,7 +105,7 @@ class LoginDialog(QDialog):
 
         # 用户名输入框布局（注册专用）
         self.username_layout = QHBoxLayout()
-        icon_data = self.db_manager.get_icon_by_id(11)
+        icon_data = load_icon_data(11)
         if icon_data:
             username_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
@@ -120,7 +121,7 @@ class LoginDialog(QDialog):
 
         # 登录邮箱输入框布局
         self.login_email_layout = QHBoxLayout()
-        icon_data = self.db_manager.get_icon_by_id(3)
+        icon_data = load_icon_data(3)
         if icon_data:
             login_email_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
@@ -158,7 +159,7 @@ class LoginDialog(QDialog):
 
         # 注册邮箱输入框布局
         self.register_email_layout = QHBoxLayout()
-        icon_data = self.db_manager.get_icon_by_id(3)
+        icon_data = load_icon_data(3)
         if icon_data:
             register_email_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
@@ -196,7 +197,7 @@ class LoginDialog(QDialog):
 
         # 验证码输入框布局（共用）
         self.verification_code_layout = QHBoxLayout()
-        icon_data = self.db_manager.get_icon_by_id(12)
+        icon_data = load_icon_data(12)
         if icon_data:
             code_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
@@ -212,7 +213,7 @@ class LoginDialog(QDialog):
 
         # 登录密码输入框布局
         self.login_password_layout = QHBoxLayout()
-        icon_data = self.db_manager.get_icon_by_id(8)
+        icon_data = load_icon_data(8)
         if icon_data:
             login_password_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
@@ -228,7 +229,7 @@ class LoginDialog(QDialog):
 
         # 注册密码输入框布局
         self.register_password_layout = QHBoxLayout()
-        icon_data = self.db_manager.get_icon_by_id(10)
+        icon_data = load_icon_data(10)
         if icon_data:
             register_password_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)

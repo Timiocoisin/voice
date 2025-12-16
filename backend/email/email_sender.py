@@ -10,8 +10,8 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class EmailSender:
     def __init__(self, config):
-        """初始化 EmailSender 类，配置信息通过参数传入"""
-        self.config = config
+        """初始化 EmailSender 类，固定使用配置中的发送方信息"""
+        self.config = config  # 固定使用配置好的发送方信息
         self.server = None
 
     def connect(self):
@@ -32,7 +32,11 @@ class EmailSender:
             logging.info("已关闭与邮件服务器的连接")
 
     def send_verification_code(self, recipient_email, code, expires_in_minutes=5):
-        """发送验证码邮件"""
+        """发送验证码邮件
+        :param recipient_email: 接收方邮箱（用户输入的目标邮箱）
+        :param code: 验证码
+        :param expires_in_minutes: 有效期（分钟）
+        """
         if not self.connect():
             return False
 
@@ -42,7 +46,7 @@ class EmailSender:
         expire_str = expire_time.strftime("%Y年%m月%d日 %H:%M:%S")
 
         subject = "【语音转换系统】您的验证码"
-        # 调整后的邮件内容（动态年份）
+        # 邮件内容（使用HTML格式）
         content = f"""
             <!DOCTYPE html>
             <html lang="zh-CN">
@@ -265,7 +269,8 @@ class EmailSender:
             msg['To'] = recipient_email
             msg['Subject'] = Header(subject, 'utf-8')
 
-            self.server.sendmail(self.config['sender_email'], recipient_email, msg.as_string())
+            # 发送方固定为配置中的邮箱，接收方为用户输入的邮箱
+            self.server.sendmail(sender_email, recipient_email, msg.as_string())
             logging.info(f"验证码邮件已成功发送至 {recipient_email}")
             return True
         except Exception as e:
@@ -279,3 +284,19 @@ def generate_verification_code(length=6):
     import string
     all_characters = string.digits + string.ascii_letters
     return ''.join(random.choices(all_characters, k=length))    
+
+
+# 使用示例
+if __name__ == "__main__":
+    # 用户输入的目标邮箱（接收方）
+    user_email = input("请输入接收验证码的邮箱：")
+    
+    # 生成验证码
+    code = generate_verification_code()
+    
+    # 发送验证码
+    sender = EmailSender()
+    if sender.send_verification_code(user_email, code):
+        print(f"验证码 {code} 已发送至 {user_email}")
+    else:
+        print("验证码发送失败")

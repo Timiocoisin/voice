@@ -12,6 +12,7 @@ from backend.database.database_manager import DatabaseManager
 from backend.login.token_storage import  read_token
 from backend.login.token_utils import verify_token
 from backend.login.login_status_manager import check_login_status, save_login_status
+from backend.resources import load_icon_data, get_logo
 import logging
 
 
@@ -71,7 +72,7 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(20, 20, 20, 20)
 
         # 圆角背景窗口
-        self.rounded_bg = RoundedBackgroundWidget(self.db_manager)
+        self.rounded_bg = RoundedBackgroundWidget()
         self.rounded_bg.setObjectName("roundedBackground")
         self.rounded_bg.setStyleSheet("""
             #roundedBackground {
@@ -236,21 +237,21 @@ class MainWindow(QMainWindow):
         """创建Logo标签"""
         logo_label = QLabel()
 
-        # 从数据库获取 logo 数据
-        logo_data = self.db_manager.get_latest_logo()
+        # 从本地文件加载 logo 数据
+        logo_data = get_logo()
         if logo_data:
             logo_pixmap = QPixmap()
             logo_pixmap.loadFromData(logo_data)
 
-        # 调整Logo大小
-        logo_height = int(parent_widget.height() * 2.5)  # 调整Logo高度比例
-        logo_pixmap = logo_pixmap.scaled(
-            logo_height * 3,  # 调整Logo宽度比例
-            logo_height,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        )
-        logo_label.setPixmap(logo_pixmap)
+            # 调整Logo大小
+            logo_height = int(parent_widget.height() * 2.5)  # 调整Logo高度比例
+            logo_pixmap = logo_pixmap.scaled(
+                logo_height * 3,  # 调整Logo宽度比例
+                logo_height,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation
+            )
+            logo_label.setPixmap(logo_pixmap)
         logo_label.setStyleSheet("margin-right: 15px;")
 
         return logo_label
@@ -359,7 +360,8 @@ class MainWindow(QMainWindow):
 
     def create_svg_widget(self, icon_id, width, height, style):
         """创建SVG图标控件"""
-        icon_data = self.db_manager.get_icon_by_id(icon_id)
+        # 从本地文件加载图标数据
+        icon_data = load_icon_data(icon_id)
         if not icon_data:
             return None
 
@@ -582,12 +584,12 @@ class MainWindow(QMainWindow):
 
 
 class RoundedBackgroundWidget(QWidget):
-    def __init__(self, db_manager):
+    def __init__(self):
         super().__init__()
         self.radius = 20
 
-        # 从数据库获取背景图片
-        background_image_data = db_manager.get_icon_by_id(14)
+        # 从本地文件加载背景图片
+        background_image_data = load_icon_data(14)
         if background_image_data:
             self.background_image = QPixmap()
             self.background_image.loadFromData(background_image_data)

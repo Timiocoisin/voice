@@ -5,6 +5,7 @@ from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtCore import QByteArray  # 引入 QByteArray
 from gui.main_window import MainWindow
 from backend.database.database_manager import DatabaseManager
+from backend.resources import load_icon_data
 import logging
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -19,7 +20,8 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     db_manager = DatabaseManager()
 
-    app_icon_data = db_manager.get_icon_by_id(5)
+    # 从本地文件加载应用图标
+    app_icon_data = load_icon_data(5)
 
     # 如果获取到的图标数据是字节类型，则将其转换为 QIcon
     if app_icon_data:
