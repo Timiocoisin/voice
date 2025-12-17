@@ -1,7 +1,7 @@
 # 文件 1：main_window.py
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect, QGridLayout,
-    QFileDialog
+    QFileDialog, QDialog
 )
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent, QPoint, QByteArray, QRectF
@@ -14,6 +14,7 @@ from backend.login.token_utils import verify_token
 from backend.login.login_status_manager import check_login_status, save_login_status
 from backend.resources import load_icon_data, get_logo, get_default_avatar
 from gui.custom_message_box import CustomMessageBox
+from gui.avatar_crop_dialog import AvatarCropDialog
 import logging
 
 
@@ -683,15 +684,32 @@ class MainWindow(QMainWindow):
         if self.user_id:
             file_path, _ = QFileDialog.getOpenFileName(self, "选择头像", "", "Images (*.png *.jpg *.jpeg *.bmp)")
             if file_path:
-                with open(file_path, "rb") as file:
-                    avatar_data = file.read()
-                    if self.db_manager.update_user_avatar(self.user_id, avatar_data):
-                        # 更新成功后，重新加载头像显示
-                        self.update_user_avatar_display(avatar_data)
+                # 打开裁剪对话框
+                crop_dialog = AvatarCropDialog(file_path, self)
+                # 居中显示
+                dialog_rect = crop_dialog.geometry()
+                parent_rect = self.geometry()
+                x = parent_rect.x() + (parent_rect.width() - dialog_rect.width()) // 2
+                y = parent_rect.y() + (parent_rect.height() - dialog_rect.height()) // 2
+                crop_dialog.move(x, y)
+                
+                if crop_dialog.exec() == QDialog.DialogCode.Accepted:
+                    # 获取裁剪后的头像数据
+                    avatar_data = crop_dialog.get_cropped_avatar_bytes()
+                    if avatar_data:
+                        if self.db_manager.update_user_avatar(self.user_id, avatar_data):
+                            # 更新成功后，重新加载头像显示
+                            self.update_user_avatar_display(avatar_data)
+                            logging.info("头像更新成功")
+                        else:
+                            msg_box = CustomMessageBox(self, variant="error")
+                            msg_box.setWindowTitle("更新失败")
+                            msg_box.setText("头像更新失败，请稍后重试")
+                            msg_box.exec()
                     else:
                         msg_box = CustomMessageBox(self, variant="error")
-                        msg_box.setWindowTitle("更新失败")
-                        msg_box.setText("头像更新失败，请稍后重试")
+                        msg_box.setWindowTitle("错误")
+                        msg_box.setText("无法获取裁剪后的头像")
                         msg_box.exec()
         else:
             msg_box = CustomMessageBox(self, variant="error")
