@@ -7,6 +7,7 @@ from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent, QPoint, QByteArray, QRectF
 from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QBrush, QColor
 from modules.login_dialog import LoginDialog
+from modules.vip_membership_dialog import VipMembershipDialog, VipPackageDialog, DiamondPackageDialog
 from backend.login.login_status_manager import check_login_status
 from backend.database.database_manager import DatabaseManager
 from backend.login.token_storage import  read_token
@@ -99,76 +100,66 @@ class MainWindow(QMainWindow):
 
         # 创建主内容区域
         main_content_widget = QWidget()
-        main_content_layout = QVBoxLayout(main_content_widget)
+        main_content_layout = QHBoxLayout(main_content_widget)
         main_content_layout.setContentsMargins(20, 15, 20, 15)  # 优化边距，给内容更多空间
-        main_content_layout.setSpacing(18)  # 优化行间距
+        main_content_layout.setSpacing(18)  # 优化列间距
+        main_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
-        # 创建独立的行布局和板块
-        # 第一行
-        row1_widget = QWidget()
-        row1_layout = QHBoxLayout(row1_widget)
-        row1_layout.setContentsMargins(0, 0, 0, 0)
-        row1_layout.setSpacing(18)  # 优化列间距
-        row1_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        # 左边列：版块1和版块4垂直排列，各占一半
+        left_column_widget = QWidget()
+        left_column_layout = QVBoxLayout(left_column_widget)
+        left_column_layout.setContentsMargins(0, 0, 0, 0)
+        left_column_layout.setSpacing(18)  # 优化行间距
 
-        # 板块1 - 独立布局
+        # 版块1
         section1 = self.create_section_widget(0)
         section1.setMinimumHeight(220)  # 设置最小高度，确保内容有足够空间
         section1_layout = QVBoxLayout()
         section1_layout.setContentsMargins(0, 0, 0, 0)
         section1_layout.addWidget(section1)
-        row1_layout.addLayout(section1_layout, 1)  # 权重1
+        left_column_layout.addLayout(section1_layout, 1)  # 拉伸因子1，占一半
 
-        # 板块2 - 独立布局
-        section2 = self.create_section_widget(1)
-        section2.setMinimumHeight(220)  # 设置最小高度
-        section2_layout = QVBoxLayout()
-        section2_layout.setContentsMargins(0, 0, 0, 0)
-        section2_layout.addWidget(section2)
-        row1_layout.addLayout(section2_layout, 3)  # 权重3
-
-        # 板块3 - 独立布局
-        section3 = self.create_section_widget(2)
-        section3.setMinimumHeight(220)  # 设置最小高度
-        section3_layout = QVBoxLayout()
-        section3_layout.setContentsMargins(0, 0, 0, 0)
-        section3_layout.addWidget(section3)
-        row1_layout.addLayout(section3_layout, 1)  # 权重1
-
-        main_content_layout.addWidget(row1_widget)
-
-        # 第二行
-        row2_widget = QWidget()
-        row2_layout = QHBoxLayout(row2_widget)
-        row2_layout.setContentsMargins(0, 0, 0, 0)
-        row2_layout.setSpacing(18)  # 优化列间距
-        row2_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        # 板块4 - 独立布局
+        # 版块4
         section4 = self.create_section_widget(3)
         section4.setMinimumHeight(220)  # 设置最小高度
         section4_layout = QVBoxLayout()
         section4_layout.setContentsMargins(0, 0, 0, 0)
         section4_layout.addWidget(section4)
-        row2_layout.addLayout(section4_layout, 1)  # 权重1
+        left_column_layout.addLayout(section4_layout, 1)  # 拉伸因子1，占一半
 
-        # 板块5 - 独立布局
-        section5 = self.create_section_widget(4)
-        section5.setMinimumHeight(220)  # 设置最小高度
-        section5_layout = QVBoxLayout()
-        section5_layout.setContentsMargins(0, 0, 0, 0)
-        section5_layout.addWidget(section5)
-        row2_layout.addLayout(section5_layout, 3)  # 权重3
+        main_content_layout.addWidget(left_column_widget, 1)  # 权重1
 
-        # 板块6 - 独立布局
+        # 中间列：合并后的版块2（原版块2和版块5合并）
+        merged_section2 = self.create_merged_section_widget()
+        merged_section2.setMinimumHeight(460)  # 设置最小高度，跨越两行（220 + 220 + 间距）
+        merged_section2_layout = QVBoxLayout()
+        merged_section2_layout.setContentsMargins(0, 0, 0, 0)
+        merged_section2_layout.addWidget(merged_section2)
+        main_content_layout.addLayout(merged_section2_layout, 3)  # 权重3
+
+        # 右边列：版块3和版块6垂直排列，各占一半
+        right_column_widget = QWidget()
+        right_column_layout = QVBoxLayout(right_column_widget)
+        right_column_layout.setContentsMargins(0, 0, 0, 0)
+        right_column_layout.setSpacing(18)  # 优化行间距
+
+        # 版块3
+        section3 = self.create_section_widget(2)
+        section3.setMinimumHeight(220)  # 设置最小高度
+        section3_layout = QVBoxLayout()
+        section3_layout.setContentsMargins(0, 0, 0, 0)
+        section3_layout.addWidget(section3)
+        right_column_layout.addLayout(section3_layout, 1)  # 拉伸因子1，占一半
+
+        # 版块6
         section6 = self.create_section_widget(5)
         section6.setMinimumHeight(220)  # 设置最小高度
         section6_layout = QVBoxLayout()
         section6_layout.setContentsMargins(0, 0, 0, 0)
         section6_layout.addWidget(section6)
-        row2_layout.addLayout(section6_layout, 1)  # 权重1
+        right_column_layout.addLayout(section6_layout, 1)  # 拉伸因子1，占一半
 
-        main_content_layout.addWidget(row2_widget)
+        main_content_layout.addWidget(right_column_widget, 1)  # 权重1
 
         rounded_layout.addWidget(main_content_widget, stretch=1)
 
@@ -288,6 +279,110 @@ class MainWindow(QMainWindow):
 
         return section_widget
 
+    def create_merged_section_widget(self):
+        """创建合并后的版块2（原版块2和版块5合并）"""
+        section_widget = QWidget()
+        section_widget.setObjectName("section2_merged")
+        
+        # 优化板块样式：添加渐变背景、阴影效果
+        section_widget.setStyleSheet("""
+            #section2_merged {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255, 255, 255, 220),
+                    stop:1 rgba(255, 255, 255, 200));
+                border: 1px solid rgba(226, 232, 240, 200);
+                border-radius: 16px;
+                padding: 20px;
+            }
+            #section2_merged:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(255, 255, 255, 240),
+                    stop:1 rgba(255, 255, 255, 220));
+                border: 1px solid rgba(203, 213, 225, 250);
+            }
+        """)
+        
+        # 添加阴影效果
+        shadow = QGraphicsDropShadowEffect(section_widget)
+        shadow.setBlurRadius(20)
+        shadow.setOffset(0, 4)
+        shadow.setColor(QColor(0, 0, 0, 30))
+        section_widget.setGraphicsEffect(shadow)
+
+        layout = QVBoxLayout(section_widget)
+        layout.setContentsMargins(20, 20, 20, 20)
+        layout.setSpacing(12)
+        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        # 标题：版块2
+        title = QLabel("板块 2")
+        title.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-weight: 700;
+                font-size: 18px;
+                color: #1e293b;
+                padding-bottom: 8px;
+                border-bottom: 2px solid rgba(226, 232, 240, 200);
+                margin-bottom: 4px;
+            }
+        """)
+        layout.addWidget(title)
+
+        # 原版块2的内容
+        content1 = QLabel("这是板块 2 的内容")
+        content1.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 14px;
+                color: #64748b;
+                padding: 8px 0px;
+                line-height: 1.6;
+            }
+        """)
+        content1.setWordWrap(True)
+        layout.addWidget(content1)
+        
+        # 添加分隔线
+        separator = QWidget()
+        separator.setFixedHeight(1)
+        separator.setStyleSheet("background-color: rgba(226, 232, 240, 200); margin: 12px 0px;")
+        layout.addWidget(separator)
+        
+        # 标题：版块5（作为合并版块的一部分）
+        title2 = QLabel("板块 5")
+        title2.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-weight: 700;
+                font-size: 18px;
+                color: #1e293b;
+                padding-bottom: 8px;
+                border-bottom: 2px solid rgba(226, 232, 240, 200);
+                margin-bottom: 4px;
+            }
+        """)
+        layout.addWidget(title2)
+
+        # 原版块5的内容
+        content2 = QLabel("这是板块 5 的内容")
+        content2.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 14px;
+                color: #64748b;
+                padding: 8px 0px;
+                line-height: 1.6;
+            }
+        """)
+        content2.setWordWrap(True)
+        layout.addWidget(content2)
+        
+        # 添加弹性空间
+        layout.addStretch()
+
+        return section_widget
+
     def create_top_bar(self):
         """创建顶部导航栏"""
         top_bar = QWidget()
@@ -347,44 +442,62 @@ class MainWindow(QMainWindow):
         """创建公告布局"""
         announcement_layout = QHBoxLayout()
         announcement_layout.setContentsMargins(0, 0, 0, 0)
-        announcement_layout.setSpacing(8)  # 优化图标和文字之间的间距
+        announcement_layout.setSpacing(8)  # 公告容器和客服按钮之间的间距
         announcement_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignHCenter)
 
-        # 公告左侧喇叭图标
-        speaker_icon = self.create_svg_widget(10, 18, 18, "margin: 0px; opacity: 0.7;")
-        if speaker_icon:
-            announcement_layout.addWidget(speaker_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
-
-        # 从数据库获取公告文本
-        announcement_text = self.db_manager.get_latest_announcement()
-        if not announcement_text:
-            announcement_text = "暂无公告"
-
-        # 公告标签 - 优化样式
-        announcement_label = QLabel(announcement_text)
-        announcement_label.setObjectName("announcementLabel")
-        announcement_label.setStyleSheet("""
-            #announcementLabel {
+        # 创建公告容器，包含背景样式
+        announcement_container = QWidget()
+        announcement_container.setObjectName("announcementContainer")
+        announcement_container.setStyleSheet("""
+            #announcementContainer {
                 background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
                     stop:0 rgba(255, 255, 255, 0.95),
                     stop:1 rgba(248, 250, 252, 0.95));
                 border: 1px solid rgba(226, 232, 240, 0.8);
                 border-radius: 12px;  
-                padding: 6px 14px;  
-                font-family: "Microsoft YaHei", "Roboto", "Arial";
-                font-size: 13px;  
-                font-weight: 500;
-                color: #475569;
                 max-width: 600px;  
                 min-width: 120px;
             }
         """)
+        announcement_container.setFixedHeight(26)  # 优化高度
+
+        # 容器内部布局
+        container_layout = QHBoxLayout(announcement_container)
+        container_layout.setContentsMargins(10, 0, 10, 0)  # 内边距
+        container_layout.setSpacing(8)  # 图标和文字之间的间距
+        container_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        # 公告左侧喇叭图标（放在容器内的最左侧）
+        speaker_icon = self.create_svg_widget(10, 18, 18, "margin: 0px; opacity: 0.7;")
+        if speaker_icon:
+            container_layout.addWidget(speaker_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
+
+        # 从数据库获取公告文本
+        announcement_text = self.db_manager.get_latest_announcement()
+        if not announcement_text:
+            announcement_text = "欢迎使用《声音序章》软件！！！"
+
+        # 公告标签 - 移除背景样式，因为背景已经在容器上
+        announcement_label = QLabel(announcement_text)
+        announcement_label.setObjectName("announcementLabel")
+        announcement_label.setStyleSheet("""
+            #announcementLabel {
+                background: transparent;
+                padding: 0px;
+                font-family: "Microsoft YaHei", "Roboto", "Arial";
+                font-size: 13px;  
+                font-weight: 500;
+                color: #475569;
+            }
+        """)
         announcement_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         announcement_label.setWordWrap(False)
-        announcement_label.setFixedHeight(26)  # 优化高度
-        announcement_layout.addWidget(announcement_label, stretch=1, alignment=Qt.AlignmentFlag.AlignVCenter)
+        container_layout.addWidget(announcement_label, stretch=1, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        # 公告右侧耳机图标
+        # 添加公告容器到布局
+        announcement_layout.addWidget(announcement_container, alignment=Qt.AlignmentFlag.AlignVCenter)
+
+        # 客服按钮（耳机图标）- 放在公告容器外面
         headset_icon = self.create_svg_widget(9, 18, 18, "margin: 0px; opacity: 0.7;")
         if headset_icon:
             announcement_layout.addWidget(headset_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
@@ -455,6 +568,9 @@ class MainWindow(QMainWindow):
         vip_group.setSpacing(5)  # 优化图标和文字间距
         self.vip_icon = self.create_svg_widget(13, 18, 18, "margin: 0px;")
         if self.vip_icon:
+            # 设置VIP图标可点击
+            self.vip_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.vip_icon.mousePressEvent = lambda event: self.show_vip_dialog() if event.button() == Qt.MouseButton.LeftButton else None
             vip_group.addWidget(self.vip_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.vip_status_label = QLabel("非会员")
         self.vip_status_label.setStyleSheet("""
@@ -467,6 +583,9 @@ class MainWindow(QMainWindow):
                 margin: 0px;
             }
         """)
+        # 设置VIP状态标签也可点击
+        self.vip_status_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.vip_status_label.mousePressEvent = lambda event: self.show_vip_dialog() if event.button() == Qt.MouseButton.LeftButton else None
         vip_group.addWidget(self.vip_status_label, alignment=Qt.AlignmentFlag.AlignVCenter)
         membership_layout.addLayout(vip_group)
 
@@ -476,6 +595,13 @@ class MainWindow(QMainWindow):
         diamond_group.setSpacing(5)  # 优化图标和文字间距
         self.diamond_icon = self.create_svg_widget(2, 18, 18, "margin: 0px;")
         if self.diamond_icon:
+            # 设置钻石图标可点击，打开钻石套餐弹窗
+            self.diamond_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.diamond_icon.mousePressEvent = (
+                lambda event: self.show_diamond_dialog()
+                if event.button() == Qt.MouseButton.LeftButton
+                else None
+            )
             diamond_group.addWidget(self.diamond_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.diamond_count_label = QLabel("0")
         self.diamond_count_label.setStyleSheet("""
@@ -678,6 +804,46 @@ class MainWindow(QMainWindow):
 
         # 更新头像（None/bytes/memoryview 都可）
         self.update_user_avatar_display(avatar_data)
+
+    def show_vip_dialog(self):
+        """显示VIP会员对话框"""
+        if not self.user_id:
+            # 如果用户未登录，提示先登录
+            msg_box = CustomMessageBox(self)
+            msg_box.setText("请先登录")
+            msg_box.setWindowTitle("提示")
+            msg_box.exec()
+            return
+        
+        # 获取当前会员状态
+        vip_info = self.db_manager.get_user_vip_info(self.user_id)
+        is_vip = False
+        if vip_info:
+            is_vip = bool(vip_info.get('is_vip', False))
+        
+        # 创建并显示VIP对话框
+        vip_dialog = VipMembershipDialog(self, user_id=self.user_id, is_vip=is_vip)
+        
+        # 居中显示对话框
+        dialog_rect = vip_dialog.geometry()
+        parent_rect = self.geometry()
+        x = parent_rect.x() + (parent_rect.width() - dialog_rect.width()) // 2
+        y = parent_rect.y() + (parent_rect.height() - dialog_rect.height()) // 2
+        vip_dialog.move(x, y)
+        
+        vip_dialog.exec()
+
+    def show_diamond_dialog(self):
+        """显示钻石套餐对话框"""
+        if not self.user_id:
+            msg_box = CustomMessageBox(self)
+            msg_box.setText("请先登录")
+            msg_box.setWindowTitle("提示")
+            msg_box.exec()
+            return
+
+        dialog = DiamondPackageDialog(self, user_id=self.user_id)
+        dialog.exec()
 
     def upload_avatar(self, event):
         """上传头像"""
