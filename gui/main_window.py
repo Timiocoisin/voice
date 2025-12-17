@@ -1,11 +1,29 @@
 # 文件 1：main_window.py
+import os
+import base64
+from datetime import datetime
+from html import escape
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout, QLabel, QGraphicsDropShadowEffect, QGridLayout,
-    QFileDialog, QDialog
+    QApplication,
+    QMainWindow,
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QLabel,
+    QGraphicsDropShadowEffect,
+    QGridLayout,
+    QFileDialog,
+    QDialog,
+    QTextEdit,
+    QLineEdit,
+    QPushButton,
+    QMenu,
+    QWidgetAction,
+    QScrollArea,
 )
 from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtCore import Qt, QEvent, QPoint, QByteArray, QRectF
-from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QBrush, QColor
+from PyQt6.QtCore import Qt, QEvent, QPoint, QByteArray, QRectF, QSize, QBuffer, QIODevice, QTimer
+from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QBrush, QColor, QIcon
 from modules.login_dialog import LoginDialog
 from modules.vip_membership_dialog import VipMembershipDialog, VipPackageDialog, DiamondPackageDialog
 from backend.login.login_status_manager import check_login_status
@@ -13,9 +31,10 @@ from backend.database.database_manager import DatabaseManager
 from backend.login.token_storage import  read_token
 from backend.login.token_utils import verify_token
 from backend.login.login_status_manager import check_login_status, save_login_status
-from backend.resources import load_icon_data, get_logo, get_default_avatar
+from backend.resources import load_icon_data, load_icon_path, get_logo, get_default_avatar
 from gui.custom_message_box import CustomMessageBox
 from gui.avatar_crop_dialog import AvatarCropDialog
+from .marquee_label import MarqueeLabel
 import logging
 
 
@@ -99,15 +118,15 @@ class MainWindow(QMainWindow):
         rounded_layout.addWidget(top_bar)
 
         # 创建主内容区域
-        main_content_widget = QWidget()
-        main_content_layout = QHBoxLayout(main_content_widget)
-        main_content_layout.setContentsMargins(20, 15, 20, 15)  # 优化边距，给内容更多空间
-        main_content_layout.setSpacing(18)  # 优化列间距
-        main_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+        self.main_content_widget = QWidget()
+        self.main_content_layout = QHBoxLayout(self.main_content_widget)
+        self.main_content_layout.setContentsMargins(20, 15, 20, 15)  # 优化边距，给内容更多空间
+        self.main_content_layout.setSpacing(18)  # 优化列间距
+        self.main_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
         # 左边列：版块1和版块4垂直排列，各占一半
-        left_column_widget = QWidget()
-        left_column_layout = QVBoxLayout(left_column_widget)
+        self.left_column_widget = QWidget()
+        left_column_layout = QVBoxLayout(self.left_column_widget)
         left_column_layout.setContentsMargins(0, 0, 0, 0)
         left_column_layout.setSpacing(18)  # 优化行间距
 
@@ -127,19 +146,19 @@ class MainWindow(QMainWindow):
         section4_layout.addWidget(section4)
         left_column_layout.addLayout(section4_layout, 1)  # 拉伸因子1，占一半
 
-        main_content_layout.addWidget(left_column_widget, 1)  # 权重1
+        self.main_content_layout.addWidget(self.left_column_widget, 1)  # 权重1
 
         # 中间列：合并后的版块2（原版块2和版块5合并）
-        merged_section2 = self.create_merged_section_widget()
-        merged_section2.setMinimumHeight(460)  # 设置最小高度，跨越两行（220 + 220 + 间距）
-        merged_section2_layout = QVBoxLayout()
-        merged_section2_layout.setContentsMargins(0, 0, 0, 0)
-        merged_section2_layout.addWidget(merged_section2)
-        main_content_layout.addLayout(merged_section2_layout, 3)  # 权重3
+        self.merged_section2 = self.create_merged_section_widget()
+        self.merged_section2.setMinimumHeight(460)  # 设置最小高度，跨越两行（220 + 220 + 间距）
+        self.merged_section2_layout = QVBoxLayout()
+        self.merged_section2_layout.setContentsMargins(0, 0, 0, 0)
+        self.merged_section2_layout.addWidget(self.merged_section2)
+        self.main_content_layout.addLayout(self.merged_section2_layout, 3)  # 权重3
 
         # 右边列：版块3和版块6垂直排列，各占一半
-        right_column_widget = QWidget()
-        right_column_layout = QVBoxLayout(right_column_widget)
+        self.right_column_widget = QWidget()
+        right_column_layout = QVBoxLayout(self.right_column_widget)
         right_column_layout.setContentsMargins(0, 0, 0, 0)
         right_column_layout.setSpacing(18)  # 优化行间距
 
@@ -159,9 +178,13 @@ class MainWindow(QMainWindow):
         section6_layout.addWidget(section6)
         right_column_layout.addLayout(section6_layout, 1)  # 拉伸因子1，占一半
 
-        main_content_layout.addWidget(right_column_widget, 1)  # 权重1
+        self.main_content_layout.addWidget(self.right_column_widget, 1)  # 权重1
 
-        rounded_layout.addWidget(main_content_widget, stretch=1)
+        # 客服聊天大面板（默认隐藏，点击耳机后显示，覆盖中间 + 右侧区域）
+        self.chat_panel = self.create_chat_panel(self.main_content_widget)
+        self.chat_panel.setVisible(False)
+
+        rounded_layout.addWidget(self.main_content_widget, stretch=1)
 
         # 底部红色导航栏模块
         bottom_bar = self.create_bottom_bar()
@@ -388,7 +411,8 @@ class MainWindow(QMainWindow):
         top_bar = QWidget()
         top_bar.setObjectName("topBar")
         top_bar.setStyleSheet("background-color: transparent;")
-        top_bar.setFixedHeight(40)  # 调整顶部导航栏高度，使其更紧凑
+        # 顶部导航栏再加高一些，让头像有更大的显示空间
+        top_bar.setFixedHeight(56)
 
         top_bar_layout = QHBoxLayout(top_bar)
         top_bar_layout.setContentsMargins(12, 0, 12, 0)  # 优化外边距
@@ -468,7 +492,7 @@ class MainWindow(QMainWindow):
         container_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # 公告左侧喇叭图标（放在容器内的最左侧）
-        speaker_icon = self.create_svg_widget(10, 18, 18, "margin: 0px; opacity: 0.7;")
+        speaker_icon = self.create_svg_widget(10, 20, 20, "margin: 0px; opacity: 0.75;")
         if speaker_icon:
             container_layout.addWidget(speaker_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
 
@@ -477,30 +501,32 @@ class MainWindow(QMainWindow):
         if not announcement_text:
             announcement_text = "欢迎使用《声音序章》软件！！！"
 
-        # 公告标签 - 移除背景样式，因为背景已经在容器上
-        announcement_label = QLabel(announcement_text)
+        # 公告标签使用自定义滚动组件（跑马灯效果）
+        announcement_label = MarqueeLabel()
         announcement_label.setObjectName("announcementLabel")
+        announcement_label.setText(announcement_text)
         announcement_label.setStyleSheet("""
             #announcementLabel {
                 background: transparent;
                 padding: 0px;
-                font-family: "Microsoft YaHei", "Roboto", "Arial";
+                font-family: \"Microsoft YaHei\", \"Roboto\", \"Arial\";
                 font-size: 13px;  
                 font-weight: 500;
                 color: #475569;
             }
         """)
-        announcement_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        announcement_label.setWordWrap(False)
+        announcement_label.setFixedHeight(20)
         container_layout.addWidget(announcement_label, stretch=1, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         # 添加公告容器到布局
         announcement_layout.addWidget(announcement_container, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        # 客服按钮（耳机图标）- 放在公告容器外面
-        headset_icon = self.create_svg_widget(9, 18, 18, "margin: 0px; opacity: 0.7;")
-        if headset_icon:
-            announcement_layout.addWidget(headset_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
+        # 客服按钮（耳机图标）- 放在公告容器外面，单独放大一档
+        self.headset_icon = self.create_svg_widget(9, 26, 26, "margin: 0px; opacity: 0.85;")
+        if self.headset_icon:
+            self.headset_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.headset_icon.mousePressEvent = self.open_customer_service_chat
+            announcement_layout.addWidget(self.headset_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         return announcement_layout
 
@@ -528,7 +554,7 @@ class MainWindow(QMainWindow):
 
         # 头像（再放大一些，几乎占满导航栏高度）
         self.user_avatar_label = QLabel()
-        avatar_size = max(32, parent_widget.height() - 4)
+        avatar_size = max(40, parent_widget.height() - 4)
         self.user_avatar_label.setFixedSize(avatar_size, avatar_size)
         self.user_avatar_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.user_avatar_label.mousePressEvent = self.upload_avatar
@@ -541,12 +567,12 @@ class MainWindow(QMainWindow):
         right_col_layout.setSpacing(4)  # 优化间距
         right_col_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
 
-        # 用户名（右上）
+        # 用户名（右上）- 字体加大
         self.username_display_label = QLabel("未登录")
         self.username_display_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "Roboto", "Arial";
-                font-size: 13px;
+                font-size: 15px;
                 font-weight: 700;
                 color: #0f172a;
                 padding: 0px;
@@ -566,7 +592,8 @@ class MainWindow(QMainWindow):
         vip_group = QHBoxLayout()
         vip_group.setContentsMargins(0, 0, 0, 0)
         vip_group.setSpacing(5)  # 优化图标和文字间距
-        self.vip_icon = self.create_svg_widget(13, 18, 18, "margin: 0px;")
+        # VIP 图标稍微放大
+        self.vip_icon = self.create_svg_widget(13, 20, 20, "margin: 0px;")
         if self.vip_icon:
             # 设置VIP图标可点击
             self.vip_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -576,7 +603,7 @@ class MainWindow(QMainWindow):
         self.vip_status_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: 600;
                 color: #1e293b;
                 padding: 0px;
@@ -593,7 +620,8 @@ class MainWindow(QMainWindow):
         diamond_group = QHBoxLayout()
         diamond_group.setContentsMargins(0, 0, 0, 0)
         diamond_group.setSpacing(4)  # 图标和数字紧挨在一起显示
-        self.diamond_icon = self.create_svg_widget(2, 18, 18, "margin: 0px;")
+        # 钻石图标稍微放大
+        self.diamond_icon = self.create_svg_widget(2, 20, 20, "margin: 0px;")
         if self.diamond_icon:
             # 设置钻石图标可点击，打开钻石套餐弹窗
             self.diamond_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
@@ -607,7 +635,7 @@ class MainWindow(QMainWindow):
         self.diamond_count_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 13px;
+                font-size: 14px;
                 font-weight: 600;
                 color: #1e293b;
                 padding: 0px;
@@ -675,6 +703,489 @@ class MainWindow(QMainWindow):
 
         return right_layout
 
+    def create_chat_panel(self, parent=None):
+        """创建客服聊天大面板，占据中间+右侧区域"""
+        chat_panel = QWidget(parent)
+        chat_panel.setObjectName("chatPanel")
+        chat_panel.setStyleSheet("""
+            #chatPanel {
+                background-color: transparent;
+            }
+        """)
+
+        # 根容器：整体包裹聊天+FAQ，右侧栏目嵌在同一个白色框内
+        root_layout = QHBoxLayout(chat_panel)
+        root_layout.setContentsMargins(0, 0, 0, 0)
+        root_layout.setSpacing(0)
+
+        container = QWidget()
+        container.setObjectName("chatContainer")
+        container.setStyleSheet("""
+            #chatContainer {
+                background-color: #ffffff;
+                border-radius: 16px;
+                border: 1px solid rgba(226, 232, 240, 200);
+            }
+        """)
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(0, 0, 0, 0)
+        container_layout.setSpacing(0)
+
+        # 顶部紫色标题栏（空间加大，标题改为“声音序章”）
+        header = QWidget()
+        header.setObjectName("chatHeader")
+        header.setStyleSheet("""
+            #chatHeader {
+                background-color: #7c3aed;
+                border-top-left-radius: 16px;
+                border-top-right-radius: 16px;
+            }
+        """)
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(20, 14, 20, 14)  # 更大的上下内边距
+        header_layout.setSpacing(10)
+
+        title_label = QLabel("声音序章")
+        title_label.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 16px;
+                font-weight: 700;
+            }
+        """)
+        header_layout.addWidget(title_label, alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+        header_layout.addStretch()
+
+        container_layout.addWidget(header)
+
+        # 中部主体：左聊天区 + 右 FAQ（同一容器内）
+        body = QWidget()
+        body_layout = QHBoxLayout(body)
+        body_layout.setContentsMargins(0, 0, 0, 0)
+        body_layout.setSpacing(0)
+
+        # 左侧聊天垂直布局
+        left_layout = QVBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(0)
+
+        # 滚动区域 + 垂直布局，每条消息是一个独立的圆角气泡控件
+        self.chat_scroll_area = QScrollArea()
+        self.chat_scroll_area.setWidgetResizable(True)
+        self.chat_scroll_area.setHorizontalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAlwaysOff)
+        self.chat_scroll_area.setStyleSheet("""
+            QScrollArea {
+                border: none;
+                background-color: #f4f5f7;
+            }
+            QScrollArea > QWidget > QWidget {
+                background-color: #f4f5f7;
+            }
+        """)
+
+        self.chat_scroll_widget = QWidget()
+        self.chat_layout = QVBoxLayout(self.chat_scroll_widget)
+        self.chat_layout.setContentsMargins(10, 10, 10, 10)
+        self.chat_layout.setSpacing(8)
+        self.chat_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+
+        self.chat_scroll_area.setWidget(self.chat_scroll_widget)
+        left_layout.addWidget(self.chat_scroll_area, stretch=1)
+        # 预生成默认客服 / 用户头像 Data URL（默认为同一张，可在更新头像时覆盖用户头像）
+        self._support_avatar_url = ""
+        self._user_avatar_url = ""
+        default_bytes = get_default_avatar()
+        if default_bytes:
+            self._support_avatar_url = self._avatar_bytes_to_data_url(default_bytes)
+            self._user_avatar_url = self._support_avatar_url
+
+        # 底部输入栏（高度更大，增加附件/表情/图片按钮占位）
+        input_bar = QWidget()
+        input_bar.setObjectName("chatInputBar")
+        input_bar.setStyleSheet("""
+            #chatInputBar {
+                background-color: #f8fafc;
+                border-bottom-left-radius: 16px;
+                border-bottom-right-radius: 16px;
+                border-top: 1px solid rgba(226, 232, 240, 180);
+            }
+        """)
+        input_layout = QVBoxLayout(input_bar)
+        input_layout.setContentsMargins(12, 10, 12, 12)
+        input_layout.setSpacing(8)
+
+        # 工具栏：表情、图片、文件（使用 SVG 图标）
+        tools_row = QHBoxLayout()
+        tools_row.setContentsMargins(0, 0, 0, 0)
+        tools_row.setSpacing(10)
+
+        self.emoji_button = QPushButton()
+        self._set_icon_button(self.emoji_button, 15, "表情")
+        self.emoji_button.clicked.connect(self.open_emoji_menu)
+        tools_row.addWidget(self.emoji_button, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        self.pic_button = QPushButton()
+        self._set_icon_button(self.pic_button, 17, "发送图片")
+        self.pic_button.clicked.connect(self.send_image)
+        tools_row.addWidget(self.pic_button, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        self.file_button = QPushButton()
+        self._set_icon_button(self.file_button, 16, "发送文件（≤100MB）")
+        self.file_button.clicked.connect(self.send_file)
+        tools_row.addWidget(self.file_button, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        tools_row.addStretch()
+        input_layout.addLayout(tools_row)
+
+        # 输入行
+        input_row = QHBoxLayout()
+        input_row.setContentsMargins(0, 0, 0, 0)
+        input_row.setSpacing(10)
+
+        self.chat_input = QLineEdit()
+        self.chat_input.setPlaceholderText("输入消息，回车或点击发送")
+        self.chat_input.setFixedHeight(40)
+        self.chat_input.setStyleSheet("""
+            QLineEdit {
+                border-radius: 20px;
+                border: 1px solid rgba(203, 213, 225, 200);
+                padding: 8px 14px;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+                background-color: #ffffff;
+            }
+            QLineEdit:focus {
+                border-color: #7c3aed;
+            }
+        """)
+        self.chat_input.returnPressed.connect(self._handle_chat_send)
+
+        send_button = QPushButton("发送")
+        send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        send_button.setFixedHeight(40)
+        send_button.setStyleSheet("""
+            QPushButton {
+                background-color: #7c3aed;
+                color: #ffffff;
+                border-radius: 20px;
+                padding: 8px 20px;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background-color: #6d28d9;
+            }
+            QPushButton:pressed {
+                background-color: #5b21b6;
+            }
+        """)
+        send_button.clicked.connect(self._handle_chat_send)
+
+        input_row.addWidget(self.chat_input, stretch=1)
+        input_row.addWidget(send_button, stretch=0)
+        input_layout.addLayout(input_row)
+
+        left_layout.addWidget(input_bar)
+
+        # 右侧常见问题栏目（嵌在同一容器内部）
+        faq_container = QWidget()
+        faq_container.setObjectName("faqContainer")
+        faq_container.setFixedWidth(240)
+        faq_container.setStyleSheet("""
+            #faqContainer {
+                background-color: #ffffff;
+                border-left: 1px solid rgba(226, 232, 240, 200);
+            }
+        """)
+        faq_layout = QVBoxLayout(faq_container)
+        faq_layout.setContentsMargins(16, 16, 16, 16)
+        faq_layout.setSpacing(12)
+
+        faq_title = QLabel("常见问题")
+        faq_title.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 15px;
+                font-weight: 700;
+                color: #1f2937;
+            }
+        """)
+        faq_layout.addWidget(faq_title)
+
+        self.faq_list = QTextEdit()
+        self.faq_list.setReadOnly(True)
+        self.faq_list.setStyleSheet("""
+            QTextEdit {
+                border: none;
+                background-color: #ffffff;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                color: #334155;
+            }
+        """)
+        self.faq_list.setPlaceholderText("这里展示常见问题列表，可根据需要填充内容。")
+        faq_layout.addWidget(self.faq_list, stretch=1)
+
+        # 将聊天与 FAQ 放入同一主体
+        body_layout.addLayout(left_layout, stretch=4)
+        body_layout.addWidget(faq_container, stretch=1)
+
+        container_layout.addWidget(body)
+        root_layout.addWidget(container)
+
+        return chat_panel
+
+    def open_customer_service_chat(self, event):
+        """点击顶部耳机图标时，打开客服聊天界面：将中间+右侧版块合并成一个大的聊天对话框"""
+        if event.button() != Qt.MouseButton.LeftButton:
+            return
+
+        # 只初始化一次布局切换
+        if getattr(self, "_chat_panel_added", False):
+            self.chat_panel.setVisible(True)
+            return
+
+        # 从主布局移除中间和右侧（占原来的 3+1 比例），用一个聊天面板等效占比替换
+        # 不再 setParent(None)，避免成为临时顶层窗口闪一下
+        if self.merged_section2_layout:
+            self.main_content_layout.removeItem(self.merged_section2_layout)
+            if self.merged_section2:
+                self.merged_section2.hide()
+        if self.right_column_widget:
+            self.main_content_layout.removeWidget(self.right_column_widget)
+            self.right_column_widget.hide()
+
+        # 聊天面板占据原中间+右侧的总宽度（保持左侧宽度不变）
+        # 先放入布局再显示，避免无父级时短暂成为顶层窗口闪烁
+        self.main_content_layout.addWidget(self.chat_panel, 4)
+        self.chat_panel.setVisible(True)
+        self._chat_panel_added = True
+
+    def _handle_chat_send(self):
+        """简单模拟发送消息，将内容追加到聊天记录中（后续可接入真实客服/机器人）"""
+        text = self.chat_input.text().strip()
+        if not text:
+            return
+        self._append_chat_message(text, from_self=True)
+        self.chat_input.clear()
+        # 模拟客服稍后回复
+        QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
+
+    def _append_chat_message(self, content: str, from_self: bool = True, is_html: bool = False):
+        """按左右气泡形式追加一条消息，使用真实圆角控件"""
+        if not hasattr(self, "chat_layout"):
+            return
+
+        # 容器：一条完整的消息（可包含时间 + 气泡）
+        message_widget = QWidget()
+        v_layout = QVBoxLayout(message_widget)
+        v_layout.setContentsMargins(4, 0, 4, 0)
+        v_layout.setSpacing(2)
+
+        # 用户消息：上方一行时间（右对齐）
+        if from_self:
+            time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            time_label = QLabel(time_str)
+            time_label.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 11px;
+                    color: #9ca3af;
+                }
+            """)
+            time_row = QHBoxLayout()
+            time_row.setContentsMargins(0, 0, 0, 0)
+            time_row.addStretch()
+            time_row.addWidget(time_label)
+            v_layout.addLayout(time_row)
+
+        # 气泡 + 头像 行
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+
+        # 头像
+        avatar_label = QLabel()
+        avatar_label.setFixedSize(32, 32)
+        # 从当前顶部头像获取图像，缩放即可（避免重新处理字节）
+        if from_self and self.user_avatar_label.pixmap():
+            pm = self.user_avatar_label.pixmap().scaled(
+                32, 32,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            avatar_label.setPixmap(pm)
+        else:
+            # 客服头像使用默认头像
+            default_bytes = get_default_avatar()
+            if default_bytes:
+                pm = QPixmap()
+                if pm.loadFromData(default_bytes):
+                    avatar_label.setPixmap(
+                        pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
+                                  Qt.TransformationMode.SmoothTransformation)
+                    )
+
+        if from_self:
+            bubble_label = ChatBubble(
+                content,
+                background=QColor("#dcf8c6"),
+                text_color=QColor("#0f172a"),
+                max_width=420,
+                align_right=True,
+            )
+            avatar_label.setStyleSheet("""
+                QLabel {
+                    border-radius: 16px;
+                }
+            """)
+
+            # 行布局：左侧留空，右侧气泡 + 头像
+            row.addStretch()
+            row.addWidget(bubble_label)
+            row.addWidget(avatar_label)
+        else:
+            bubble_label = ChatBubble(
+                content,
+                background=QColor("#ffffff"),
+                text_color=QColor("#111827"),
+                border_color=QColor("#e5e7eb"),
+                max_width=420,
+                align_right=False,
+            )
+            avatar_label.setStyleSheet("""
+                QLabel {
+                    border-radius: 16px;
+                }
+            """)
+
+            # 行布局：左侧头像 + 气泡，右侧留空
+            row.addWidget(avatar_label)
+            row.addWidget(bubble_label)
+            row.addStretch()
+
+        v_layout.addLayout(row)
+
+        self.chat_layout.addWidget(message_widget)
+
+        # 滚动到底部
+        if hasattr(self, "chat_scroll_area"):
+            bar = self.chat_scroll_area.verticalScrollBar()
+            bar.setValue(bar.maximum())
+
+    def append_support_message(self, content: str, is_html: bool = False):
+        """供后续真实客服或机器人使用的接口"""
+        self._append_chat_message(content, from_self=False, is_html=is_html)
+
+    def open_emoji_menu(self):
+        """弹出表情选择器：10 个一行的网格布局"""
+        emojis = [
+            # 常用表情
+            "😀", "😁", "😂", "🤣", "😃", "😄", "😅", "😉", "😊", "😍",
+            "😘", "😗", "😙", "😚", "😋", "😜", "🤪", "😝", "🤑", "🤗",
+            "🤭", "🤫", "🤔", "🤨", "😐", "😑", "😶", "🙄", "😏", "😣",
+            "😥", "😮", "🤐", "😯", "😪", "😫", "🥱", "😴", "😌", "😛",
+            "😓", "😔", "😕", "🙃", "🫠", "😷", "🤒", "🤕", "🤢", "🤮",
+            "🤧", "🥵", "🥶", "🥴", "😵", "🤯", "🤠", "🥳", "😎", "🤓",
+            "🧐", "😕", "😟", "🙁", "☹️", "😮‍💨", "😢", "😭", "😤", "😠",
+            "😡", "🤬", "😈", "👿", "💀", "☠️", "💩", "🤡", "👻", "👽",
+        ]
+
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #ffffff;
+                border: 1px solid #e5e7eb;
+                padding: 4px;
+            }
+        """)
+
+        grid_widget = QWidget()
+        grid_layout = QGridLayout(grid_widget)
+        grid_layout.setContentsMargins(4, 4, 4, 4)
+        grid_layout.setHorizontalSpacing(4)
+        grid_layout.setVerticalSpacing(4)
+
+        columns = 10
+        for idx, e in enumerate(emojis):
+            row = idx // columns
+            col = idx % columns
+            btn = QPushButton(e)
+            btn.setFixedSize(28, 28)
+            btn.setStyleSheet("""
+                QPushButton {
+                    border: none;
+                    background: transparent;
+                    font-size: 16px;
+                }
+                QPushButton:hover {
+                    background-color: #e5e7eb;
+                    border-radius: 4px;
+                }
+            """)
+            btn.clicked.connect(lambda _, em=e: self._insert_emoji(em))
+            grid_layout.addWidget(btn, row, col)
+
+        widget_action = QWidgetAction(menu)
+        widget_action.setDefaultWidget(grid_widget)
+        menu.addAction(widget_action)
+
+        # 让表情面板出现在按钮“上方”
+        menu_size = menu.sizeHint()
+        button_top_left = self.emoji_button.mapToGlobal(self.emoji_button.rect().topLeft())
+        pos = QPoint(button_top_left.x(), button_top_left.y() - menu_size.height())
+        menu.exec(pos)
+
+    def _insert_emoji(self, emoji: str):
+        self.chat_input.insert(emoji)
+
+    def send_image(self):
+        """选择并发送图片（内联展示），限制 100MB"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择图片", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
+        )
+        if not file_path:
+            return
+        size = os.path.getsize(file_path)
+        if size > 100 * 1024 * 1024:
+            self._append_chat_message("图片超过 100MB，未发送。", from_self=False)
+            return
+
+        # 使用 QPixmap 先缩小图片，再转为 data URL，避免在聊天框中巨幅显示
+        pix = QPixmap(file_path)
+        if pix.isNull():
+            self._append_chat_message("图片加载失败。", from_self=False)
+            return
+        scaled = pix.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+
+        from PyQt6.QtCore import QBuffer, QIODevice
+        buffer = QBuffer()
+        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+        scaled.save(buffer, "PNG")
+        data = base64.b64encode(buffer.data()).decode("utf-8")
+        buffer.close()
+
+        data_url = f"data:image/png;base64,{data}"
+        html = f'我发送图片：<br><img src="{data_url}" />'
+        self._append_chat_message(html, from_self=True, is_html=True)
+
+    def send_file(self):
+        """发送文件，限制 100MB；展示文件名和大小"""
+        file_path, _ = QFileDialog.getOpenFileName(
+            self, "选择文件", "", "All Files (*.*)"
+        )
+        if not file_path:
+            return
+        size = os.path.getsize(file_path)
+        if size > 100 * 1024 * 1024:
+            self._append_chat_message("文件超过 100MB，未发送。", from_self=False)
+            return
+        size_mb = size / (1024 * 1024)
+        filename = os.path.basename(file_path)
+        self._append_chat_message(f"我发送文件：{filename} （{size_mb:.1f} MB）", from_self=True)
+
     def create_svg_widget(self, icon_id, width, height, style):
         """创建SVG图标控件"""
         # 从本地文件加载图标数据
@@ -687,6 +1198,61 @@ class MainWindow(QMainWindow):
         svg_widget.setFixedSize(width, height)
         svg_widget.setStyleSheet(style)
         return svg_widget
+
+    def _set_icon_button(self, button: QPushButton, icon_id: int, tooltip: str = ""):
+        """为按钮设置SVG图标样式（统一尺寸与风格）"""
+        button.setToolTip(tooltip)
+        button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        button.setFixedSize(36, 32)
+        button.setStyleSheet("""
+            QPushButton {
+                background-color: #e2e8f0;
+                border: none;
+                border-radius: 8px;
+                padding: 4px;
+            }
+            QPushButton:hover {
+                background-color: #cbd5e1;
+            }
+            QPushButton:pressed {
+                background-color: #94a3b8;
+            }
+        """)
+        path = load_icon_path(icon_id)
+        if path:
+            icon = QIcon(path)
+            button.setIcon(icon)
+            button.setIconSize(QSize(18, 18))
+
+    def _bytes_to_data_url(self, data: bytes, mime: str = "image/png") -> str:
+        """将二进制图片转换为 data URL，通用小工具"""
+        try:
+            b64 = base64.b64encode(data).decode("utf-8")
+            return f"data:{mime};base64,{b64}"
+        except Exception:
+            return ""
+
+    def _avatar_bytes_to_data_url(self, data: bytes, size: int = 32, mime: str = "image/png") -> str:
+        """将头像二进制图片缩放到固定尺寸后再转为 data URL
+
+        为了在 QTextEdit 中既清晰又不占太大空间，这里会生成 2×size 像素的图片，
+        在 HTML 里用 width/height=size 来显示，相当于“高分辨率小图标”，减少缩小带来的模糊感。
+        """
+        try:
+            pix = QPixmap()
+            if not pix.loadFromData(data) or pix.isNull():
+                return self._bytes_to_data_url(data, mime)
+            target = size * 2
+            scaled = pix.scaled(target, target, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+
+            buffer = QBuffer()
+            buffer.open(QIODevice.OpenModeFlag.WriteOnly)
+            scaled.save(buffer, "PNG")
+            b64 = base64.b64encode(buffer.data()).decode("utf-8")
+            buffer.close()
+            return f"data:{mime};base64,{b64}"
+        except Exception:
+            return self._bytes_to_data_url(data, mime)
 
     def show_login_dialog(self):
         is_logged_in, _, _ = check_login_status()
@@ -794,17 +1360,6 @@ class MainWindow(QMainWindow):
 
         vip = bool(is_vip)
         self.vip_status_label.setText("会员" if vip else "非会员")
-        # 会员/非会员颜色统一为深灰色
-        self.vip_status_label.setStyleSheet(f"""
-            QLabel {{
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 13px;
-                font-weight: 600;
-                color: #1e293b;
-                padding: 0px;
-                margin: 0px;
-            }}
-        """)
 
         try:
             d = int(diamonds)
@@ -911,16 +1466,19 @@ class MainWindow(QMainWindow):
             self.user_avatar_label.setPixmap(pm)
             return
         if isinstance(avatar_data, memoryview):
-            avatar_data = avatar_data.tobytes()
+            avatar_bytes = avatar_data.tobytes()
+        else:
+            avatar_bytes = avatar_data
 
         pixmap = QPixmap()
-        ok = pixmap.loadFromData(avatar_data)
+        ok = pixmap.loadFromData(avatar_bytes)
         if not ok or pixmap.isNull():
             # 数据非法则回退默认头像
             fallback = get_default_avatar()
-            if fallback and fallback is not avatar_data:
+            if fallback and fallback is not avatar_bytes:
                 pixmap = QPixmap()
                 pixmap.loadFromData(fallback)
+                avatar_bytes = fallback
 
         size = min(pixmap.width(), pixmap.height())
         if size <= 0:
@@ -939,6 +1497,11 @@ class MainWindow(QMainWindow):
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         ))
+        # 同步更新聊天中使用的用户头像（缩小后用于 QTextEdit）
+        try:
+            self._user_avatar_url = self._avatar_bytes_to_data_url(avatar_bytes)
+        except Exception:
+            pass
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -954,6 +1517,89 @@ class MainWindow(QMainWindow):
 
         # 调整蒙版大小
         self._update_mask_geometry()
+
+
+from typing import Optional
+
+
+class ChatBubble(QWidget):
+    """自绘圆角聊天气泡"""
+
+    def __init__(
+        self,
+        text: str,
+        background: QColor,
+        text_color: QColor,
+        border_color: Optional[QColor] = None,
+        max_width: int = 420,
+        align_right: bool = False,
+        parent: Optional[QWidget] = None,
+    ):
+        super().__init__(parent)
+        self._text = text
+        self._bg = background
+        self._text_color = text_color
+        self._border_color = border_color
+        self._radius = 18
+        self._padding_h = 14
+        self._padding_v = 8
+        self._max_width = max_width
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(self._padding_h, self._padding_v, self._padding_h, self._padding_v)
+        layout.setSpacing(0)
+
+        self.label = QLabel(text, self)
+        self.label.setWordWrap(True)
+        self.label.setStyleSheet("""
+            QLabel {
+                background-color: transparent;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+            }
+        """)
+        self.label.setAlignment(
+            Qt.AlignmentFlag.AlignRight if align_right else Qt.AlignmentFlag.AlignLeft
+        )
+        layout.addWidget(self.label)
+
+        self.setSizePolicy(self.sizePolicy().horizontalPolicy(), self.sizePolicy().verticalPolicy())
+
+    def sizeHint(self):
+        doc = self.label.fontMetrics().boundingRect(
+            0, 0, self._max_width, 10000,
+            Qt.TextFlag.TextWordWrap.value,
+            self._text,
+        )
+        return QSize(
+            min(self._max_width, doc.width() + self._padding_h * 2),
+            doc.height() + self._padding_v * 2,
+        )
+
+    def minimumSizeHint(self):
+        return self.sizeHint()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+
+        rect = QRectF(self.rect())
+        path = QPainterPath()
+        path.addRoundedRect(rect, self._radius, self._radius)
+
+        painter.setBrush(self._bg)
+        if self._border_color:
+            pen = painter.pen()
+            pen.setColor(self._border_color)
+            pen.setWidth(1)
+            painter.setPen(pen)
+        else:
+            painter.setPen(Qt.PenStyle.NoPen)
+
+        painter.drawPath(path)
+        painter.setPen(self._text_color)
+
+        super().paintEvent(event)
 
 
 class RoundedBackgroundWidget(QWidget):

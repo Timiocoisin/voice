@@ -32,6 +32,9 @@ ICON_MAPPING = {
     12: ("icons", "code.svg"),           # 验证码图标
     13: ("icons", "vip.svg"),            # VIP图标
     14: ("images", "background.jpg"),    # 背景图片
+    15: ("icons", "expression.svg"),     # 表情图标
+    16: ("icons", "file.svg"),           # 文件图标
+    17: ("icons", "pic.svg"),            # 图片图标
 }
 
 
