@@ -523,12 +523,12 @@ class MainWindow(QMainWindow):
         """)
         user_layout = QHBoxLayout(user_widget)
         user_layout.setContentsMargins(0, 0, 0, 0)
-        user_layout.setSpacing(10)
+        user_layout.setSpacing(8)
         user_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
-        # 头像
+        # 头像（再放大一些，几乎占满导航栏高度）
         self.user_avatar_label = QLabel()
-        avatar_size = int(parent_widget.height() * 0.75)  # 减小头像尺寸以适应更小的导航栏
+        avatar_size = max(32, parent_widget.height() - 4)
         self.user_avatar_label.setFixedSize(avatar_size, avatar_size)
         self.user_avatar_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.user_avatar_label.mousePressEvent = self.upload_avatar
@@ -559,7 +559,7 @@ class MainWindow(QMainWindow):
         membership_row = QWidget()
         membership_layout = QHBoxLayout(membership_row)
         membership_layout.setContentsMargins(0, 0, 0, 0)
-        membership_layout.setSpacing(10)  # 优化VIP和钻石之间的间距
+        membership_layout.setSpacing(8)  # VIP 和钻石之间更紧凑
         membership_layout.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
 
         # VIP - 优化样式
@@ -592,7 +592,7 @@ class MainWindow(QMainWindow):
         # 钻石 - 优化样式
         diamond_group = QHBoxLayout()
         diamond_group.setContentsMargins(0, 0, 0, 0)
-        diamond_group.setSpacing(5)  # 优化图标和文字间距
+        diamond_group.setSpacing(4)  # 图标和数字紧挨在一起显示
         self.diamond_icon = self.create_svg_widget(2, 18, 18, "margin: 0px;")
         if self.diamond_icon:
             # 设置钻石图标可点击，打开钻石套餐弹窗
@@ -614,12 +614,22 @@ class MainWindow(QMainWindow):
                 margin: 0px;
             }
         """)
+        # 预留更大的数字显示空间（支持 1w+ 钻石）
+        self.diamond_count_label.setMinimumWidth(80)
+        self.diamond_count_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        # 与钻石图标紧挨显示，整体仍然靠左
         diamond_group.addWidget(self.diamond_count_label, alignment=Qt.AlignmentFlag.AlignVCenter)
+        # 在数字右侧添加伸缩空间，避免被后面的分隔线和按钮“挤回去”
+        diamond_group.addStretch()
         membership_layout.addLayout(diamond_group)
 
         right_col_layout.addWidget(membership_row, alignment=Qt.AlignmentFlag.AlignLeft)
         user_layout.addWidget(right_col)
-        right_layout.addWidget(user_widget)
+
+        # 让用户信息块可以向左扩展，占据更多空间，避免被右侧图标挤压
+        from PyQt6.QtWidgets import QSizePolicy
+        user_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        right_layout.addWidget(user_widget, stretch=1)
 
         # 初始化默认头像（资源缺失时会自动回退）
         self.update_user_avatar_display(None)
