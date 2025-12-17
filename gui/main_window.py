@@ -973,6 +973,138 @@ class MainWindow(QMainWindow):
         # 模拟客服稍后回复
         QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
 
+    def _append_file_message(self, filename: str, size_str: str):
+        """以卡片形式追加一条用户发送的文件消息"""
+        if not hasattr(self, "chat_layout"):
+            return
+
+        message_widget = QWidget()
+        v_layout = QVBoxLayout(message_widget)
+        v_layout.setContentsMargins(4, 0, 4, 0)
+        v_layout.setSpacing(2)
+
+        # 时间行（右对齐）
+        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        time_label = QLabel(time_str)
+        time_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 11px;
+                color: #9ca3af;
+            }
+        """)
+        time_row = QHBoxLayout()
+        time_row.setContentsMargins(0, 0, 0, 0)
+        time_row.addStretch()
+        time_row.addWidget(time_label)
+        v_layout.addLayout(time_row)
+
+        # 主行：右侧为文件卡片 + 头像
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+
+        # 文件卡片（白底，圆角，内部左右布局）
+        card = QWidget()
+        card.setObjectName("fileCard")
+        card.setStyleSheet("""
+            #fileCard {
+                background-color: #ffffff;
+                border-radius: 14px;
+                border: 1px solid #e5e7eb;
+            }
+        """)
+        # 限制卡片最大宽度，避免撑满整行
+        card.setMinimumWidth(200)
+        card.setMaximumWidth(260)
+        card_layout = QHBoxLayout(card)
+        card_layout.setContentsMargins(10, 8, 10, 8)
+        card_layout.setSpacing(8)
+
+        # 左侧：文件名 + 大小
+        text_col = QVBoxLayout()
+        text_col.setContentsMargins(0, 0, 0, 0)
+        text_col.setSpacing(4)
+
+        name_label = QLabel(filename)
+        name_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 14px;
+                font-weight: 600;
+                color: #111827;
+            }
+        """)
+        name_label.setMinimumWidth(120)
+        name_label.setMaximumWidth(200)
+
+        size_label = QLabel(size_str)
+        size_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                color: #6b7280;
+            }
+        """)
+
+        text_col.addWidget(name_label)
+        text_col.addWidget(size_label)
+        card_layout.addLayout(text_col, stretch=1)
+
+        # 右侧：小文件图标块
+        ext = os.path.splitext(filename)[1].lstrip(".").upper() or "FILE"
+        ext = ext[:3]
+        icon_bg = QWidget()
+        icon_bg.setObjectName("fileIcon")
+        icon_bg.setFixedSize(34, 42)
+        icon_bg.setStyleSheet("""
+            #fileIcon {
+                background-color: #2563eb;
+                border-radius: 8px;
+            }
+        """)
+        icon_layout = QVBoxLayout(icon_bg)
+        icon_layout.setContentsMargins(0, 0, 0, 0)
+        icon_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        icon_label = QLabel(ext)
+        icon_label.setStyleSheet("""
+            QLabel {
+                color: #ffffff;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                font-weight: 700;
+            }
+        """)
+        icon_layout.addWidget(icon_label)
+
+        card_layout.addWidget(icon_bg, alignment=Qt.AlignmentFlag.AlignVCenter)
+
+        # 头像（右侧）
+        avatar_label = QLabel()
+        avatar_label.setFixedSize(32, 32)
+        if self.user_avatar_label.pixmap():
+            pm = self.user_avatar_label.pixmap().scaled(
+                32, 32,
+                Qt.AspectRatioMode.KeepAspectRatio,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            avatar_label.setPixmap(pm)
+
+        avatar_label.setStyleSheet("border-radius:16px;")
+
+        row.addStretch()
+        row.addWidget(card)
+        row.addWidget(avatar_label)
+
+        v_layout.addLayout(row)
+
+        self.chat_layout.addWidget(message_widget)
+
+        if hasattr(self, "chat_scroll_area"):
+            bar = self.chat_scroll_area.verticalScrollBar()
+            bar.setValue(bar.maximum())
+
     def _append_chat_message(self, content: str, from_self: bool = True, is_html: bool = False):
         """按左右气泡形式追加一条消息，使用真实圆角控件"""
         if not hasattr(self, "chat_layout"):
@@ -1035,6 +1167,7 @@ class MainWindow(QMainWindow):
                 text_color=QColor("#0f172a"),
                 max_width=420,
                 align_right=True,
+                rich_text=is_html,
             )
             avatar_label.setStyleSheet("""
                 QLabel {
@@ -1054,6 +1187,7 @@ class MainWindow(QMainWindow):
                 border_color=QColor("#e5e7eb"),
                 max_width=420,
                 align_right=False,
+                rich_text=is_html,
             )
             avatar_label.setStyleSheet("""
                 QLabel {
@@ -1158,7 +1292,8 @@ class MainWindow(QMainWindow):
         if pix.isNull():
             self._append_chat_message("图片加载失败。", from_self=False)
             return
-        scaled = pix.scaled(80, 80, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+        # 这里设置一个最大边 160，让图片清晰但不会太大
+        scaled = pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
 
         from PyQt6.QtCore import QBuffer, QIODevice
         buffer = QBuffer()
@@ -1168,8 +1303,11 @@ class MainWindow(QMainWindow):
         buffer.close()
 
         data_url = f"data:image/png;base64,{data}"
-        html = f'我发送图片：<br><img src="{data_url}" />'
+        # 仅发送图片本身，使用 HTML img 标签，气泡将自适应图片大小
+        html = f'<img src="{data_url}" />'
         self._append_chat_message(html, from_self=True, is_html=True)
+        # 模拟客服稍后回复
+        QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
 
     def send_file(self):
         """发送文件，限制 100MB；展示文件名和大小"""
@@ -1182,9 +1320,21 @@ class MainWindow(QMainWindow):
         if size > 100 * 1024 * 1024:
             self._append_chat_message("文件超过 100MB，未发送。", from_self=False)
             return
-        size_mb = size / (1024 * 1024)
+
+        # 计算文件大小字符串（K / M）
+        if size < 1024 * 1024:
+            size_kb = size / 1024
+            size_str = f"{size_kb:.1f} KB"
+        else:
+            size_mb = size / (1024 * 1024)
+            size_str = f"{size_mb:.1f} MB"
+
         filename = os.path.basename(file_path)
-        self._append_chat_message(f"我发送文件：{filename} （{size_mb:.1f} MB）", from_self=True)
+
+        # 使用卡片形式的文件消息
+        self._append_file_message(filename, size_str)
+        # 模拟客服稍后回复
+        QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
 
     def create_svg_widget(self, icon_id, width, height, style):
         """创建SVG图标控件"""
@@ -1533,6 +1683,7 @@ class ChatBubble(QWidget):
         border_color: Optional[QColor] = None,
         max_width: int = 420,
         align_right: bool = False,
+        rich_text: bool = False,
         parent: Optional[QWidget] = None,
     ):
         super().__init__(parent)
@@ -1544,6 +1695,7 @@ class ChatBubble(QWidget):
         self._padding_h = 14
         self._padding_v = 8
         self._max_width = max_width
+        self._rich_text = rich_text
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(self._padding_h, self._padding_v, self._padding_h, self._padding_v)
@@ -1551,6 +1703,9 @@ class ChatBubble(QWidget):
 
         self.label = QLabel(text, self)
         self.label.setWordWrap(True)
+        self.label.setTextFormat(
+            Qt.TextFormat.RichText if self._rich_text else Qt.TextFormat.PlainText
+        )
         self.label.setStyleSheet("""
             QLabel {
                 background-color: transparent;
@@ -1566,15 +1721,11 @@ class ChatBubble(QWidget):
         self.setSizePolicy(self.sizePolicy().horizontalPolicy(), self.sizePolicy().verticalPolicy())
 
     def sizeHint(self):
-        doc = self.label.fontMetrics().boundingRect(
-            0, 0, self._max_width, 10000,
-            Qt.TextFlag.TextWordWrap.value,
-            self._text,
-        )
-        return QSize(
-            min(self._max_width, doc.width() + self._padding_h * 2),
-            doc.height() + self._padding_v * 2,
-        )
+        """基于内部 QLabel 的尺寸，自动适应文本或图片大小"""
+        inner = self.label.sizeHint()
+        width = min(self._max_width, inner.width() + self._padding_h * 2)
+        height = inner.height() + self._padding_v * 2
+        return QSize(width, height)
 
     def minimumSizeHint(self):
         return self.sizeHint()
