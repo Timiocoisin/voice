@@ -27,7 +27,7 @@ ICON_MAPPING = {
     7: ("icons", "minimize.svg"),        # 最小化图标
     8: ("icons", "password.svg"),        # 密码图标
     9: ("icons", "headset.svg"),         # 耳机图标
-    10: ("icons", "speaker.svg"),        # 喇叭图标/注册密码图标
+    10: ("icons", "speaker.svg"),        # 喇叭图标
     11: ("icons", "username.svg"),       # 用户名图标
     12: ("icons", "code.svg"),           # 验证码图标
     13: ("icons", "vip.svg"),            # VIP图标

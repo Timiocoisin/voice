@@ -1,4 +1,5 @@
-import mysql.connector
+import pymysql
+import pymysql.cursors
 import bcrypt
 from typing import Optional
 import logging
@@ -15,7 +16,7 @@ class DatabaseManager:
     def connect(self):
         """建立与 MySQL 数据库的连接"""
         try:
-            self.connection = mysql.connector.connect(
+            self.connection = pymysql.connect(
                 host="localhost",
                 user="root",
                 password="123456",
@@ -23,7 +24,7 @@ class DatabaseManager:
             )
             logging.info("数据库连接成功")
             self.ensure_tables_exist()
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"连接数据库失败: {e}")
 
     def ensure_tables_exist(self):
@@ -50,7 +51,7 @@ class DatabaseManager:
             """
             cursor.execute(create_table_query)
             self.connection.commit()
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"创建用户表失败: {e}")
 
     def create_user_vip_table(self):
@@ -69,7 +70,7 @@ class DatabaseManager:
             """
             cursor.execute(create_table_query)
             self.connection.commit()
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"创建用户 VIP 信息表失败: {e}")
 
     def create_logo_table(self):
@@ -85,7 +86,7 @@ class DatabaseManager:
             """
             cursor.execute(create_table_query)
             self.connection.commit()
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"创建 logo 表失败: {e}")
 
     def create_announcement_table(self):
@@ -101,7 +102,7 @@ class DatabaseManager:
             """
             cursor.execute(create_table_query)
             self.connection.commit()
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"创建公告表失败: {e}")
 
     def insert_user_info(self, username: str, email: str, password: str, avatar_data: Optional[bytes] = None) -> bool:
@@ -130,7 +131,7 @@ class DatabaseManager:
 
             logging.info(f"用户 {username} 注册成功，ID: {user_id}")
             return True
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.info(f"插入用户信息失败: {e}")
             self.connection.rollback()
             return False
@@ -138,11 +139,11 @@ class DatabaseManager:
     def get_user_by_email(self, email: str):
         """根据邮箱查询用户信息"""
         try:
-            cursor = self.connection.cursor(dictionary=True)
+            cursor = self.connection.cursor(cursorclass=pymysql.cursors.DictCursor)
             query = "SELECT id, username, password, avatar FROM users WHERE email = %s"
             cursor.execute(query, (email,))
             return cursor.fetchone()  # 返回包含用户头像的结果
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"查询用户信息失败: {e}")
             return None
 
@@ -159,7 +160,7 @@ class DatabaseManager:
 
             logging.info(f"用户 {user_id} VIP 信息插入成功")
             return True
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.info(f"插入用户 VIP 信息失败: {e}")
             self.connection.rollback()
             return False
@@ -167,11 +168,11 @@ class DatabaseManager:
     def get_user_vip_info(self, user_id: int):
         """根据用户 ID 查询用户 VIP 信息"""
         try:
-            cursor = self.connection.cursor(dictionary=True)
+            cursor = self.connection.cursor(cursorclass=pymysql.cursors.DictCursor)
             query = "SELECT is_vip, vip_expiry_date, diamonds FROM user_vip WHERE user_id = %s"
             cursor.execute(query, (user_id,))
             return cursor.fetchone()
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.info(f"查询用户 VIP 信息失败: {e}")
             return None
 
@@ -190,7 +191,7 @@ class DatabaseManager:
                 return result[0]
             logging.info(f"未找到ID为 {icon_id} 的图标")
             return None
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"查询图标 ID {icon_id} 失败: {e}")
             return None
 
@@ -208,7 +209,7 @@ class DatabaseManager:
             if result:
                 return result[0]
             return None
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.info(f"查询公告失败: {e}")
             self.connection.rollback()
             return False
@@ -226,7 +227,7 @@ class DatabaseManager:
             self.connection.commit()
             logging.info(f"用户 {user_id} 的头像已更新")
             return True
-        except mysql.connector.Error as e:
+        except pymysql.Error as e:
             logging.error(f"更新用户头像失败: {e}")
             self.connection.rollback()
             return False

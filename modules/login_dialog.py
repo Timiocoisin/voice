@@ -1,6 +1,7 @@
 # 文件 3：login_dialog.py
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
-                                QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QWidget)
+                                QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QWidget,
+                                QGraphicsDropShadowEffect)
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent, QByteArray
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath
@@ -44,43 +45,71 @@ class LoginDialog(QDialog):
         self.db_manager = DatabaseManager()
 
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
+        # 给阴影留出空间
+        main_layout.setContentsMargins(18, 18, 18, 18)
         main_layout.setSpacing(0)
 
         content_widget = QWidget()
+        content_widget.setObjectName("loginCard")
+        # 轻盈风：更通透的白、极淡边框
+        content_widget.setStyleSheet("""
+            #loginCard {
+                background-color: rgba(255, 255, 255, 235);
+                border-radius: 24px;
+                border: 1px solid rgba(226, 232, 240, 170);
+            }
+        """)
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(36)
+        shadow.setOffset(0, 12)
+        shadow.setColor(QColor(0, 0, 0, 40))
+        content_widget.setGraphicsEffect(shadow)
+
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(30, 30, 30, 30)
-        content_layout.setSpacing(25)
+        content_layout.setContentsMargins(44, 40, 44, 32)
+        content_layout.setSpacing(16)
+
+        # 统一输入控件高度（用于对齐“输入框 + 按钮”）
+        field_height = 46
+        row_bg_style = "background-color: transparent;"
 
         # 头部布局，包含用户登录和用户注册
         header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 6)
+        header_layout.setSpacing(20)
 
         # 用户登录标签
         self.user_login_label = QLabel("用户登录")
         self.user_login_label.setStyleSheet("""
             font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 25px; 
-            font-weight: bold; 
-            color: #429bf7;
-            letter-spacing: 1px;
+            font-size: 28px; 
+            font-weight: 700; 
+            color: #2563eb;
+            letter-spacing: 0.5px;
+            padding: 4px 0px 10px 0px;
+            border-bottom: 2px solid #2563eb;
         """)
         self.user_login_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.user_login_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.user_login_label.mousePressEvent = lambda event: self.switch_mode("login")
         header_layout.addWidget(self.user_login_label)
 
-        spacer = QSpacerItem(20, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+        spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         header_layout.addItem(spacer)
 
         # 用户注册标签
         self.user_register_label = QLabel("用户注册")
         self.user_register_label.setStyleSheet("""
             font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 25px; 
-            font-weight: bold; 
-            color: #222;
-            letter-spacing: 1px;
+            font-size: 28px; 
+            font-weight: 600; 
+            color: #93c5fd;
+            letter-spacing: 0.5px;
+            padding: 4px 0px 10px 0px;
+            border-bottom: 2px solid transparent;
         """)
         self.user_register_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+        self.user_register_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.user_register_label.mousePressEvent = lambda event: self.switch_mode("register")
         header_layout.addWidget(self.user_register_label)
 
@@ -89,239 +118,311 @@ class LoginDialog(QDialog):
         input_style = """
             QLineEdit {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 16px;
-                color: #333;
-                background-color: transparent;
-                border: 2px solid #ddd; 
-                border-radius: 10px; 
-                padding: 10px 15px; 
-                margin-bottom: 8px; 
+                font-size: 15px;
+                color: #2c3e50;
+                background-color: rgba(255, 255, 255, 0.72);
+                border: 1px solid rgba(226, 232, 240, 210);
+                border-radius: 14px;
+                padding: 12px 18px;
+                selection-background-color: #429bf7;
+                selection-color: white;
             }
             QLineEdit:focus {
-                border-color: #429bf7; 
-                background-color: #fff; 
+                border-color: #2563eb;
+                background-color: #ffffff;
+                border-width: 1.5px;
+            }
+            QLineEdit:hover {
+                border-color: rgba(203, 213, 225, 210);
+                background-color: #ffffff;
             }
         """
 
         # 用户名输入框布局（注册专用）
-        self.username_layout = QHBoxLayout()
+        self.username_row = QWidget()
+        self.username_row.setStyleSheet(row_bg_style)
+        self.username_layout = QHBoxLayout(self.username_row)
+        self.username_layout.setContentsMargins(0, 0, 0, 0)
+        self.username_layout.setSpacing(12)
         icon_data = load_icon_data(11)
         if icon_data:
             username_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
             username_icon.load(byte_array)
-            username_icon.setFixedSize(30, 30)
-            username_icon.setStyleSheet("margin-right: 10px;")
-            self.username_layout.addWidget(username_icon)
+            username_icon.setFixedSize(24, 24)
+            username_icon.setStyleSheet("margin: 0px; opacity: 0.5;")
+            self.username_layout.addWidget(username_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.username_input = QLineEdit()
         self.username_input.setPlaceholderText("请输入用户名")
         self.username_input.setStyleSheet(input_style)
-        self.username_layout.addWidget(self.username_input)
-        self._set_layout_visible(self.username_layout, False)  # 默认隐藏
+        self.username_input.setFixedHeight(field_height)
+        self.username_layout.addWidget(self.username_input, stretch=1)
+        self.username_row.setVisible(False)  # 默认隐藏
 
-        # 登录邮箱输入框布局
-        self.login_email_layout = QHBoxLayout()
+        # 登录邮箱（含获取验证码按钮）外层透明容器：用于统一高度、显隐与间距
+        self.login_email_row = QWidget()
+        self.login_email_row.setStyleSheet(row_bg_style)
+        self.login_email_layout = QHBoxLayout(self.login_email_row)
+        self.login_email_layout.setContentsMargins(0, 0, 0, 0)
+        self.login_email_layout.setSpacing(12)
         icon_data = load_icon_data(3)
         if icon_data:
             login_email_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
             login_email_icon.load(byte_array)
-            login_email_icon.setFixedSize(30, 30)
-            login_email_icon.setStyleSheet("margin-right: 10px;")
-            self.login_email_layout.addWidget(login_email_icon)
+            login_email_icon.setFixedSize(24, 24)
+            login_email_icon.setStyleSheet("margin: 0px; opacity: 0.5;")
+            self.login_email_layout.addWidget(login_email_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.login_email_input = QLineEdit()
         self.login_email_input.setPlaceholderText("请输入邮箱")
         self.login_email_input.setStyleSheet(input_style)
-        self.login_email_layout.addWidget(self.login_email_input)
+        self.login_email_input.setFixedHeight(field_height)
+        self.login_email_layout.addWidget(self.login_email_input, stretch=1)
 
         # 登录获取验证码按钮
         self.login_get_verification_code_button = QPushButton("获取验证码")
         self.login_get_verification_code_button.setStyleSheet("""
             QPushButton {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background-color: #429bf7;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #60a5fa, stop:1 #3b82f6);
                 color: white;
                 border: none;
-                border-radius: 10px;
-                padding: 10px 15px;  /* 减小按钮内边距 */
-                font-size: 14px;     /* 减小字体大小 */
+                border-radius: 14px;
+                padding: 0px 18px;
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 118px;
             }
             QPushButton:hover {
-                background-color: #78b6f6;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #3b82f6, stop:1 #2563eb);
             }
             QPushButton:pressed {
-                background-color: #429bf7;
+                background-color: #2563eb;
+            }
+            QPushButton:disabled {
+                background-color: rgba(226, 232, 240, 200);
+                color: #94a3b8;
             }
         """)
+        self.login_get_verification_code_button.setFixedHeight(field_height)
+        self.login_get_verification_code_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.login_get_verification_code_button.clicked.connect(lambda: self.send_verification_code("login"))
-        self.login_email_layout.addWidget(self.login_get_verification_code_button)
+        self.login_email_layout.addWidget(self.login_get_verification_code_button, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.login_timer_manager = TimerManager(self.login_get_verification_code_button)
 
-        # 注册邮箱输入框布局
-        self.register_email_layout = QHBoxLayout()
+        # 注册邮箱（含获取验证码按钮）外层透明容器：用于统一高度、显隐与间距
+        self.register_email_row = QWidget()
+        self.register_email_row.setStyleSheet(row_bg_style)
+        self.register_email_layout = QHBoxLayout(self.register_email_row)
+        self.register_email_layout.setContentsMargins(0, 0, 0, 0)
+        self.register_email_layout.setSpacing(12)
         icon_data = load_icon_data(3)
         if icon_data:
             register_email_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
             register_email_icon.load(byte_array)
-            register_email_icon.setFixedSize(30, 30)
-            register_email_icon.setStyleSheet("margin-right: 10px;")
-            self.register_email_layout.addWidget(register_email_icon)
+            register_email_icon.setFixedSize(24, 24)
+            register_email_icon.setStyleSheet("margin: 0px; opacity: 0.5;")
+            self.register_email_layout.addWidget(register_email_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.register_email_input = QLineEdit()
         self.register_email_input.setPlaceholderText("请输入邮箱")
         self.register_email_input.setStyleSheet(input_style)
-        self.register_email_layout.addWidget(self.register_email_input)
+        self.register_email_input.setFixedHeight(field_height)
+        self.register_email_layout.addWidget(self.register_email_input, stretch=1)
 
         # 注册获取验证码按钮
         self.register_get_verification_code_button = QPushButton("获取验证码")
         self.register_get_verification_code_button.setStyleSheet("""
             QPushButton {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background-color: #429bf7;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #60a5fa, stop:1 #3b82f6);
                 color: white;
                 border: none;
-                border-radius: 10px;
-                padding: 10px 15px;  /* 减小按钮内边距 */
-                font-size: 14px;     /* 减小字体大小 */
+                border-radius: 14px;
+                padding: 0px 18px;
+                font-size: 13px;
+                font-weight: 600;
+                min-width: 118px;
             }
             QPushButton:hover {
-                background-color: #78b6f6;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #3b82f6, stop:1 #2563eb);
             }
             QPushButton:pressed {
-                background-color: #429bf7;
+                background-color: #2563eb;
+            }
+            QPushButton:disabled {
+                background-color: rgba(226, 232, 240, 200);
+                color: #94a3b8;
             }
         """)
+        self.register_get_verification_code_button.setFixedHeight(field_height)
+        self.register_get_verification_code_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.register_get_verification_code_button.clicked.connect(lambda: self.send_verification_code("register"))
-        self.register_email_layout.addWidget(self.register_get_verification_code_button)
+        self.register_email_layout.addWidget(self.register_get_verification_code_button, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.register_timer_manager = TimerManager(self.register_get_verification_code_button)
 
         # 验证码输入框布局（共用）
-        self.verification_code_layout = QHBoxLayout()
+        self.verification_code_row = QWidget()
+        self.verification_code_row.setStyleSheet(row_bg_style)
+        self.verification_code_layout = QHBoxLayout(self.verification_code_row)
+        self.verification_code_layout.setContentsMargins(0, 0, 0, 0)
+        self.verification_code_layout.setSpacing(12)
         icon_data = load_icon_data(12)
         if icon_data:
             code_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
             code_icon.load(byte_array)
-            code_icon.setFixedSize(30, 30)
-            code_icon.setStyleSheet("margin-right: 10px;")
-            self.verification_code_layout.addWidget(code_icon)
+            code_icon.setFixedSize(24, 24)
+            code_icon.setStyleSheet("margin: 0px; opacity: 0.5;")
+            self.verification_code_layout.addWidget(code_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.verification_code_input = QLineEdit()
         self.verification_code_input.setPlaceholderText("请输入验证码")
         self.verification_code_input.setStyleSheet(input_style)
-        self.verification_code_layout.addWidget(self.verification_code_input)
-        self._set_layout_visible(self.verification_code_layout, False)  # 默认隐藏
+        self.verification_code_input.setFixedHeight(field_height)
+        self.verification_code_layout.addWidget(self.verification_code_input, stretch=1)
+        self.verification_code_row.setVisible(False)  # 默认隐藏
 
         # 登录密码输入框布局
-        self.login_password_layout = QHBoxLayout()
+        self.login_password_row = QWidget()
+        self.login_password_row.setStyleSheet(row_bg_style)
+        self.login_password_layout = QHBoxLayout(self.login_password_row)
+        self.login_password_layout.setContentsMargins(0, 0, 0, 0)
+        self.login_password_layout.setSpacing(12)
         icon_data = load_icon_data(8)
         if icon_data:
             login_password_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
             login_password_icon.load(byte_array)
-            login_password_icon.setFixedSize(30, 30)
-            login_password_icon.setStyleSheet("margin-right: 10px;")
-            self.login_password_layout.addWidget(login_password_icon)
+            login_password_icon.setFixedSize(24, 24)
+            login_password_icon.setStyleSheet("margin: 0px; opacity: 0.5;")
+            self.login_password_layout.addWidget(login_password_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.login_password_input = QLineEdit()
         self.login_password_input.setPlaceholderText("请输入密码")
         self.login_password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.login_password_input.setStyleSheet(input_style)
-        self.login_password_layout.addWidget(self.login_password_input)
+        self.login_password_input.setFixedHeight(field_height)
+        self.login_password_layout.addWidget(self.login_password_input, stretch=1)
 
         # 注册密码输入框布局
-        self.register_password_layout = QHBoxLayout()
-        icon_data = load_icon_data(10)
+        self.register_password_row = QWidget()
+        self.register_password_row.setStyleSheet(row_bg_style)
+        self.register_password_layout = QHBoxLayout(self.register_password_row)
+        self.register_password_layout.setContentsMargins(0, 0, 0, 0)
+        self.register_password_layout.setSpacing(12)
+        icon_data = load_icon_data(8)
         if icon_data:
             register_password_icon = QSvgWidget()
             byte_array = QByteArray(icon_data)
             register_password_icon.load(byte_array)
-            register_password_icon.setFixedSize(30, 30)
-            register_password_icon.setStyleSheet("margin-right: 10px;")
-            self.register_password_layout.addWidget(register_password_icon)
+            register_password_icon.setFixedSize(24, 24)
+            register_password_icon.setStyleSheet("margin: 0px; opacity: 0.5;")
+            self.register_password_layout.addWidget(register_password_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
         self.register_password_input = QLineEdit()
         self.register_password_input.setPlaceholderText("请输入密码")
         self.register_password_input.setEchoMode(QLineEdit.EchoMode.Password)
         self.register_password_input.setStyleSheet(input_style)
-        self.register_password_layout.addWidget(self.register_password_input)
+        self.register_password_input.setFixedHeight(field_height)
+        self.register_password_layout.addWidget(self.register_password_input, stretch=1)
 
-        # 添加所有输入框布局到内容布局
-        content_layout.addLayout(self.username_layout)
-        content_layout.addLayout(self.login_email_layout)
-        content_layout.addLayout(self.register_email_layout)
-        content_layout.addLayout(self.verification_code_layout)
-        content_layout.addLayout(self.login_password_layout)
-        content_layout.addLayout(self.register_password_layout)
+        # 添加所有输入行（统一用透明容器包裹，便于显隐与间距一致）
+        content_layout.addWidget(self.username_row)
+        content_layout.addWidget(self.login_email_row)
+        content_layout.addWidget(self.register_email_row)
+        content_layout.addWidget(self.verification_code_row)
+        content_layout.addWidget(self.login_password_row)
+        content_layout.addWidget(self.register_password_row)
 
         # 登录按钮
         self.login_button = QPushButton("登录")
         self.login_button.setStyleSheet("""
             QPushButton {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background-color: #429bf7;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #60a5fa, stop:1 #3b82f6);
                 color: white;
                 border: none;
-                border-radius: 25px;
-                padding: 18px 50px;
-                font-size: 20px;
-                min-width: 260px;
-                font-weight: 500;
-                letter-spacing: 1px;
+                border-radius: 14px;
+                padding: 0px 40px;
+                font-size: 16px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
             }
             QPushButton:hover {
-                background-color: #78b6f6;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #3b82f6, stop:1 #2563eb);
             }
             QPushButton:pressed {
-                background-color: #429bf7;
+                background-color: #2563eb;
+            }
+            QPushButton:disabled {
+                background-color: rgba(226, 232, 240, 200);
+                color: #94a3b8;
             }
         """)
+        self.login_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.login_button.setFixedHeight(48)
+        self.login_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.login_button.clicked.connect(self.login)
-        content_layout.addWidget(self.login_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        content_layout.addWidget(self.login_button)
 
         # 注册按钮
         self.register_button = QPushButton("注册")
         self.register_button.setStyleSheet("""
             QPushButton {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background-color: #429bf7;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #60a5fa, stop:1 #3b82f6);
                 color: white;
                 border: none;
-                border-radius: 25px;
-                padding: 18px 50px;
-                font-size: 20px;
-                min-width: 260px;
-                font-weight: 500;
-                letter-spacing: 1px;
+                border-radius: 14px;
+                padding: 0px 40px;
+                font-size: 16px;
+                font-weight: 600;
+                letter-spacing: 0.5px;
             }
             QPushButton:hover {
-                background-color: #78b6f6;
+                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:1,
+                                                  stop:0 #3b82f6, stop:1 #2563eb);
             }
             QPushButton:pressed {
-                background-color: #429bf7;
+                background-color: #2563eb;
+            }
+            QPushButton:disabled {
+                background-color: rgba(226, 232, 240, 200);
+                color: #94a3b8;
             }
         """)
+        self.register_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.register_button.setFixedHeight(48)
+        self.register_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.register_button.clicked.connect(self.register)
-        content_layout.addWidget(self.register_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        content_layout.addWidget(self.register_button)
 
         # 协议布局
         agreement_layout = QHBoxLayout()
         text_label = QLabel("登录即代表你已阅读并同意 ")
         text_label.setStyleSheet("""
             font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 16px; 
-            color: #888;
-            letter-spacing: 0.5px;
+            font-size: 13px; 
+            color: #94a3b8;
+            letter-spacing: 0.3px;
         """)
         agreement_label = ClickableLabel("《用户协议》")
         agreement_label.setStyleSheet("""
             font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 16px; 
-            color: #007bff; 
+            font-size: 13px; 
+            color: #429bf7; 
             text-decoration: none;
             font-weight: 500;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.3px;
         """)
         agreement_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         agreement_label.clicked.connect(self.show_agreement)
-        agreement_layout.setSpacing(3)
+        agreement_layout.setSpacing(2)
         agreement_layout.addWidget(text_label)
         agreement_layout.addWidget(agreement_label)
         agreement_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
@@ -333,13 +434,6 @@ class LoginDialog(QDialog):
         self.switch_mode("login")
         self.installEventFilter(self)
         self.clear_focus()  # 确保初始化时不选中任何输入框
-
-    def screen_size(self, ratio, height=False):
-        screen = QApplication.primaryScreen()
-        size = screen.size()
-        if height:
-            return int(size.height() * ratio)
-        return int(size.width() * ratio)
 
     def show_agreement(self):
         if self.agreement_dialog and not self.agreement_dialog.isVisible():
@@ -360,20 +454,11 @@ class LoginDialog(QDialog):
         return super().eventFilter(obj, event)
 
     def paintEvent(self, event):
+        # 整体 Dialog 透明：卡片背景由 content_widget 负责绘制（含阴影）
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        rect = self.rect().adjusted(1, 1, -1, -1)
-        painter.setPen(Qt.PenStyle.NoPen)
-        painter.setBrush(QColor(255, 255, 255, 230))
-        painter.drawRoundedRect(rect, 25, 25)
+        painter.setCompositionMode(QPainter.CompositionMode.CompositionMode_Source)
+        painter.fillRect(self.rect(), Qt.GlobalColor.transparent)
         painter.end()
-
-    def _set_layout_visible(self, layout, visible):
-        """设置布局中所有控件的可见性"""
-        for i in range(layout.count()):
-            item = layout.itemAt(i)
-            if item.widget():
-                item.widget().setVisible(visible)
 
     def switch_mode(self, mode):
         self.current_mode = mode
@@ -381,28 +466,32 @@ class LoginDialog(QDialog):
             # 登录模式样式
             self.user_login_label.setStyleSheet("""
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 25px; 
-                font-weight: bold; 
-                color: #429bf7;
-                letter-spacing: 1px;
+                font-size: 28px; 
+                font-weight: 700; 
+                color: #2563eb;
+                letter-spacing: 0.5px;
+                padding: 4px 0px 10px 0px;
+                border-bottom: 2px solid #2563eb;
             """)
             self.user_register_label.setStyleSheet("""
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 25px; 
-                font-weight: bold; 
-                color: #222;
-                letter-spacing: 1px;
+                font-size: 28px; 
+                font-weight: 600; 
+                color: #93c5fd;
+                letter-spacing: 0.5px;
+                padding: 4px 0px 10px 0px;
+                border-bottom: 2px solid transparent;
             """)
             # 显示/隐藏按钮
             self.login_button.setVisible(True)
             self.register_button.setVisible(False)
             # 显示/隐藏输入框布局
-            self._set_layout_visible(self.username_layout, False)  # 隐藏用户名（注册专用）
-            self._set_layout_visible(self.verification_code_layout, True)  # 显示验证码
-            self._set_layout_visible(self.login_email_layout, True)  # 显示登录邮箱
-            self._set_layout_visible(self.register_email_layout, False)  # 隐藏注册邮箱
-            self._set_layout_visible(self.login_password_layout, True)  # 显示登录密码框
-            self._set_layout_visible(self.register_password_layout, False)  # 隐藏注册密码框
+            self.username_row.setVisible(False)              # 隐藏用户名（注册专用）
+            self.verification_code_row.setVisible(True)      # 显示验证码
+            self.login_email_row.setVisible(True)            # 显示登录邮箱
+            self.register_email_row.setVisible(False)        # 隐藏注册邮箱
+            self.login_password_row.setVisible(True)         # 显示登录密码框
+            self.register_password_row.setVisible(False)     # 隐藏注册密码框
             # 清空并移除焦点
             self.login_email_input.clear()
             self.verification_code_input.clear()
@@ -414,28 +503,32 @@ class LoginDialog(QDialog):
             # 注册模式样式
             self.user_login_label.setStyleSheet("""
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 25px; 
-                font-weight: bold; 
-                color: #222;
-                letter-spacing: 1px;
+                font-size: 28px; 
+                font-weight: 600; 
+                color: #93c5fd;
+                letter-spacing: 0.5px;
+                padding: 4px 0px 10px 0px;
+                border-bottom: 2px solid transparent;
             """)
             self.user_register_label.setStyleSheet("""
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 25px; 
-                font-weight: bold; 
-                color: #429bf7;
-                letter-spacing: 1px;
+                font-size: 28px; 
+                font-weight: 700; 
+                color: #2563eb;
+                letter-spacing: 0.5px;
+                padding: 4px 0px 10px 0px;
+                border-bottom: 2px solid #2563eb;
             """)
             # 显示/隐藏按钮
             self.login_button.setVisible(False)
             self.register_button.setVisible(True)
             # 显示/隐藏输入框布局
-            self._set_layout_visible(self.username_layout, True)  # 显示用户名（注册专用）
-            self._set_layout_visible(self.verification_code_layout, True)  # 显示验证码
-            self._set_layout_visible(self.login_email_layout, False)  # 隐藏登录邮箱
-            self._set_layout_visible(self.register_email_layout, True)  # 显示注册邮箱
-            self._set_layout_visible(self.login_password_layout, False)  # 隐藏登录密码框
-            self._set_layout_visible(self.register_password_layout, True)  # 显示注册密码框
+            self.username_row.setVisible(True)               # 显示用户名（注册专用）
+            self.verification_code_row.setVisible(True)      # 显示验证码
+            self.login_email_row.setVisible(False)           # 隐藏登录邮箱
+            self.register_email_row.setVisible(True)         # 显示注册邮箱
+            self.login_password_row.setVisible(False)        # 隐藏登录密码框
+            self.register_password_row.setVisible(True)      # 显示注册密码框
             # 清空并移除焦点
             self.register_email_input.clear()
             self.verification_code_input.clear()
