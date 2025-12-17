@@ -600,7 +600,7 @@ class LoginDialog(QDialog):
 
         # 校验密码
         if not validate_password(password):
-            msg_box = CustomMessageBox(self.parent())
+            msg_box = CustomMessageBox(self.parent(), variant="error")
             msg_box.setText("密码应包含大小写字母、数字和特殊字符，长度至少8位")
             msg_box.setWindowTitle("密码格式错误")
             msg_box.exec()
@@ -731,26 +731,6 @@ class LoginDialog(QDialog):
 
     def update_user_info(self, avatar, username, is_vip, diamonds, user_id=None):
         main_window = self.parent()
-
-        if avatar:
-            image = QImage.fromData(avatar)
-            pixmap = QPixmap.fromImage(image)
-            size = min(pixmap.width(), pixmap.height())
-            cropped_pixmap = QPixmap(size, size)
-            cropped_pixmap.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(cropped_pixmap)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            path = QPainterPath()
-            path.addEllipse(0, 0, size, size)
-            painter.setClipPath(path)
-            painter.drawPixmap(0, 0, pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio))
-            painter.end()
-            main_window.user_avatar_label.setPixmap(cropped_pixmap.scaled(
-                main_window.user_avatar_label.size(),
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation
-            ))
-
-        main_window.username_display_label.setText(username)
+        # 统一交由 MainWindow 处理头像/用户名/会员信息展示（含默认头像兜底）
         main_window.update_membership_info(avatar, username, is_vip, diamonds, user_id)
         logging.info(f"用户 {username} 是 VIP: {is_vip}, 钻石数量: {diamonds}")

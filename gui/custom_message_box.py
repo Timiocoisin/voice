@@ -4,7 +4,7 @@ from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QLinearGradient, QPainte
 from PyQt6 import QtCore
 
 class CustomMessageBox(QDialog):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, variant: str = "error"):
         super().__init__(parent)
         
         # 自定义属性
@@ -12,24 +12,18 @@ class CustomMessageBox(QDialog):
         self.shadow_offset = 8
         self._opacity = 1.0  # 使用私有变量存储opacity值
         
-        # 颜色方案 - 蓝紫色调
-        self.bg_color_start = QColor(245, 247, 255, 250)  # 淡蓝紫色开始
-        self.bg_color_end = QColor(235, 238, 250, 250)    # 淡蓝紫色结束
-        self.text_color = QColor(72, 85, 106)              # 深灰色文本
-        self.border_color = QColor(163, 177, 198, 180)     # 边框颜色
-        self.shadow_color = QColor(72, 85, 106, 20)        # 阴影颜色
+        # 颜色方案（可切换）
+        self.bg_color_start = QColor(245, 247, 255, 250)  # 默认：淡蓝紫色开始
+        self.bg_color_end = QColor(235, 238, 250, 250)    # 默认：淡蓝紫色结束
+        self.text_color = QColor(72, 85, 106)             # 默认：深灰文本
+        self.border_color = QColor(163, 177, 198, 180)    # 默认：边框
+        self.shadow_color = QColor(72, 85, 106, 20)       # 默认：阴影
         
         # 创建标签显示文本
         self.label = QLabel(self)
         self.label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.label.setWordWrap(True)
-        self.label.setStyleSheet(f"""
-            color: {self.text_color.name()}; 
-            font-size: 14px; 
-            font-family: 'Segoe UI', 'Roboto', sans-serif;
-            font-weight: 500;
-            padding: 5px 0;
-        """)
+        self._apply_label_style()
 
         # 设置布局
         layout = QHBoxLayout(self)
@@ -62,6 +56,39 @@ class CustomMessageBox(QDialog):
         self.fadeOutAnimation.setStartValue(1.0)
         self.fadeOutAnimation.setEndValue(0.0)
         self.fadeOutAnimation.finished.connect(self.close)
+
+        # 初始化样式变体
+        self.setVariant(variant)
+
+    def _apply_label_style(self):
+        self.label.setStyleSheet(f"""
+            color: {self.text_color.name()};
+            font-size: 14px;
+            font-family: 'Segoe UI', 'Roboto', sans-serif;
+            font-weight: 500;
+            padding: 5px 0;
+        """)
+
+    def setVariant(self, variant: str):
+        """设置提示样式：info / error / warning（warning 等同 error，统一浅红）"""
+        v = (variant or "info").lower().strip()
+        if v in ("error", "warning"):
+            # 浅红提示（更温和的错误感）
+            self.bg_color_start = QColor(255, 241, 242, 250)  # #fff1f2
+            self.bg_color_end = QColor(254, 226, 226, 250)    # #fee2e2
+            self.text_color = QColor(153, 27, 27)             # #991b1b
+            self.border_color = QColor(254, 202, 202, 200)    # #fecaca
+            self.shadow_color = QColor(153, 27, 27, 18)
+        else:
+            # 默认 info：蓝紫色调
+            self.bg_color_start = QColor(245, 247, 255, 250)
+            self.bg_color_end = QColor(235, 238, 250, 250)
+            self.text_color = QColor(72, 85, 106)
+            self.border_color = QColor(163, 177, 198, 180)
+            self.shadow_color = QColor(72, 85, 106, 20)
+
+        self._apply_label_style()
+        self.update()
     
     def setText(self, text):
         self.label.setText(text)

@@ -112,7 +112,12 @@ def get_default_avatar() -> Optional[bytes]:
     Returns:
         默认头像的二进制数据
     """
-    return load_icon_data(4)
+    # 默认头像文件可能在某些发行包中缺失，缺失时回退到应用图标
+    data = load_icon_data(4)
+    if data:
+        return data
+    logging.warning("默认头像 default_avatar.png 不存在，已回退到 app_icon.png")
+    return load_icon_data(5)
 
 
 def get_logo() -> Optional[bytes]:

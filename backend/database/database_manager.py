@@ -139,7 +139,8 @@ class DatabaseManager:
     def get_user_by_email(self, email: str):
         """根据邮箱查询用户信息"""
         try:
-            cursor = self.connection.cursor(cursorclass=pymysql.cursors.DictCursor)
+            # PyMySQL 的 Connection.cursor() 不支持 cursorclass 关键字参数，需直接传入游标类
+            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
             query = "SELECT id, username, password, avatar FROM users WHERE email = %s"
             cursor.execute(query, (email,))
             return cursor.fetchone()  # 返回包含用户头像的结果
@@ -168,7 +169,7 @@ class DatabaseManager:
     def get_user_vip_info(self, user_id: int):
         """根据用户 ID 查询用户 VIP 信息"""
         try:
-            cursor = self.connection.cursor(cursorclass=pymysql.cursors.DictCursor)
+            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
             query = "SELECT is_vip, vip_expiry_date, diamonds FROM user_vip WHERE user_id = %s"
             cursor.execute(query, (user_id,))
             return cursor.fetchone()
