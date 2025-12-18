@@ -32,10 +32,12 @@ from backend.login.token_storage import  read_token
 from backend.login.token_utils import verify_token
 from backend.login.login_status_manager import check_login_status, save_login_status
 from backend.resources import load_icon_data, load_icon_path, get_logo, get_default_avatar
+from backend.customer_service.keyword_matcher import get_matcher
 from gui.custom_message_box import CustomMessageBox
 from gui.avatar_crop_dialog import AvatarCropDialog
 from .marquee_label import MarqueeLabel
 import logging
+import random
 
 
 # 配置日志记录
@@ -63,6 +65,9 @@ class MainWindow(QMainWindow):
 
         # 初始化用户ID
         self.user_id = None
+
+        # 初始化关键词匹配器（客服系统）
+        self.keyword_matcher = get_matcher()
 
         self.initUI()
 
@@ -522,11 +527,37 @@ class MainWindow(QMainWindow):
         announcement_layout.addWidget(announcement_container, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         # 客服按钮（耳机图标）- 放在公告容器外面，单独放大一档
+        # 用一个容器包裹耳机图标和未读消息badge
+        self.headset_container = QWidget()
+        self.headset_container.setFixedSize(32, 32)
+        self.headset_container.setStyleSheet("background: transparent;")
+        
         self.headset_icon = self.create_svg_widget(9, 26, 26, "margin: 0px; opacity: 0.85;")
         if self.headset_icon:
-            self.headset_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            self.headset_icon.mousePressEvent = self.open_customer_service_chat
-            announcement_layout.addWidget(self.headset_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
+            self.headset_icon.setParent(self.headset_container)
+            self.headset_icon.move(3, 3)
+            self.headset_container.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            self.headset_container.mousePressEvent = self.open_customer_service_chat
+        
+        # 未读消息 badge（默认隐藏）
+        self.unread_badge = QLabel("0", self.headset_container)
+        self.unread_badge.setFixedSize(18, 18)
+        self.unread_badge.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.unread_badge.move(16, -2)  # 右上角位置
+        self.unread_badge.setStyleSheet("""
+            QLabel {
+                background-color: #ef4444;
+                color: #ffffff;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 10px;
+                font-weight: 700;
+                border-radius: 9px;
+            }
+        """)
+        self.unread_badge.setVisible(False)
+        self.unread_count = 0  # 未读消息计数
+        
+        announcement_layout.addWidget(self.headset_container, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         return announcement_layout
 
@@ -756,6 +787,47 @@ class MainWindow(QMainWindow):
         """)
         header_layout.addWidget(title_label, alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         header_layout.addStretch()
+
+        # 最小化按钮
+        minimize_chat_btn = QPushButton("—")
+        minimize_chat_btn.setFixedSize(28, 28)
+        minimize_chat_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        minimize_chat_btn.setToolTip("最小化聊天")
+        minimize_chat_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.2);
+                border: none;
+                border-radius: 14px;
+                font-size: 14px;
+                font-weight: 700;
+                color: #ffffff;
+            }
+            QPushButton:hover {
+                background-color: rgba(255, 255, 255, 0.3);
+            }
+        """)
+        minimize_chat_btn.clicked.connect(self._minimize_chat_panel)
+        header_layout.addWidget(minimize_chat_btn)
+
+        # 关闭按钮
+        close_chat_btn = QPushButton("✕")
+        close_chat_btn.setFixedSize(28, 28)
+        close_chat_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        close_chat_btn.setToolTip("结束聊天")
+        close_chat_btn.setStyleSheet("""
+            QPushButton {
+                background-color: rgba(255, 255, 255, 0.2);
+                border: none;
+                border-radius: 14px;
+                font-size: 14px;
+                color: #ffffff;
+            }
+            QPushButton:hover {
+                background-color: rgba(239, 68, 68, 0.8);
+            }
+        """)
+        close_chat_btn.clicked.connect(self._close_chat_panel)
+        header_layout.addWidget(close_chat_btn)
 
         container_layout.addWidget(header)
 
@@ -1075,6 +1147,9 @@ class MainWindow(QMainWindow):
         if event.button() != Qt.MouseButton.LeftButton:
             return
 
+        # 清除未读消息计数
+        self._clear_unread_count()
+
         # 只初始化一次布局切换
         if getattr(self, "_chat_panel_added", False):
             self.chat_panel.setVisible(True)
@@ -1096,15 +1171,92 @@ class MainWindow(QMainWindow):
         self.chat_panel.setVisible(True)
         self._chat_panel_added = True
 
+    def _minimize_chat_panel(self):
+        """最小化聊天面板（隐藏但保留聊天记录）"""
+        if hasattr(self, "chat_panel") and self.chat_panel:
+            self.chat_panel.setVisible(False)
+            self._chat_minimized = True
+
+    def _close_chat_panel(self):
+        """关闭聊天面板（结束聊天服务，清空聊天记录）"""
+        if hasattr(self, "chat_panel") and self.chat_panel:
+            self.chat_panel.setVisible(False)
+            # 清空聊天记录
+            if hasattr(self, "chat_layout"):
+                while self.chat_layout.count():
+                    item = self.chat_layout.takeAt(0)
+                    widget = item.widget()
+                    if widget:
+                        widget.deleteLater()
+            # 重置状态
+            self._chat_minimized = False
+            self._clear_unread_count()
+            
+            # 恢复原来的布局：移除聊天面板，重新添加中间和右侧版块
+            if getattr(self, "_chat_panel_added", False):
+                # 从布局中移除聊天面板
+                self.main_content_layout.removeWidget(self.chat_panel)
+                
+                # 重新添加中间版块布局（如果不在布局中）
+                if self.merged_section2_layout:
+                    if self.main_content_layout.indexOf(self.merged_section2_layout) == -1:
+                        # 找到左侧列的位置，在它之后插入中间列
+                        left_index = self.main_content_layout.indexOf(self.left_column_widget)
+                        self.main_content_layout.insertLayout(left_index + 1, self.merged_section2_layout, 3)
+                    # 显示中间版块
+                    if self.merged_section2:
+                        self.merged_section2.show()
+                
+                # 重新添加右侧版块（如果不在布局中）
+                if self.right_column_widget:
+                    if self.main_content_layout.indexOf(self.right_column_widget) == -1:
+                        # 在布局末尾添加右侧列（应该在中间列之后）
+                        self.main_content_layout.addWidget(self.right_column_widget, 1)
+                    # 显示右侧版块
+                    self.right_column_widget.show()
+                
+                # 重置标志，以便下次打开时可以重新添加
+                self._chat_panel_added = False
+
+    def _add_unread_count(self):
+        """增加未读消息计数（聊天面板隐藏时调用）"""
+        if not hasattr(self, "unread_count"):
+            self.unread_count = 0
+        self.unread_count += 1
+        self._update_unread_badge()
+
+    def _clear_unread_count(self):
+        """清除未读消息计数"""
+        self.unread_count = 0
+        self._update_unread_badge()
+
+    def _update_unread_badge(self):
+        """更新未读消息 badge 显示"""
+        if not hasattr(self, "unread_badge"):
+            return
+        if self.unread_count <= 0:
+            self.unread_badge.setVisible(False)
+        else:
+            self.unread_badge.setVisible(True)
+            if self.unread_count > 10:
+                self.unread_badge.setText("...")
+            else:
+                self.unread_badge.setText(str(self.unread_count))
+
     def _handle_chat_send(self):
-        """简单模拟发送消息，将内容追加到聊天记录中（后续可接入真实客服/机器人）"""
+        """发送消息并使用关键词匹配生成客服回复"""
         text = self.chat_input.text().strip()
         if not text:
             return
         self._append_chat_message(text, from_self=True)
         self.chat_input.clear()
-        # 模拟客服稍后回复
-        QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
+        
+        # 使用关键词匹配生成回复
+        reply = self.keyword_matcher.generate_reply(text, add_greeting=True)
+        
+        # 模拟客服回复延迟（0.5-1.5秒，让对话更自然）
+        delay = random.randint(500, 1500)
+        QTimer.singleShot(delay, lambda: self.append_support_message(reply))
 
     def _append_file_message(self, filename: str, size_str: str, from_self: bool = True):
         """以卡片形式追加一条文件消息（用户或客服）"""
@@ -1263,8 +1415,15 @@ class MainWindow(QMainWindow):
             bar = self.chat_scroll_area.verticalScrollBar()
             bar.setValue(bar.maximum())
 
-    def _append_chat_message(self, content: str, from_self: bool = True, is_html: bool = False):
-        """按左右气泡形式追加一条消息，使用真实圆角控件"""
+    def _append_chat_message(self, content: str, from_self: bool = True, is_html: bool = False, streaming: bool = False):
+        """按左右气泡形式追加一条消息，使用真实圆角控件
+
+        Args:
+            content: 文本内容
+            from_self: 是否为用户自己发送
+            is_html: 是否为富文本
+            streaming: 是否启用“打字机式”流式展示（仅对客服消息生效）
+        """
         if not hasattr(self, "chat_layout"):
             return
 
@@ -1362,14 +1521,53 @@ class MainWindow(QMainWindow):
 
         self.chat_layout.addWidget(message_widget)
 
+        # 如果是客服消息且开启了流式展示，则启动“打字机”效果
+        if streaming and not from_self and not is_html and isinstance(bubble_label, ChatBubble):
+            self._start_streaming_text(bubble_label, content)
+
         # 滚动到底部
         if hasattr(self, "chat_scroll_area"):
             bar = self.chat_scroll_area.verticalScrollBar()
             bar.setValue(bar.maximum())
 
+    def _start_streaming_text(self, bubble: "ChatBubble", full_text: str, interval_ms: int = 30):
+        """让气泡中的文本以打字机形式逐字出现"""
+        if not full_text:
+            return
+
+        # 先清空文本
+        bubble.label.setText("")
+
+        state = {"i": 0}
+        timer = QTimer(bubble)
+        timer.setInterval(interval_ms)
+
+        def on_timeout():
+            i = state["i"]
+            if i >= len(full_text):
+                timer.stop()
+                timer.deleteLater()
+                return
+            i += 1
+            state["i"] = i
+            bubble.label.setText(full_text[:i])
+
+            # 每次更新后，确保滚动条始终在底部
+            if hasattr(self, "chat_scroll_area"):
+                bar = self.chat_scroll_area.verticalScrollBar()
+                bar.setValue(bar.maximum())
+
+        timer.timeout.connect(on_timeout)
+        timer.start()
+
     def append_support_message(self, content: str, is_html: bool = False):
         """供后续真实客服或机器人使用的接口"""
-        self._append_chat_message(content, from_self=False, is_html=is_html)
+        # HTML 富文本暂时不做流式，避免标签被截断导致显示异常
+        streaming = not is_html
+        self._append_chat_message(content, from_self=False, is_html=is_html, streaming=streaming)
+        # 如果聊天面板隐藏，增加未读消息计数
+        if hasattr(self, "chat_panel") and not self.chat_panel.isVisible():
+            self._add_unread_count()
 
     def open_emoji_menu(self):
         """弹出表情选择器：10 个一行的网格布局"""
@@ -1795,8 +1993,10 @@ class MainWindow(QMainWindow):
 
         # 发送图片消息（不带气泡）
         self._append_image_message(scaled, from_self=True)
-        # 模拟客服稍后回复
-        QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
+        # 模拟客服回复（图片消息使用默认回复）
+        reply = self.keyword_matcher.generate_reply("图片", add_greeting=True)
+        delay = random.randint(500, 1500)
+        QTimer.singleShot(delay, lambda: self.append_support_message(reply))
 
     def _append_image_message(self, pixmap: QPixmap, from_self: bool = True):
         """发送图片消息，不使用气泡，直接显示圆角图片 + 头像"""
@@ -1917,8 +2117,10 @@ class MainWindow(QMainWindow):
 
         # 使用卡片形式的文件消息
         self._append_file_message(filename, size_str)
-        # 模拟客服稍后回复
-        QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
+        # 模拟客服回复（文件消息使用默认回复）
+        reply = self.keyword_matcher.generate_reply("文件", add_greeting=True)
+        delay = random.randint(500, 1500)
+        QTimer.singleShot(delay, lambda: self.append_support_message(reply))
 
     def create_svg_widget(self, icon_id, width, height, style):
         """创建SVG图标控件"""
