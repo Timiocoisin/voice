@@ -148,6 +148,17 @@ class DatabaseManager:
             logging.error(f"查询用户信息失败: {e}")
             return None
 
+    def get_user_by_id(self, user_id: int):
+        """根据用户 ID 查询用户基础信息（含头像）"""
+        try:
+            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            query = "SELECT id, username, avatar FROM users WHERE id = %s"
+            cursor.execute(query, (user_id,))
+            return cursor.fetchone()
+        except pymysql.Error as e:
+            logging.error(f"根据用户ID查询用户信息失败: {e}")
+            return None
+
     def insert_user_vip_info(self, user_id: int) -> bool:
         """插入用户 VIP 信息到数据库，默认非会员，钻石数量为 0"""
         try:
@@ -230,6 +241,36 @@ class DatabaseManager:
             return True
         except pymysql.Error as e:
             logging.error(f"更新用户头像失败: {e}")
+            self.connection.rollback()
+            return False
+
+    def consume_diamonds_and_update_vip(self, user_id: int, cost: int, new_expiry) -> bool:
+        """消耗钻石并更新 VIP 有效期
+
+        使用单条 SQL 保证扣减与更新的原子性：
+        - 仅当当前钻石数量 >= cost 时才会更新
+        """
+        try:
+            cursor = self.connection.cursor()
+            update_query = """
+            UPDATE user_vip
+            SET diamonds = diamonds - %s,
+                is_vip = TRUE,
+                vip_expiry_date = %s
+            WHERE user_id = %s AND diamonds >= %s
+            """
+            cursor.execute(update_query, (cost, new_expiry, user_id, cost))
+            if cursor.rowcount == 0:
+                # 钻石不足或用户不存在
+                self.connection.rollback()
+                return False
+            self.connection.commit()
+            logging.info(
+                f"用户 {user_id} 消耗 {cost} 钻石，VIP 有效期更新为 {new_expiry}"
+            )
+            return True
+        except pymysql.Error as e:
+            logging.error(f"更新用户 VIP 信息失败: {e}")
             self.connection.rollback()
             return False
 

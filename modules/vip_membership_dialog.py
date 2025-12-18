@@ -1,12 +1,16 @@
 # 文件：vip_membership_dialog.py
+import os
+from typing import Optional, Dict
+from datetime import datetime, timedelta
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget,
     QGraphicsDropShadowEffect, QStackedWidget, QGridLayout
 )
 from PyQt6.QtCore import Qt, QPoint, QByteArray
-from PyQt6.QtGui import QPainter, QColor, QCursor
-from backend.resources import load_icon_data
+from PyQt6.QtGui import QPainter, QColor, QCursor, QPixmap
+from backend.resources import load_icon_data, get_default_avatar
 from backend.database.database_manager import DatabaseManager
+from gui.custom_message_box import CustomMessageBox
 import logging
 
 # 配置日志记录
@@ -15,50 +19,9 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 
 class VipMembershipDialog(QDialog):
     def __init__(self, parent=None, user_id=None, is_vip=False):
-        super().__init__(parent)
-        self.user_id = user_id
-        self.is_vip = is_vip
-        self.db_manager = DatabaseManager()
-        
-        # 设置窗口属性（不强制固定宽高，交给布局自适应）
-        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        
-        # 主布局
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(0)
-        
-        # 创建内容容器（半透明背景）
-        content_widget = QWidget()
-        content_widget.setObjectName("vipDialogCard")
-        content_widget.setStyleSheet("""
-            #vipDialogCard {
-                background-color: rgba(255, 255, 255, 200);
-                border-radius: 24px;
-                border: 1px solid rgba(226, 232, 240, 180);
-            }
-        """)
-        
-        # 添加阴影效果
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(40)
-        shadow.setOffset(0, 12)
-        shadow.setColor(QColor(0, 0, 0, 50))
-        content_widget.setGraphicsEffect(shadow)
-        
-        content_layout = QVBoxLayout(content_widget)
-        # 适中一些的内边距，兼顾两种页面的高度
-        content_layout.setContentsMargins(36, 18, 36, 18)
-        content_layout.setSpacing(16)
-        
-        # 直接使用“会员提示”页面作为此对话框的唯一内容
-        non_vip_page = self.create_non_vip_page()
-        content_layout.addWidget(non_vip_page)
-
-        main_layout.addWidget(content_widget)
-        # 让对话框根据内容自动调整大小
-        self.adjustSize()
+        # 兼容旧调用：直接转到新的会员套餐弹窗
+        dlg = VipPackageDialog(parent, user_id=user_id)
+        dlg.exec()
     
     def create_non_vip_page(self):
         """创建非会员提示页面"""
@@ -186,6 +149,11 @@ class VipPackageDialog(QDialog):
     def __init__(self, parent=None, user_id=None):
         super().__init__(parent)
         self.user_id = user_id
+        self.db_manager = DatabaseManager()
+        self.vip_expiry = None  # type: Optional[datetime]
+
+        # 读取当前 VIP 信息
+        self._load_vip_info()
 
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -228,17 +196,24 @@ class VipPackageDialog(QDialog):
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
         content_layout.addWidget(title)
 
+        # 有效期显示：有效期至：xxxx-xx-xx / 已过期 / 已永久
+        self.vip_expiry_label = QLabel()
+        self.vip_expiry_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._update_vip_expiry_label()
+        content_layout.addWidget(self.vip_expiry_label)
+
         # 会员卡2x2网格布局
         cards_grid = QGridLayout()
         cards_grid.setVerticalSpacing(25)
         cards_grid.setHorizontalSpacing(20)
         cards_grid.setContentsMargins(20, 10, 20, 10)
 
+        # 会员套餐配置：天卡、月卡、年卡、永久
         membership_cards = [
-            {"name": "日卡", "price": 10, "period": "每日", "row": 0, "col": 0},
-            {"name": "周卡", "price": 50, "period": "每周", "row": 0, "col": 1},
-            {"name": "月卡", "price": 60, "period": "每月", "row": 1, "col": 0},
-            {"name": "年卡", "price": 600, "period": "每年", "row": 1, "col": 1}
+            {"name": "天卡至尊", "diamonds": 30, "days": 1, "row": 0, "col": 0},
+            {"name": "月卡至尊", "diamonds": 300, "days": 30, "row": 0, "col": 1},
+            {"name": "年卡至尊", "diamonds": 1000, "days": 365, "row": 1, "col": 0},
+            {"name": "永久至尊", "diamonds": 3000, "days": None, "row": 1, "col": 1},
         ]
 
         for card_info in membership_cards:
@@ -252,32 +227,6 @@ class VipPackageDialog(QDialog):
 
         content_layout.addLayout(cards_grid)
 
-        # 返回按钮
-        back_button = QPushButton("返回")
-        back_button.setStyleSheet("""
-            QPushButton {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 15px;
-                font-weight: 600;
-                color: #475569;
-                background-color: rgba(255, 255, 255, 220);
-                border: 1px solid rgba(226, 232, 240, 200);
-                border-radius: 12px;
-                padding: 10px 34px;
-                min-width: 120px;
-            }
-            QPushButton:hover {
-                background-color: rgba(248, 250, 252, 250);
-                border-color: rgba(203, 213, 225, 250);
-            }
-            QPushButton:pressed {
-                background-color: rgba(241, 245, 249, 250);
-            }
-        """)
-        back_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        back_button.clicked.connect(self.reject)
-        content_layout.addWidget(back_button, alignment=Qt.AlignmentFlag.AlignCenter)
-
         main_layout.addWidget(content_widget)
         self.adjustSize()
 
@@ -285,7 +234,7 @@ class VipPackageDialog(QDialog):
         """创建单个会员卡组件"""
         card_widget = QWidget()
         card_widget.setObjectName(f"membershipCard_{card_info['name']}")
-        card_widget.setFixedSize(140, 140)
+        card_widget.setFixedSize(180, 170)
         card_widget.setStyleSheet(f"""
             #membershipCard_{card_info['name']} {{
                 background-color: rgba(255, 255, 255, 240);
@@ -306,15 +255,15 @@ class VipPackageDialog(QDialog):
         card_widget.setGraphicsEffect(shadow)
 
         layout = QVBoxLayout(card_widget)
-        layout.setContentsMargins(15, 18, 15, 18)
-        layout.setSpacing(12)
+        layout.setContentsMargins(15, 16, 15, 16)
+        layout.setSpacing(10)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        period_label = QLabel(card_info["period"])
+        period_label = QLabel(card_info["name"])
         period_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 20px;
+                font-size: 18px;
                 font-weight: 700;
                 color: #3b82f6;
                 padding: 0px;
@@ -324,7 +273,7 @@ class VipPackageDialog(QDialog):
         period_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(period_label)
 
-        price_label = QLabel(f"¥ {card_info['price']}")
+        price_label = QLabel(f"{card_info['diamonds']} 钻石")
         price_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
@@ -337,21 +286,148 @@ class VipPackageDialog(QDialog):
         """)
         price_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(price_label)
-
-        def on_card_click():
-            logging.info(
-                f"用户选择了 {card_info['name']}，价格：¥{card_info['price']}"
-            )
-            # TODO: 这里可以添加支付逻辑或更新数据库
-            self.accept()
-
-        card_widget.mousePressEvent = (
-            lambda event: on_card_click()
-            if event.button() == Qt.MouseButton.LeftButton
-            else None
-        )
+        # 购买按钮
+        buy_button = QPushButton("购买")
+        buy_button.setFixedHeight(32)
+        buy_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        buy_button.setStyleSheet("""
+            QPushButton {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 14px;
+                font-weight: 600;
+                color: #ffffff;
+                background-color: #ec4899;
+                border-radius: 16px;
+                padding: 4px 18px;
+            }
+            QPushButton:hover {
+                background-color: #db2777;
+            }
+            QPushButton:pressed {
+                background-color: #be185d;
+            }
+        """)
+        buy_button.clicked.connect(lambda: self._on_buy_membership(card_info))
+        layout.addWidget(buy_button, alignment=Qt.AlignmentFlag.AlignCenter)
 
         return card_widget
+
+    # --------- 会员套餐相关逻辑 ---------
+
+    def _load_vip_info(self):
+        """加载当前用户 VIP 有效期"""
+        self.vip_expiry = None
+        if not self.user_id:
+            return
+        info = self.db_manager.get_user_vip_info(self.user_id)
+        if not info:
+            return
+        expiry = info.get("vip_expiry_date")
+        if isinstance(expiry, datetime):
+            self.vip_expiry = expiry
+
+    def _update_vip_expiry_label(self):
+        """根据当前 VIP 信息更新“有效期至”显示"""
+        if not hasattr(self, "vip_expiry_label"):
+            return
+
+        text = ""
+        now = datetime.now()
+        if not self.vip_expiry:
+            text = (
+                "<span style=\"font-family:'Microsoft YaHei','SimHei','Arial';"
+                "font-size:13px; color:#4b5563;\">"
+                "有效期至：<span style=\"color:#ef4444; font-weight:700;\">已过期</span>"
+                "</span>"
+            )
+        else:
+            # 认为大于等于 2099 的为永久
+            if self.vip_expiry.year >= 2099:
+                text = (
+                    "<span style=\"font-family:'Microsoft YaHei','SimHei','Arial';"
+                    "font-size:13px; color:#4b5563;\">"
+                    "有效期至：<span style=\"color:#facc15; font-weight:700;\">已永久</span>"
+                    "</span>"
+                )
+            elif self.vip_expiry > now:
+                date_str = self.vip_expiry.strftime("%Y-%m-%d")
+                text = (
+                    "<span style=\"font-family:'Microsoft YaHei','SimHei','Arial';"
+                    "font-size:13px; color:#4b5563;\">"
+                    "有效期至：<span style=\"color:#facc15; font-weight:700;\">"
+                    f"{date_str}</span>"
+                    "</span>"
+                )
+            else:
+                text = (
+                    "<span style=\"font-family:'Microsoft YaHei','SimHei','Arial';"
+                    "font-size:13px; color:#4b5563;\">"
+                    "有效期至：<span style=\"color:#ef4444; font-weight:700;\">已过期</span>"
+                    "</span>"
+                )
+
+        self.vip_expiry_label.setText(text)
+
+    def _on_buy_membership(self, card_info: Dict):
+        """购买会员套餐：消耗钻石并更新 VIP 有效期"""
+        if not self.user_id:
+            msg_box = CustomMessageBox(self.parent())
+            msg_box.setWindowTitle("提示")
+            msg_box.setText("请先登录后再购买会员")
+            msg_box.exec()
+            return
+
+        cost = int(card_info.get("diamonds", 0))
+        days = card_info.get("days", None)
+
+        vip_info = self.db_manager.get_user_vip_info(self.user_id)
+        diamonds = 0
+        if vip_info:
+            try:
+                diamonds = int(vip_info.get("diamonds", 0))
+            except Exception:
+                diamonds = 0
+
+        if diamonds < cost:
+            # 钻石不足：提示并跳转到钻石套餐弹窗
+            msg_box = CustomMessageBox(self.parent())
+            msg_box.setWindowTitle("钻石不足")
+            msg_box.setText("您的钻石数量不足，无法购买该会员套餐，请先前往充值钻石。")
+            msg_box.exec()
+
+            self.close()
+            dialog = DiamondPackageDialog(self.parent(), user_id=self.user_id)
+            dialog.exec()
+            return
+
+        now = datetime.now()
+        if days is None:
+            # 永久：设置一个很远的时间
+            new_expiry = datetime(2099, 12, 31, 23, 59, 59)
+        else:
+            new_expiry = now + timedelta(days=int(days))
+
+        # 调用数据库方法：扣减钻石并更新 VIP
+        success = self.db_manager.consume_diamonds_and_update_vip(
+            user_id=self.user_id,
+            cost=cost,
+            new_expiry=new_expiry,
+        )
+
+        if not success:
+            msg_box = CustomMessageBox(self.parent(), variant="error")
+            msg_box.setWindowTitle("购买失败")
+            msg_box.setText("购买会员失败，请稍后重试或联系管理员。")
+            msg_box.exec()
+            return
+
+        # 本地更新状态并刷新有效期显示
+        self.vip_expiry = new_expiry
+        self._update_vip_expiry_label()
+        msg_box = CustomMessageBox(self.parent())
+        msg_box.setWindowTitle("购买成功")
+        msg_box.setText(f"已成功开通 {card_info.get('name', '会员')}，感谢您的支持！")
+        msg_box.exec()
 
 
 class DiamondPackageDialog(QDialog):
@@ -360,6 +436,18 @@ class DiamondPackageDialog(QDialog):
     def __init__(self, parent=None, user_id=None):
         super().__init__(parent)
         self.user_id = user_id
+        self.db_manager = DatabaseManager()
+
+        # 当前选中的钻石套餐与支付方式
+        self.selected_plan = None
+        self.diamond_cards = []  # [(card_widget, plan_dict), ...]
+        self.selected_pay_method = "wechat"  # "wechat" 或 "alipay"
+
+        # 加载用户基础信息与钻石余额
+        self.username = "未登录"
+        self.diamond_balance = 0
+        self.avatar_pixmap = self._load_user_avatar()
+        self._load_user_diamond_balance()
 
         self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
@@ -388,8 +476,119 @@ class DiamondPackageDialog(QDialog):
         content_layout.setContentsMargins(36, 24, 36, 24)
         content_layout.setSpacing(20)
 
+        # 顶部用户信息区域（头像 + 用户名 + 钻石余额 + 刷新）
+        header = QWidget()
+        header_layout = QHBoxLayout(header)
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(12)
+
+        # 头像
+        avatar_label = QLabel()
+        avatar_label.setFixedSize(56, 56)
+        if self.avatar_pixmap and not self.avatar_pixmap.isNull():
+            scaled = self.avatar_pixmap.scaled(
+                56, 56,
+                Qt.AspectRatioMode.KeepAspectRatioByExpanding,
+                Qt.TransformationMode.SmoothTransformation,
+            )
+            # 裁剪成圆形
+            circle = QPixmap(56, 56)
+            circle.fill(Qt.GlobalColor.transparent)
+            painter = QPainter(circle)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setPen(Qt.PenStyle.NoPen)
+            from PyQt6.QtGui import QPainterPath
+            path = QPainterPath()
+            path.addEllipse(0, 0, 56, 56)
+            painter.setClipPath(path)
+            painter.drawPixmap(0, 0, scaled)
+            painter.end()
+            avatar_label.setPixmap(circle)
+        header_layout.addWidget(avatar_label)
+
+        # 用户名 + 钻石余额
+        info_col = QVBoxLayout()
+        info_col.setContentsMargins(0, 0, 0, 0)
+        info_col.setSpacing(4)
+
+        self.username_label = QLabel(self.username)
+        self.username_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 18px;
+                font-weight: 700;
+                color: #1e293b;
+            }
+        """)
+        info_col.addWidget(self.username_label)
+
+        self.diamond_label = QLabel(f"钻石余额：{self.diamond_balance}")
+        self.diamond_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+                color: #64748b;
+            }
+        """)
+        info_col.addWidget(self.diamond_label)
+
+        header_layout.addLayout(info_col)
+        header_layout.addStretch()
+
+        # 刷新按钮
+        refresh_button = QPushButton("刷新")
+        refresh_button.setFixedHeight(32)
+        refresh_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        refresh_button.setStyleSheet("""
+            QPushButton {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+                font-weight: 500;
+                color: #2563eb;
+                background-color: rgba(239, 246, 255, 1);
+                border-radius: 16px;
+                padding: 4px 14px;
+                border: 1px solid rgba(191, 219, 254, 1);
+            }
+            QPushButton:hover {
+                background-color: rgba(219, 234, 254, 1);
+            }
+            QPushButton:pressed {
+                background-color: rgba(191, 219, 254, 1);
+            }
+        """)
+        refresh_button.clicked.connect(self._refresh_user_info)
+        header_layout.addWidget(refresh_button)
+
+        # 右上角关闭图标按钮
+        close_btn = QPushButton("✕")
+        close_btn.setFixedSize(28, 28)
+        close_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        close_btn.setStyleSheet("""
+            QPushButton {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 14px;
+                font-weight: 600;
+                color: #9ca3af;
+                background-color: transparent;
+                border: none;
+                border-radius: 14px;
+            }
+            QPushButton:hover {
+                background-color: rgba(248, 250, 252, 1);
+                color: #ef4444;
+            }
+            QPushButton:pressed {
+                background-color: rgba(241, 245, 249, 1);
+            }
+        """)
+        close_btn.clicked.connect(self.reject)
+        header_layout.addWidget(close_btn)
+
+        content_layout.addWidget(header)
+
         # 标题
-        title = QLabel("选择钻石套餐")
+        title = QLabel("钻石充值")
         title.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
@@ -420,6 +619,7 @@ class DiamondPackageDialog(QDialog):
 
         for plan in diamond_plans:
             card = self._create_diamond_card(plan)
+            self.diamond_cards.append((card, plan))
             cards_grid.addWidget(
                 card,
                 plan["row"],
@@ -429,31 +629,80 @@ class DiamondPackageDialog(QDialog):
 
         content_layout.addLayout(cards_grid)
 
-        # 返回按钮
-        back_button = QPushButton("返回")
-        back_button.setStyleSheet("""
+        # 充值提示说明（美化为富文本样式）
+        tip_label = QLabel()
+        tip_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        tip_label.setTextFormat(Qt.TextFormat.RichText)
+        tip_label.setText(
+            """
+            <div style="font-family:'Microsoft YaHei','SimHei','Arial'; font-size:13px; line-height:1.7;">
+              <span style="color:#4b5563;">
+                请确认
+                <span style="color:#ec4899; font-weight:600;">充值数量</span>
+                和
+                <span style="color:#6366f1; font-weight:600;">支付方式</span>
+              </span><br/>
+              <span style="color:#4b5563;">
+                请
+                <span style="color:#22c55e; font-weight:600;">试用满意后再购买</span>，
+                充值后
+                <span style="color:#ef4444; font-weight:700;">不支持退款</span>
+              </span><br/>
+              <span style="color:#4b5563;">
+                选中的套餐
+                <span style="color:#ec4899; font-weight:600;">颜色会变深</span>
+              </span>
+            </div>
+            """
+        )
+        content_layout.addWidget(tip_label)
+
+        # 支付方式选择 + 按钮区
+        buttons_row = QHBoxLayout()
+        buttons_row.setContentsMargins(0, 8, 0, 0)
+        buttons_row.setSpacing(12)
+
+        self.wechat_button = QPushButton("微信")
+        self.alipay_button = QPushButton("支付宝")
+        for btn in (self.wechat_button, self.alipay_button):
+            btn.setFixedHeight(40)
+            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+
+        self.wechat_button.clicked.connect(lambda: self._set_pay_method("wechat"))
+        self.alipay_button.clicked.connect(lambda: self._set_pay_method("alipay"))
+
+        buttons_row.addWidget(self.wechat_button)
+        buttons_row.addWidget(self.alipay_button)
+
+        buttons_row.addStretch()
+
+        confirm_button = QPushButton("确认充值")
+        confirm_button.setFixedHeight(40)
+        confirm_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        confirm_button.setStyleSheet("""
             QPushButton {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
                 font-size: 15px;
-                font-weight: 600;
-                color: #475569;
-                background-color: rgba(255, 255, 255, 220);
-                border: 1px solid rgba(226, 232, 240, 200);
-                border-radius: 12px;
-                padding: 10px 34px;
-                min-width: 120px;
+                font-weight: 700;
+                color: #ffffff;
+                background-color: #ec4899;
+                border-radius: 20px;
+                padding: 0 28px;
             }
             QPushButton:hover {
-                background-color: rgba(248, 250, 252, 250);
-                border-color: rgba(203, 213, 225, 250);
+                background-color: #db2777;
             }
             QPushButton:pressed {
-                background-color: rgba(241, 245, 249, 250);
+                background-color: #be185d;
             }
         """)
-        back_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        back_button.clicked.connect(self.reject)
-        content_layout.addWidget(back_button, alignment=Qt.AlignmentFlag.AlignCenter)
+        confirm_button.clicked.connect(self._on_confirm_recharge)
+        buttons_row.addWidget(confirm_button)
+
+        content_layout.addLayout(buttons_row)
+
+        # 初始化支付方式按钮样式
+        self._update_pay_method_buttons()
 
         main_layout.addWidget(content_widget)
         self.adjustSize()
@@ -463,17 +712,7 @@ class DiamondPackageDialog(QDialog):
         card = QWidget()
         card.setObjectName("diamondCard")
         card.setFixedSize(130, 130)
-        card.setStyleSheet("""
-            #diamondCard {
-                background-color: rgba(255, 255, 255, 240);
-                border: 1px solid rgba(226, 232, 240, 220);
-                border-radius: 16px;
-            }
-            #diamondCard:hover {
-                background-color: rgba(255, 255, 255, 255);
-                border: 1.5px solid rgba(59, 130, 246, 250);
-            }
-        """)
+        self._set_card_selected_style(card, selected=False)
         card.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
 
         shadow = QGraphicsDropShadowEffect(card)
@@ -512,16 +751,273 @@ class DiamondPackageDialog(QDialog):
         layout.addWidget(price_label)
 
         def on_click():
-            logging.info(
-                f"用户选择了 {plan['diamonds']} 钻石，价格：¥{plan['price']}"
-            )
-            # TODO: 在这里添加充值/扣费逻辑
-            self.accept()
+            if Qt.MouseButton.LeftButton:
+                self._on_diamond_card_clicked(card, plan)
 
-        card.mousePressEvent = (
-            lambda event: on_click()
-            if event.button() == Qt.MouseButton.LeftButton
-            else None
-        )
+        def mouse_press_event(event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                on_click()
+
+        card.mousePressEvent = mouse_press_event
 
         return card
+
+    # ---------------- 私有辅助方法 ----------------
+
+    def _load_user_avatar(self) -> QPixmap:
+        """从数据库或默认资源加载用户头像"""
+        avatar_bytes = None
+        if self.user_id:
+            user = self.db_manager.get_user_by_id(self.user_id)
+            if user:
+                self.username = user.get("username") or self.username
+                avatar_bytes = user.get("avatar")
+
+        if not avatar_bytes:
+            avatar_bytes = get_default_avatar()
+
+        pix = QPixmap()
+        if avatar_bytes and pix.loadFromData(avatar_bytes):
+            return pix
+        return QPixmap()
+
+    def _load_user_diamond_balance(self):
+        """加载用户当前钻石余额"""
+        if not self.user_id:
+            self.diamond_balance = 0
+            return
+        info = self.db_manager.get_user_vip_info(self.user_id)
+        if info:
+            try:
+                self.diamond_balance = int(info.get("diamonds", 0))
+            except Exception:
+                self.diamond_balance = 0
+
+    def _refresh_user_info(self):
+        """刷新用户名和钻石余额显示"""
+        # 重新加载余额
+        self._load_user_diamond_balance()
+        if hasattr(self, "username_label"):
+            self.username_label.setText(self.username)
+        if hasattr(self, "diamond_label"):
+            self.diamond_label.setText(f"钻石余额：{self.diamond_balance}")
+
+    def _set_card_selected_style(self, card: QWidget, selected: bool):
+        """根据是否选中设置套餐卡片样式"""
+        if selected:
+            card.setStyleSheet("""
+                #diamondCard {
+                    background-color: rgba(244, 114, 182, 0.95);
+                    border: 2px solid rgba(236, 72, 153, 1);
+                    border-radius: 16px;
+                }
+            """)
+        else:
+            card.setStyleSheet("""
+                #diamondCard {
+                    background-color: rgba(255, 255, 255, 240);
+                    border: 1px solid rgba(226, 232, 240, 220);
+                    border-radius: 16px;
+                }
+                #diamondCard:hover {
+                    background-color: rgba(255, 255, 255, 255);
+                    border: 1.5px solid rgba(59, 130, 246, 250);
+                }
+            """)
+
+    def _on_diamond_card_clicked(self, card: QWidget, plan: dict):
+        """选择某个钻石套餐，并让颜色变深"""
+        self.selected_plan = plan
+        for c, p in self.diamond_cards:
+            self._set_card_selected_style(c, selected=(c is card))
+
+    def _set_pay_method(self, method: str):
+        """设置当前支付方式并刷新按钮样式"""
+        if method not in ("wechat", "alipay"):
+            return
+        self.selected_pay_method = method
+        self._update_pay_method_buttons()
+
+    def _update_pay_method_buttons(self):
+        """根据选中状态更新微信/支付宝按钮样式"""
+        if not hasattr(self, "wechat_button") or not hasattr(self, "alipay_button"):
+            return
+
+        def style(selected: bool):
+            if selected:
+                return """
+                    QPushButton {
+                        font-family: "Microsoft YaHei", "SimHei", "Arial";
+                        font-size: 14px;
+                        font-weight: 700;
+                        color: #ffffff;
+                        background-color: #22c55e;
+                        border-radius: 18px;
+                        padding: 0 20px;
+                    }
+                    QPushButton:hover {
+                        background-color: #16a34a;
+                    }
+                    QPushButton:pressed {
+                        background-color: #15803d;
+                    }
+                """
+            return """
+                QPushButton {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 14px;
+                    font-weight: 500;
+                    color: #4b5563;
+                    background-color: #e5e7eb;
+                    border-radius: 18px;
+                    padding: 0 20px;
+                }
+                QPushButton:hover {
+                    background-color: #d4d4d8;
+                }
+                QPushButton:pressed {
+                    background-color: #a1a1aa;
+                }
+            """
+
+        self.wechat_button.setStyleSheet(style(self.selected_pay_method == "wechat"))
+        self.alipay_button.setStyleSheet(style(self.selected_pay_method == "alipay"))
+
+    def _on_confirm_recharge(self):
+        """点击确认充值后，弹出对应软件的收款码窗口"""
+        if not self.selected_plan:
+            # 未选择套餐时，不进行处理（可根据需要添加提示）
+            return
+
+        method = self.selected_pay_method or "wechat"
+        dialog = PaymentQRCodeDialog(
+            self,
+            pay_method=method,
+            plan=self.selected_plan,
+        )
+        dialog.exec()
+
+
+class PaymentQRCodeDialog(QDialog):
+    """展示微信/支付宝收款二维码的弹窗"""
+
+    def __init__(self, parent=None, pay_method: str = "wechat", plan: Optional[Dict] = None):
+        super().__init__(parent)
+        self.pay_method = pay_method
+        self.plan = plan or {}
+
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(20, 20, 20, 20)
+        main_layout.setSpacing(0)
+
+        card = QWidget()
+        card.setObjectName("payQrCard")
+        card.setStyleSheet("""
+            #payQrCard {
+                background-color: #ffffff;
+                border-radius: 24px;
+                border: 1px solid rgba(226, 232, 240, 200);
+            }
+        """)
+
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(30)
+        shadow.setOffset(0, 8)
+        shadow.setColor(QColor(0, 0, 0, 60))
+        card.setGraphicsEffect(shadow)
+
+        layout = QVBoxLayout(card)
+        layout.setContentsMargins(24, 24, 24, 24)
+        layout.setSpacing(16)
+
+        # 标题
+        pay_name = "微信支付" if self.pay_method == "wechat" else "支付宝支付"
+        title = QLabel(pay_name)
+        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        title.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 20px;
+                font-weight: 700;
+                color: #16a34a;
+            }
+        """)
+        layout.addWidget(title)
+
+        # 套餐信息
+        info_text = f"{self.plan.get('diamonds', 0)} 钻石  ¥{self.plan.get('price', 0)}"
+        info_label = QLabel(info_text)
+        info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        info_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 14px;
+                color: #4b5563;
+            }
+        """)
+        layout.addWidget(info_label)
+
+        # 二维码图片
+        qr_label = QLabel()
+        qr_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        base_dir = os.path.dirname(os.path.dirname(__file__))
+        img_name = "wechat_qr.png" if self.pay_method == "wechat" else "alipay_qr.png"
+        img_path = os.path.join(base_dir, "resources", "images", img_name)
+
+        pix = QPixmap()
+        if os.path.exists(img_path) and pix.load(img_path):
+            scaled = pix.scaled(260, 260, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            qr_label.setPixmap(scaled)
+        else:
+            qr_label.setText("暂未配置二维码图片，请在 resources/images/\n放置 " + img_name)
+            qr_label.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 12px;
+                    color: #ef4444;
+                }
+            """)
+
+        layout.addWidget(qr_label)
+
+        hint = QLabel("请使用对应 App 扫码完成支付")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                color: #6b7280;
+            }
+        """)
+        layout.addWidget(hint)
+
+        # 关闭按钮
+        close_btn = QPushButton("关闭")
+        close_btn.setFixedHeight(34)
+        close_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        close_btn.setStyleSheet("""
+            QPushButton {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+                font-weight: 500;
+                color: #4b5563;
+                background-color: #e5e7eb;
+                border-radius: 17px;
+                padding: 0 20px;
+            }
+            QPushButton:hover {
+                background-color: #d4d4d8;
+            }
+            QPushButton:pressed {
+                background-color: #a1a1aa;
+            }
+        """)
+        close_btn.clicked.connect(self.accept)
+        layout.addWidget(close_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+
+        main_layout.addWidget(card)
+        self.adjustSize()

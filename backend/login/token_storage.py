@@ -27,3 +27,11 @@ def read_token():
         except Exception:
             return None
     return None
+
+def clear_token():
+    """清除本地保存的 token 文件"""
+    if os.path.exists(TOKEN_FILE):
+        try:
+            os.remove(TOKEN_FILE)
+        except OSError:
+            pass

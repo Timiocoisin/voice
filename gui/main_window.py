@@ -22,13 +22,13 @@ from PyQt6.QtWidgets import (
     QScrollArea,
 )
 from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtCore import Qt, QEvent, QPoint, QByteArray, QRectF, QSize, QBuffer, QIODevice, QTimer
+from PyQt6.QtCore import Qt, QEvent, QPoint, QRect, QRectF, QSize, QBuffer, QByteArray, QIODevice, QTimer, QPropertyAnimation
 from PyQt6.QtGui import QPixmap, QCursor, QPainter, QPainterPath, QBrush, QColor, QIcon
 from modules.login_dialog import LoginDialog
 from modules.vip_membership_dialog import VipMembershipDialog, VipPackageDialog, DiamondPackageDialog
 from backend.login.login_status_manager import check_login_status
 from backend.database.database_manager import DatabaseManager
-from backend.login.token_storage import  read_token
+from backend.login.token_storage import  read_token, clear_token
 from backend.login.token_utils import verify_token
 from backend.login.login_status_manager import check_login_status, save_login_status
 from backend.resources import load_icon_data, load_icon_path, get_logo, get_default_avatar
@@ -65,6 +65,16 @@ class MainWindow(QMainWindow):
 
         # 初始化用户ID
         self.user_id = None
+
+        # 用户头像 hover 动画与退出弹窗相关变量
+        self._avatar_normal_geometry = None
+        self._avatar_anim = None
+        self.logout_popup = None
+        
+        # 退出登录浮窗的延时隐藏计时器
+        self._logout_timer = QTimer(self)
+        self._logout_timer.setSingleShot(True)
+        self._logout_timer.timeout.connect(self._really_hide_logout)
 
         # 初始化关键词匹配器（客服系统）
         self.keyword_matcher = get_matcher()
@@ -583,13 +593,26 @@ class MainWindow(QMainWindow):
         user_layout.setSpacing(8)
         user_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
-        # 头像（再放大一些，几乎占满导航栏高度）
-        self.user_avatar_label = QLabel()
+        # 头像（包装在固定尺寸容器中，实现真正的原地中心放大）
         avatar_size = max(40, parent_widget.height() - 4)
+        self.avatar_expand_margin = 12  # 为放大预留的边距
+        self.avatar_container = QWidget()
+        self.avatar_container.setFixedSize(avatar_size + self.avatar_expand_margin * 2, avatar_size + self.avatar_expand_margin * 2)
+        self.avatar_container.setStyleSheet("background: transparent;")
+        
+        self.user_avatar_label = QLabel(self.avatar_container)
         self.user_avatar_label.setFixedSize(avatar_size, avatar_size)
+        # 初始居中放置
+        self.user_avatar_label.move(self.avatar_expand_margin, self.avatar_expand_margin)
+        self.user_avatar_label.setScaledContents(True)
         self.user_avatar_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        # 点击头像仍然可以上传头像
         self.user_avatar_label.mousePressEvent = self.upload_avatar
-        user_layout.addWidget(self.user_avatar_label, alignment=Qt.AlignmentFlag.AlignVCenter)
+        # 悬停时放大并显示“退出登录”浮窗
+        self.user_avatar_label.enterEvent = self._on_avatar_hover_enter
+        self.user_avatar_label.leaveEvent = self._on_avatar_hover_leave
+        
+        user_layout.addWidget(self.avatar_container, alignment=Qt.AlignmentFlag.AlignVCenter)
 
         # 右侧信息列
         right_col = QWidget()
@@ -2322,8 +2345,8 @@ class MainWindow(QMainWindow):
         if vip_info:
             is_vip = bool(vip_info.get('is_vip', False))
         
-        # 创建并显示VIP对话框
-        vip_dialog = VipMembershipDialog(self, user_id=self.user_id, is_vip=is_vip)
+        # 直接显示新版会员套餐对话框（不再弹出旧的会员提示）
+        vip_dialog = VipPackageDialog(self, user_id=self.user_id)
         
         # 居中显示对话框
         dialog_rect = vip_dialog.geometry()
@@ -2426,10 +2449,14 @@ class MainWindow(QMainWindow):
         path = QPainterPath()
         path.addEllipse(0, 0, size, size)
         painter.setClipPath(path)
-        painter.drawPixmap(0, 0, pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio))
+        painter.drawPixmap(0, 0, pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
         painter.end()
+        
+        # 使用足够大的尺寸（例如 100x100）作为 Pixmap 源，配合 setScaledContents(True)
+        # 这样在放大动画过程中图像依然保持清晰
+        display_size = 100
         self.user_avatar_label.setPixmap(cropped_pixmap.scaled(
-            self.user_avatar_label.size(),
+            display_size, display_size,
             Qt.AspectRatioMode.KeepAspectRatio,
             Qt.TransformationMode.SmoothTransformation
         ))
@@ -2453,6 +2480,151 @@ class MainWindow(QMainWindow):
 
         # 调整蒙版大小
         self._update_mask_geometry()
+
+        # 重新定位“退出登录”浮窗
+        self._update_logout_popup_position()
+
+    # ---------------- 用户头像 hover & 退出登录 ----------------
+
+    def _on_avatar_hover_enter(self, event):
+        """鼠标移入头像：原地中心放大动画（模拟向用户凸起） + 显示退出按钮"""
+        # 停止隐藏计时器
+        if hasattr(self, "_logout_timer"):
+            self._logout_timer.stop()
+
+        # 记录初始 geometry
+        if self._avatar_normal_geometry is None:
+            self._avatar_normal_geometry = self.user_avatar_label.geometry()
+
+        # 目标 geometry：原地向四周均匀扩展
+        normal = self._avatar_normal_geometry
+        scale_px = 10  # 稍微加大，体现“凸起”感
+        target = QRect(
+            normal.x() - scale_px, 
+            normal.y() - scale_px, 
+            normal.width() + scale_px * 2, 
+            normal.height() + scale_px * 2
+        )
+
+        # 动画：原地放大
+        if self._avatar_anim is not None:
+            self._avatar_anim.stop()
+        self._avatar_anim = QPropertyAnimation(self.user_avatar_label, b"geometry", self)
+        self._avatar_anim.setDuration(200)
+        self._avatar_anim.setStartValue(self.user_avatar_label.geometry())
+        self._avatar_anim.setEndValue(target)
+        self._avatar_anim.start()
+        
+        # 添加更深更散的阴影，模拟 3D 悬浮高度
+        shadow = QGraphicsDropShadowEffect(self.user_avatar_label)
+        shadow.setBlurRadius(20)
+        shadow.setOffset(0, 5) # 稍微向下偏移，模拟光源在上方，增强凸起感
+        shadow.setColor(QColor(0, 0, 0, 90))
+        self.user_avatar_label.setGraphicsEffect(shadow)
+
+        # 提升层级
+        self.user_avatar_label.raise_()
+
+        # 创建并显示带尖角的退出浮窗
+        if self.logout_popup is None:
+            self.logout_popup = LogoutPopup(self, main_window=self)
+            self.logout_popup.button.clicked.connect(self._handle_logout_click)
+
+        self._update_logout_popup_position()
+        self.logout_popup.show()
+        self.logout_popup.raise_()
+
+        if event is not None:
+            event.accept()
+
+    def _on_avatar_hover_leave(self, event):
+        """鼠标移出头像：启动延时隐藏，并开始回缩动画"""
+        # 启动延时隐藏计时器
+        if hasattr(self, "_logout_timer"):
+            self._logout_timer.start(200) # 给用户 200ms 的操作缓冲
+
+        if self._avatar_normal_geometry is None:
+            return
+
+        # 开始回缩动画
+        if self._avatar_anim is not None:
+            self._avatar_anim.stop()
+        self._avatar_anim = QPropertyAnimation(self.user_avatar_label, b"geometry", self)
+        self._avatar_anim.setDuration(200)
+        self._avatar_anim.setStartValue(self.user_avatar_label.geometry())
+        self._avatar_anim.setEndValue(self._avatar_normal_geometry)
+        self._avatar_anim.start()
+
+        # 移除阴影效果由 _really_hide_logout 统一处理，或者在这里先弱化
+        # 为了动画连贯，我们保留阴影直到完全回缩或彻底隐藏
+        
+        if event is not None:
+            event.accept()
+
+    def _really_hide_logout(self):
+        """真正执行隐藏逻辑：隐藏浮窗并重置头像效果"""
+        # 如果鼠标现在正在浮窗或者头像容器上，则不隐藏
+        # 这是一个双重保险
+        cursor_pos = QCursor.pos()
+        
+        # 检查是否在头像容器上
+        container_global_pos = self.avatar_container.mapToGlobal(QPoint(0, 0))
+        container_rect = QRect(container_global_pos, self.avatar_container.size())
+        
+        # 检查是否在浮窗上
+        popup_rect = QRect()
+        if self.logout_popup and self.logout_popup.isVisible():
+            popup_global_pos = self.logout_popup.mapToGlobal(QPoint(0, 0))
+            popup_rect = QRect(popup_global_pos, self.logout_popup.size())
+
+        if container_rect.contains(cursor_pos) or popup_rect.contains(cursor_pos):
+            return
+
+        # 执行隐藏和重置
+        if self.logout_popup:
+            self.logout_popup.hide()
+        
+        # 确保头像完全回缩并移除特效
+        self.user_avatar_label.setGraphicsEffect(None)
+        if self._avatar_normal_geometry:
+            self.user_avatar_label.setGeometry(self._avatar_normal_geometry)
+
+    def _update_logout_popup_position(self):
+        """根据头像容器位置，更新带尖角退出浮窗的位置"""
+        if not self.logout_popup or not self.avatar_container:
+            return
+
+        # 使用容器在主窗口中的坐标作为基准
+        container_pos = self.avatar_container.mapTo(self, QPoint(0, 0))
+        
+        self.logout_popup.adjustSize()
+        popup_w = self.logout_popup.width()
+        
+        # X 轴居中对齐容器
+        # 注意：由于容器现在比头像大，我们需要对准容器的中心
+        x = container_pos.x() + (self.avatar_container.width() - popup_w) // 2
+        # Y 轴放在容器下方，减去一点边距让尖角更贴合头像
+        y = container_pos.y() + self.avatar_container.height() - self.avatar_expand_margin - 2
+        
+        self.logout_popup.move(x, y)
+
+    def _handle_logout_click(self):
+        """处理退出登录：清除 token、重置 UI 并返回登录界面"""
+        # 清除本地 token
+        try:
+            clear_token()
+        except Exception:
+            pass
+
+        # 重置会员/用户显示
+        self.update_membership_info(None, "未登录", False, 0, user_id=None)
+
+        # 隐藏退出浮窗
+        if self.logout_popup:
+            self.logout_popup.hide()
+
+        # 弹出登录对话框
+        self.show_login_dialog()
 
 
 from typing import Optional
@@ -2537,6 +2709,93 @@ class ChatBubble(QWidget):
         painter.setPen(self._text_color)
 
         super().paintEvent(event)
+
+
+class LogoutPopup(QWidget):
+    """自定义带尖角的退出登录浮窗"""
+    clicked = Qt.MouseButton.LeftButton  # 仅为占位，实际使用 QPushButton
+
+    def __init__(self, parent=None, main_window=None):
+        super().__init__(parent)
+        self.main_window = main_window
+        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.SubWindow)
+        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(10, 15, 10, 10)  # 顶部留出尖角空间
+        
+        self.button = QPushButton("退出登录")
+        self.button.setObjectName("logoutButton")
+        self.button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.button.setStyleSheet("""
+            QPushButton#logoutButton {
+                background-color: #ffffff;
+                border-radius: 12px;
+                border: none;
+                padding: 8px 20px;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+                font-weight: 600;
+                color: #1f2933;
+            }
+            QPushButton#logoutButton:hover {
+                background-color: #fee2e2;
+                color: #b91c1c;
+            }
+        """)
+        layout.addWidget(self.button)
+        
+        # 添加阴影
+        shadow = QGraphicsDropShadowEffect(self)
+        shadow.setBlurRadius(15)
+        shadow.setOffset(0, 4)
+        shadow.setColor(QColor(0, 0, 0, 40))
+        self.setGraphicsEffect(shadow)
+
+    def enterEvent(self, event):
+        """鼠标进入浮窗，停止隐藏计时器"""
+        if self.main_window and hasattr(self.main_window, "_logout_timer"):
+            self.main_window._logout_timer.stop()
+        super().enterEvent(event)
+
+    def leaveEvent(self, event):
+        """鼠标离开浮窗，启动隐藏计时器"""
+        if self.main_window and hasattr(self.main_window, "_logout_timer"):
+            self.main_window._logout_timer.start(200) # 200ms 缓冲区
+        super().leaveEvent(event)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        painter.setPen(Qt.PenStyle.NoPen) # 强制不绘制边框线
+        
+        # 绘制背景气泡
+        rect = self.rect()
+        # 减去阴影边距和尖角高度
+        bubble_rect = QRectF(5, 12, rect.width() - 10, rect.height() - 17)
+        
+        path = QPainterPath()
+        # 尖角位置：顶部中央
+        arrow_w = 12
+        arrow_h = 8
+        center_x = rect.width() / 2
+        
+        # 绘制带尖角的路径
+        path.moveTo(center_x - arrow_w/2, bubble_rect.top())
+        path.lineTo(center_x, bubble_rect.top() - arrow_h)
+        path.lineTo(center_x + arrow_w/2, bubble_rect.top())
+        
+        # 添加圆角矩形
+        path.addRoundedRect(bubble_rect, 12, 12)
+        
+        painter.fillPath(path, QBrush(Qt.GlobalColor.white))
+        
+        # 移除边框绘制，保持纯净外观
+        # pen = painter.pen()
+        # pen.setColor(QColor(226, 232, 240, 200))
+        # pen.setWidth(1)
+        # painter.setPen(pen)
+        # painter.drawPath(path)
 
 
 class RoundedBackgroundWidget(QWidget):
