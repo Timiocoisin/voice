@@ -13,6 +13,7 @@ from backend.validation.verification_manager import VerificationManager
 from backend.timer.timer_manager import TimerManager
 from backend.config.config import email_config
 from gui.custom_message_box import CustomMessageBox
+from backend.config import texts as text_cfg
 from backend.database.database_manager import DatabaseManager
 from backend.resources import load_icon_data
 import bcrypt
@@ -20,9 +21,7 @@ from backend.login.token_utils import generate_token, verify_token
 from backend.login.token_storage import save_token, read_token
 from backend.login.login_status_manager import save_login_status
 import logging
-
-# 配置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from backend.logging_manager import setup_logging  # noqa: F401
 
 
 class LoginDialog(QDialog):
@@ -561,8 +560,8 @@ class LoginDialog(QDialog):
 
         if not validate_email(email):
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("请输入有效的邮箱地址")
-            msg_box.setWindowTitle("邮箱格式错误")
+            msg_box.setText(text_cfg.LOGIN_EMAIL_INVALID_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_EMAIL_INVALID_TITLE)
             msg_box.exec()
             return
 
@@ -585,40 +584,40 @@ class LoginDialog(QDialog):
         # 校验用户名
         if not username:
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("请输入用户名")
-            msg_box.setWindowTitle("用户名缺失")
+            msg_box.setText(text_cfg.LOGIN_USERNAME_REQUIRED_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_USERNAME_REQUIRED_TITLE)
             msg_box.exec()
             return
 
         # 校验邮箱
         if not validate_email(email):
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("请输入有效的邮箱地址")
-            msg_box.setWindowTitle("邮箱格式错误")
+            msg_box.setText(text_cfg.LOGIN_EMAIL_INVALID_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_EMAIL_INVALID_TITLE)
             msg_box.exec()
             return
 
         # 校验密码
         if not validate_password(password):
             msg_box = CustomMessageBox(self.parent(), variant="error")
-            msg_box.setText("密码应包含大小写字母、数字和特殊字符，长度至少8位")
-            msg_box.setWindowTitle("密码格式错误")
+            msg_box.setText(text_cfg.LOGIN_PASSWORD_INVALID_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_PASSWORD_INVALID_TITLE)
             msg_box.exec()
             return
 
         # 校验验证码
         if not self.verification_manager.verify_code(email, input_code):
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("验证码已过期或不正确，请重新获取")
-            msg_box.setWindowTitle("验证码错误")
+            msg_box.setText(text_cfg.LOGIN_VERIFICATION_INVALID_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_VERIFICATION_INVALID_TITLE)
             msg_box.exec()
             return
 
         # 检查用户名是否已存在
         if self.db_manager.get_user_by_email(email):
             msg_box = CustomMessageBox()
-            msg_box.setText("用户已存在，请直接登录")
-            msg_box.setWindowTitle("用户已存在")
+            msg_box.setText(text_cfg.LOGIN_USER_EXISTS_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_USER_EXISTS_TITLE)
             msg_box.exec()
             return
 
@@ -646,8 +645,8 @@ class LoginDialog(QDialog):
                 self.accept()  # 关闭登录对话框
         else:
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("注册失败，请稍后重试")
-            msg_box.setWindowTitle("注册失败")
+            msg_box.setText(text_cfg.LOGIN_REGISTER_FAILED_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_REGISTER_FAILED_TITLE)
             msg_box.exec()
 
     def login(self):
@@ -658,16 +657,16 @@ class LoginDialog(QDialog):
         # 校验邮箱
         if not validate_email(email):
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("请输入有效的邮箱地址")
-            msg_box.setWindowTitle("邮箱格式错误")
+            msg_box.setText(text_cfg.LOGIN_EMAIL_INVALID_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_EMAIL_INVALID_TITLE)
             msg_box.exec()
             return
 
         # 校验验证码
         if not self.verification_manager.verify_code(email, input_code):
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("验证码已过期或不正确，请重新获取")
-            msg_box.setWindowTitle("验证码错误")
+            msg_box.setText(text_cfg.LOGIN_VERIFICATION_INVALID_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_VERIFICATION_INVALID_TITLE)
             msg_box.exec()
             return
 
@@ -694,13 +693,13 @@ class LoginDialog(QDialog):
                 self.accept()  # 关闭登录对话框
             else:
                 msg_box = CustomMessageBox(self.parent())
-                msg_box.setText("密码错误，请重试")
-                msg_box.setWindowTitle("登录失败")
+                msg_box.setText(text_cfg.LOGIN_PASSWORD_WRONG_MESSAGE)
+                msg_box.setWindowTitle(text_cfg.LOGIN_FAILED_TITLE)
                 msg_box.exec()
         else:
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText("用户不存在，请先注册")
-            msg_box.setWindowTitle("登录失败")
+            msg_box.setText(text_cfg.LOGIN_USER_NOT_FOUND_MESSAGE)
+            msg_box.setWindowTitle(text_cfg.LOGIN_FAILED_TITLE)
             msg_box.exec()
 
     def check_token(self):

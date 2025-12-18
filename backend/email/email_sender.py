@@ -1,12 +1,10 @@
 import smtplib
 import logging
+from backend.logging_manager import setup_logging  # noqa: F401
 from email.mime.text import MIMEText
 from email.header import Header
 import random
 from datetime import datetime, timedelta
-
-# 配置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class EmailSender:
     def __init__(self, config):

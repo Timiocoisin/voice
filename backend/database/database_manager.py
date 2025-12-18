@@ -1,12 +1,11 @@
 import pymysql
 import pymysql.cursors
 import bcrypt
-from typing import Optional
+from typing import Optional, Dict, Any
 import logging
 from backend.resources import get_default_avatar
+from backend.logging_manager import setup_logging  # noqa: F401
 
-# 配置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 class DatabaseManager:
     def __init__(self):
@@ -106,7 +105,14 @@ class DatabaseManager:
             logging.error(f"创建公告表失败: {e}")
 
     def insert_user_info(self, username: str, email: str, password: str, avatar_data: Optional[bytes] = None) -> bool:
-        """插入用户信息到数据库，头像可选，默认为默认头像"""
+        """插入用户信息到数据库，头像可选，默认为默认头像。
+
+        Args:
+            username: 用户名（展示用）
+            email: 邮箱（登录唯一标识）
+            password: 原始明文密码，将在此处进行哈希
+            avatar_data: 头像二进制数据，缺省时使用默认头像
+        """
         try:
             cursor = self.connection.cursor()
 
@@ -136,8 +142,12 @@ class DatabaseManager:
             self.connection.rollback()
             return False
 
-    def get_user_by_email(self, email: str):
-        """根据邮箱查询用户信息"""
+    def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
+        """根据邮箱查询用户信息。
+
+        Returns:
+            包含 id、username、password、avatar 等字段的字典，查询失败或未找到返回 None。
+        """
         try:
             # PyMySQL 的 Connection.cursor() 不支持 cursorclass 关键字参数，需直接传入游标类
             cursor = self.connection.cursor(pymysql.cursors.DictCursor)
@@ -148,8 +158,8 @@ class DatabaseManager:
             logging.error(f"查询用户信息失败: {e}")
             return None
 
-    def get_user_by_id(self, user_id: int):
-        """根据用户 ID 查询用户基础信息（含头像）"""
+    def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """根据用户 ID 查询用户基础信息（含头像）。"""
         try:
             cursor = self.connection.cursor(pymysql.cursors.DictCursor)
             query = "SELECT id, username, avatar FROM users WHERE id = %s"
@@ -177,8 +187,8 @@ class DatabaseManager:
             self.connection.rollback()
             return False
 
-    def get_user_vip_info(self, user_id: int):
-        """根据用户 ID 查询用户 VIP 信息"""
+    def get_user_vip_info(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """根据用户 ID 查询用户 VIP 信息。"""
         try:
             cursor = self.connection.cursor(pymysql.cursors.DictCursor)
             query = "SELECT is_vip, vip_expiry_date, diamonds FROM user_vip WHERE user_id = %s"

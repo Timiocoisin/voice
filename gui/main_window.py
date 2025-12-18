@@ -30,18 +30,22 @@ from backend.login.login_status_manager import check_login_status
 from backend.database.database_manager import DatabaseManager
 from backend.login.token_storage import  read_token, clear_token
 from backend.login.token_utils import verify_token
-from backend.login.login_status_manager import check_login_status, save_login_status
+from backend.login.login_status_manager import check_login_status, save_login_status, clear_login_status
 from backend.resources import load_icon_data, load_icon_path, get_logo, get_default_avatar
 from backend.customer_service.keyword_matcher import get_matcher
+from backend.membership_service import MembershipService
+from backend.config import texts as text_cfg
 from gui.custom_message_box import CustomMessageBox
 from gui.avatar_crop_dialog import AvatarCropDialog
 from .marquee_label import MarqueeLabel
 import logging
+from backend.logging_manager import setup_logging  # noqa: F401
 import random
 
-
-# 配置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+# 导入拆分后的模块
+from gui.components.chat_bubble import ChatBubble, LogoutPopup, RoundedBackgroundWidget
+from gui.components.sections import create_section_widget, create_merged_section_widget, create_bottom_bar
+from gui.handlers import dialog_handlers, avatar_handlers
 
 
 
@@ -62,6 +66,8 @@ class MainWindow(QMainWindow):
 
         # 初始化数据库管理器
         self.db_manager = DatabaseManager()
+        # 会员 / 钻石业务服务（复用同一个 db_manager）
+        self.membership_service = MembershipService(self.db_manager)
 
         # 初始化用户ID
         self.user_id = None
@@ -85,8 +91,9 @@ class MainWindow(QMainWindow):
         self.login_dialog = LoginDialog(self)
 
         # 创建蒙版控件
-        # 只遮罩圆角背景区域（避免遮罩覆盖主窗口透明边缘，看起来比主页还大）
-        self.mask_widget = QWidget(self.rounded_bg)
+        # 只遮罩主内容区域，避免遮罩挡住顶部 Logo / 头像等元素
+        # initUI 中已创建 self.main_content_widget，这里可以直接作为父级
+        self.mask_widget = QWidget(self.main_content_widget)
         self.mask_widget.setStyleSheet("""
             QWidget {
                 background-color: rgba(0, 0, 0, 120);
@@ -96,9 +103,90 @@ class MainWindow(QMainWindow):
         self.mask_widget.setVisible(False)
 
         # 检查自动登录状态
-        self.check_auto_login()
+        dialog_handlers.check_auto_login(self)
 
         self.installEventFilter(self)
+
+    def update_membership_info(self, avatar_data, username, is_vip, diamonds, user_id=None):
+        """
+        统一对外的会员信息更新接口。
+
+        实际展示逻辑委托给 `gui.handlers.avatar_handlers.update_membership_info`，
+        这样其他模块（如登录对话框、自动登录逻辑）可以统一调用
+        `main_window.update_membership_info(...)` 来更新头像、用户名、会员与钻石信息。
+        """
+        avatar_handlers.update_membership_info(
+            self,
+            avatar_data,
+            username,
+            is_vip,
+            diamonds,
+            user_id=user_id,
+        )
+
+    def _update_mask_geometry(self):
+        """
+        更新登录遮罩层的几何位置。
+
+        实际逻辑复用 `gui.handlers.dialog_handlers._update_mask_geometry`，
+        这里仅作为 MainWindow 的实例方法包装，便于在 `showEvent` / `resizeEvent`
+        等生命周期回调中直接调用 `self._update_mask_geometry()`。
+        """
+        dialog_handlers._update_mask_geometry(self)
+
+    def refresh_membership_from_db(self):
+        """
+        从数据库重新拉取当前用户的会员与钻石信息，并刷新顶部展示。
+
+        - 用于：自动登录、会员购买成功、钻石充值成功等场景
+        - 若当前未登录（user_id 为空），则回退为“未登录 / 未开通会员 / 0 钻石”
+        """
+        try:
+            if not self.user_id:
+                # 未登录：重置为默认状态
+                self.update_membership_info(None, "未登录", False, 0, None)
+                return
+
+            vip_info = self.membership_service.get_vip_info(self.user_id)
+            user_row = self.db_manager.get_user_by_id(self.user_id)
+
+            avatar_bytes = user_row.get("avatar") if user_row else None
+            username = user_row.get("username") if user_row else "未登录"
+            is_vip = bool(vip_info.is_vip) if vip_info else False
+            diamonds = vip_info.diamonds if vip_info else 0
+
+            self.update_membership_info(avatar_bytes, username, is_vip, diamonds, self.user_id)
+        except Exception as e:
+            logging.error("刷新会员信息失败：%s", e, exc_info=True)
+
+    def _refresh_vip_tooltip(self):
+        """
+        根据当前 user_id 与 VIP 有效期，更新顶部 VIP 徽章的 tooltip。
+        """
+        if not hasattr(self, "vip_status_label"):
+            return
+
+        if not self.user_id:
+            self.vip_status_label.setToolTip("未登录，暂无会员信息")
+            return
+
+        try:
+            vip_info = self.membership_service.get_vip_info(self.user_id)
+        except Exception as e:
+            logging.error("获取 VIP 信息失败：%s", e, exc_info=True)
+            self.vip_status_label.setToolTip("会员信息获取失败，请稍后重试")
+            return
+
+        if not vip_info or not vip_info.vip_expiry:
+            self.vip_status_label.setToolTip("当前未开通会员")
+            return
+
+        expiry = vip_info.vip_expiry
+        if expiry.year >= 2099:
+            self.vip_status_label.setToolTip("已开通永久会员")
+        else:
+            date_str = expiry.strftime("%Y-%m-%d")
+            self.vip_status_label.setToolTip(f"VIP 有效期至：{date_str}")
 
     def screen_size(self, ratio, height=False):
         screen = QApplication.primaryScreen()
@@ -117,6 +205,7 @@ class MainWindow(QMainWindow):
         # 圆角背景窗口
         self.rounded_bg = RoundedBackgroundWidget()
         self.rounded_bg.setObjectName("roundedBackground")
+        # 还原为透明圆角背景，由外部背景图来决定视觉效果
         self.rounded_bg.setStyleSheet("""
             #roundedBackground {
                 background-color: transparent;
@@ -130,12 +219,16 @@ class MainWindow(QMainWindow):
 
         # 顶部导航栏
         top_bar = self.create_top_bar()
+        # 让顶部导航栏的下边界与中间容器的上边界紧贴在一起
         rounded_layout.addWidget(top_bar)
 
         # 创建主内容区域
         self.main_content_widget = QWidget()
+        # 中间容器改回透明，由内部板块自身的白色卡片背景决定视觉块
         self.main_content_layout = QHBoxLayout(self.main_content_widget)
-        self.main_content_layout.setContentsMargins(20, 15, 20, 15)  # 优化边距，给内容更多空间
+        # 顶部留白再压缩一点，让导航栏与首行版块更紧凑；
+        # 底部保持适中留白，避免贴得太满
+        self.main_content_layout.setContentsMargins(20, 8, 20, 15)
         self.main_content_layout.setSpacing(18)  # 优化列间距
         self.main_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
@@ -143,19 +236,21 @@ class MainWindow(QMainWindow):
         self.left_column_widget = QWidget()
         left_column_layout = QVBoxLayout(self.left_column_widget)
         left_column_layout.setContentsMargins(0, 0, 0, 0)
-        left_column_layout.setSpacing(18)  # 优化行间距
+        # 左列上下两个版块之间的间距略微减小，使垂直视觉更紧凑、对称
+        left_column_layout.setSpacing(15)
 
-        # 版块1
-        section1 = self.create_section_widget(0)
-        section1.setMinimumHeight(220)  # 设置最小高度，确保内容有足够空间
+        # 版块1（左上）
+        section1 = create_section_widget(0)
+        # 再拉高版块高度，减少容器内部空隙
+        section1.setMinimumHeight(280)
         section1_layout = QVBoxLayout()
         section1_layout.setContentsMargins(0, 0, 0, 0)
         section1_layout.addWidget(section1)
         left_column_layout.addLayout(section1_layout, 1)  # 拉伸因子1，占一半
 
-        # 版块4
-        section4 = self.create_section_widget(3)
-        section4.setMinimumHeight(220)  # 设置最小高度
+        # 版块4（左下）
+        section4 = create_section_widget(3)
+        section4.setMinimumHeight(280)
         section4_layout = QVBoxLayout()
         section4_layout.setContentsMargins(0, 0, 0, 0)
         section4_layout.addWidget(section4)
@@ -163,9 +258,10 @@ class MainWindow(QMainWindow):
 
         self.main_content_layout.addWidget(self.left_column_widget, 1)  # 权重1
 
-        # 中间列：合并后的版块2（原版块2和版块5合并）
-        self.merged_section2 = self.create_merged_section_widget()
-        self.merged_section2.setMinimumHeight(460)  # 设置最小高度，跨越两行（220 + 220 + 间距）
+        # 中间列：合并后的版块2（原版块2和版块5合并）——主功能区
+        self.merged_section2 = create_merged_section_widget()
+        # 中间主功能区整体再拉高一些，让布局更饱满
+        self.merged_section2.setMinimumHeight(560)
         self.merged_section2_layout = QVBoxLayout()
         self.merged_section2_layout.setContentsMargins(0, 0, 0, 0)
         self.merged_section2_layout.addWidget(self.merged_section2)
@@ -175,19 +271,20 @@ class MainWindow(QMainWindow):
         self.right_column_widget = QWidget()
         right_column_layout = QVBoxLayout(self.right_column_widget)
         right_column_layout.setContentsMargins(0, 0, 0, 0)
-        right_column_layout.setSpacing(18)  # 优化行间距
+        # 右列上下两个版块之间的间距与左列保持一致
+        right_column_layout.setSpacing(15)
 
-        # 版块3
-        section3 = self.create_section_widget(2)
-        section3.setMinimumHeight(220)  # 设置最小高度
+        # 版块3（右上）
+        section3 = create_section_widget(2)
+        section3.setMinimumHeight(280)
         section3_layout = QVBoxLayout()
         section3_layout.setContentsMargins(0, 0, 0, 0)
         section3_layout.addWidget(section3)
         right_column_layout.addLayout(section3_layout, 1)  # 拉伸因子1，占一半
 
-        # 版块6
-        section6 = self.create_section_widget(5)
-        section6.setMinimumHeight(220)  # 设置最小高度
+        # 版块6（右下）
+        section6 = create_section_widget(5)
+        section6.setMinimumHeight(280)
         section6_layout = QVBoxLayout()
         section6_layout.setContentsMargins(0, 0, 0, 0)
         section6_layout.addWidget(section6)
@@ -202,236 +299,29 @@ class MainWindow(QMainWindow):
         rounded_layout.addWidget(self.main_content_widget, stretch=1)
 
         # 底部红色导航栏模块
-        bottom_bar = self.create_bottom_bar()
+        bottom_bar = create_bottom_bar()
         rounded_layout.addWidget(bottom_bar)
 
         main_layout.addWidget(self.rounded_bg)
-
-    def create_bottom_bar(self):
-        """创建底部导航栏模块"""
-        bottom_bar = QWidget()
-        bottom_bar.setObjectName("bottomBar")
-        bottom_bar.setMinimumHeight(60)  # 设置最小高度，使导航栏更高
-        bottom_bar.setStyleSheet("""
-            #bottomBar {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 200),
-                    stop:1 rgba(255, 255, 255, 180));
-                border-radius: 12px;
-                border: 1px solid rgba(226, 232, 240, 200);
-                padding: 18px 20px;
-            }
-        """)
-        
-        # 添加阴影效果
-        shadow = QGraphicsDropShadowEffect(bottom_bar)
-        shadow.setBlurRadius(15)
-        shadow.setOffset(0, 3)
-        shadow.setColor(QColor(0, 0, 0, 25))
-        bottom_bar.setGraphicsEffect(shadow)
-
-        # 底部导航栏内容
-        title = QLabel("底部导航栏")
-        title.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-weight: 600;
-                font-size: 16px;
-                color: #475569;
-                text-align: center;
-            }
-        """)
-        title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-
-        layout = QHBoxLayout(bottom_bar)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.addWidget(title)
-
-        return bottom_bar
-
-    def create_section_widget(self, index):
-        section_widget = QWidget()
-        section_widget.setObjectName(f"section{index}")
-        
-        # 优化板块样式：添加渐变背景、阴影效果
-        section_widget.setStyleSheet(f"""
-            #section{index} {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 220),
-                    stop:1 rgba(255, 255, 255, 200));
-                border: 1px solid rgba(226, 232, 240, 200);
-                border-radius: 16px;
-                padding: 20px;
-            }}
-            #section{index}:hover {{
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 240),
-                    stop:1 rgba(255, 255, 255, 220));
-                border: 1px solid rgba(203, 213, 225, 250);
-            }}
-        """)
-        
-        # 添加阴影效果
-        shadow = QGraphicsDropShadowEffect(section_widget)
-        shadow.setBlurRadius(20)
-        shadow.setOffset(0, 4)
-        shadow.setColor(QColor(0, 0, 0, 30))
-        section_widget.setGraphicsEffect(shadow)
-
-        layout = QVBoxLayout(section_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        # 优化标题样式
-        title = QLabel(f"板块 {index + 1}")
-        title.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-weight: 700;
-                font-size: 18px;
-                color: #1e293b;
-                padding-bottom: 8px;
-                border-bottom: 2px solid rgba(226, 232, 240, 200);
-                margin-bottom: 4px;
-            }
-        """)
-        layout.addWidget(title)
-
-        # 优化内容区域
-        content = QLabel(f"这是板块 {index + 1} 的内容")
-        content.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 14px;
-                color: #64748b;
-                padding: 8px 0px;
-                line-height: 1.6;
-            }
-        """)
-        content.setWordWrap(True)
-        layout.addWidget(content)
-        
-        # 添加弹性空间
-        layout.addStretch()
-
-        return section_widget
-
-    def create_merged_section_widget(self):
-        """创建合并后的版块2（原版块2和版块5合并）"""
-        section_widget = QWidget()
-        section_widget.setObjectName("section2_merged")
-        
-        # 优化板块样式：添加渐变背景、阴影效果
-        section_widget.setStyleSheet("""
-            #section2_merged {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 220),
-                    stop:1 rgba(255, 255, 255, 200));
-                border: 1px solid rgba(226, 232, 240, 200);
-                border-radius: 16px;
-                padding: 20px;
-            }
-            #section2_merged:hover {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 240),
-                    stop:1 rgba(255, 255, 255, 220));
-                border: 1px solid rgba(203, 213, 225, 250);
-            }
-        """)
-        
-        # 添加阴影效果
-        shadow = QGraphicsDropShadowEffect(section_widget)
-        shadow.setBlurRadius(20)
-        shadow.setOffset(0, 4)
-        shadow.setColor(QColor(0, 0, 0, 30))
-        section_widget.setGraphicsEffect(shadow)
-
-        layout = QVBoxLayout(section_widget)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(12)
-        layout.setAlignment(Qt.AlignmentFlag.AlignTop)
-
-        # 标题：版块2
-        title = QLabel("板块 2")
-        title.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-weight: 700;
-                font-size: 18px;
-                color: #1e293b;
-                padding-bottom: 8px;
-                border-bottom: 2px solid rgba(226, 232, 240, 200);
-                margin-bottom: 4px;
-            }
-        """)
-        layout.addWidget(title)
-
-        # 原版块2的内容
-        content1 = QLabel("这是板块 2 的内容")
-        content1.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 14px;
-                color: #64748b;
-                padding: 8px 0px;
-                line-height: 1.6;
-            }
-        """)
-        content1.setWordWrap(True)
-        layout.addWidget(content1)
-        
-        # 添加分隔线
-        separator = QWidget()
-        separator.setFixedHeight(1)
-        separator.setStyleSheet("background-color: rgba(226, 232, 240, 200); margin: 12px 0px;")
-        layout.addWidget(separator)
-        
-        # 标题：版块5（作为合并版块的一部分）
-        title2 = QLabel("板块 5")
-        title2.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-weight: 700;
-                font-size: 18px;
-                color: #1e293b;
-                padding-bottom: 8px;
-                border-bottom: 2px solid rgba(226, 232, 240, 200);
-                margin-bottom: 4px;
-            }
-        """)
-        layout.addWidget(title2)
-
-        # 原版块5的内容
-        content2 = QLabel("这是板块 5 的内容")
-        content2.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 14px;
-                color: #64748b;
-                padding: 8px 0px;
-                line-height: 1.6;
-            }
-        """)
-        content2.setWordWrap(True)
-        layout.addWidget(content2)
-        
-        # 添加弹性空间
-        layout.addStretch()
-
-        return section_widget
 
     def create_top_bar(self):
         """创建顶部导航栏"""
         top_bar = QWidget()
         top_bar.setObjectName("topBar")
-        top_bar.setStyleSheet("background-color: transparent;")
-        # 顶部导航栏再加高一些，让头像有更大的显示空间
-        top_bar.setFixedHeight(56)
+        # 顶部导航栏保持完全透明，不再使用底部分割线
+        top_bar.setStyleSheet("""
+            #topBar {
+                background-color: transparent;
+            }
+        """)
+        # 高度保持当前较高的效果
+        top_bar.setFixedHeight(80)
 
         top_bar_layout = QHBoxLayout(top_bar)
-        top_bar_layout.setContentsMargins(12, 0, 12, 0)  # 优化外边距
-        top_bar_layout.setSpacing(16)  # 优化元素间距
+        # 稍微增加上下内边距，让内容不贴边，看起来更精致
+        top_bar_layout.setContentsMargins(18, 6, 18, 6)
+        # 略微增大左右元素间距，让 Logo、公告、用户区之间更舒展
+        top_bar_layout.setSpacing(20)
         top_bar_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # 添加Logo图标
@@ -464,16 +354,17 @@ class MainWindow(QMainWindow):
             logo_pixmap = QPixmap()
             logo_pixmap.loadFromData(logo_data)
 
-            # 调整Logo大小
-            logo_height = int(parent_widget.height() * 2.0)  # 调整Logo高度比例，减小Logo尺寸
+            # 调整Logo大小（整体再缩小一些）
+            logo_height = int(parent_widget.height() * 1.6)
             logo_pixmap = logo_pixmap.scaled(
-                logo_height * 3,  # 调整Logo宽度比例
+                logo_height * 2,  # 同步缩小宽度比例
                 logo_height,
                 Qt.AspectRatioMode.KeepAspectRatio,
                 Qt.TransformationMode.SmoothTransformation
             )
             logo_label.setPixmap(logo_pixmap)
-        logo_label.setStyleSheet("margin: 0px; padding: 0px;")
+        # 略微上移一点，让整体更“贴顶”
+        logo_label.setStyleSheet("margin: -4px 0 0 0; padding: 0px;")
 
         return logo_label
 
@@ -594,7 +485,10 @@ class MainWindow(QMainWindow):
         user_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
         # 头像（包装在固定尺寸容器中，实现真正的原地中心放大）
-        avatar_size = max(40, parent_widget.height() - 4)
+        # 注意：如果头像尺寸过大，会超出顶部导航栏的高度，被下边界“截断”
+        # 这里按导航栏高度的 70% 来计算头像大小，避免被遮挡
+        avatar_size = int(parent_widget.height() * 0.7)
+        avatar_size = max(40, avatar_size)
         self.avatar_expand_margin = 12  # 为放大预留的边距
         self.avatar_container = QWidget()
         self.avatar_container.setFixedSize(avatar_size + self.avatar_expand_margin * 2, avatar_size + self.avatar_expand_margin * 2)
@@ -606,8 +500,15 @@ class MainWindow(QMainWindow):
         self.user_avatar_label.move(self.avatar_expand_margin, self.avatar_expand_margin)
         self.user_avatar_label.setScaledContents(True)
         self.user_avatar_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        # 默认圆形 + 非会员灰色描边
+        self.user_avatar_label.setStyleSheet("""
+            QLabel {
+                border-radius: %dpx;
+                border: 2px solid rgba(148, 163, 184, 160);
+            }
+        """ % (avatar_size // 2))
         # 点击头像仍然可以上传头像
-        self.user_avatar_label.mousePressEvent = self.upload_avatar
+        self.user_avatar_label.mousePressEvent = lambda event: avatar_handlers.upload_avatar(self, event)
         # 悬停时放大并显示“退出登录”浮窗
         self.user_avatar_label.enterEvent = self._on_avatar_hover_enter
         self.user_avatar_label.leaveEvent = self._on_avatar_hover_leave
@@ -651,22 +552,23 @@ class MainWindow(QMainWindow):
         if self.vip_icon:
             # 设置VIP图标可点击
             self.vip_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            self.vip_icon.mousePressEvent = lambda event: self.show_vip_dialog() if event.button() == Qt.MouseButton.LeftButton else None
+            self.vip_icon.mousePressEvent = lambda event: dialog_handlers.show_vip_dialog(self) if event.button() == Qt.MouseButton.LeftButton else None
             vip_group.addWidget(self.vip_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
-        self.vip_status_label = QLabel("非会员")
+        self.vip_status_label = QLabel("未开通会员")
         self.vip_status_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 600;
-                color: #1e293b;
-                padding: 0px;
-                margin: 0px;
+                color: #64748b;
+                padding: 2px 8px;
+                border-radius: 10px;
+                background-color: rgba(226, 232, 240, 120);
             }
         """)
         # 设置VIP状态标签也可点击
         self.vip_status_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.vip_status_label.mousePressEvent = lambda event: self.show_vip_dialog() if event.button() == Qt.MouseButton.LeftButton else None
+        self.vip_status_label.mousePressEvent = lambda event: dialog_handlers.show_vip_dialog(self) if event.button() == Qt.MouseButton.LeftButton else None
         vip_group.addWidget(self.vip_status_label, alignment=Qt.AlignmentFlag.AlignVCenter)
         membership_layout.addLayout(vip_group)
 
@@ -680,16 +582,16 @@ class MainWindow(QMainWindow):
             # 设置钻石图标可点击，打开钻石套餐弹窗
             self.diamond_icon.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             self.diamond_icon.mousePressEvent = (
-                lambda event: self.show_diamond_dialog()
+                lambda event: dialog_handlers.show_diamond_dialog(self)
                 if event.button() == Qt.MouseButton.LeftButton
                 else None
             )
             diamond_group.addWidget(self.diamond_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
-        self.diamond_count_label = QLabel("0")
+        self.diamond_count_label = QLabel("0 钻石")
         self.diamond_count_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 14px;
+                font-size: 13px;
                 font-weight: 600;
                 color: #1e293b;
                 padding: 0px;
@@ -714,7 +616,7 @@ class MainWindow(QMainWindow):
         right_layout.addWidget(user_widget, stretch=1)
 
         # 初始化默认头像（资源缺失时会自动回退）
-        self.update_user_avatar_display(None)
+        avatar_handlers.update_user_avatar_display(self, None)
 
         # 添加分隔线
         separator = QWidget()
@@ -1170,6 +1072,16 @@ class MainWindow(QMainWindow):
         if event.button() != Qt.MouseButton.LeftButton:
             return
 
+        # 未登录时，引导用户先登录，再联系客服
+        if not self.user_id:
+            msg_box = CustomMessageBox(self, variant="warning")
+            msg_box.setWindowTitle("请先登录")
+            msg_box.setText("登录后即可联系客服为你处理问题。")
+            msg_box.exec()
+            # 顺便弹出登录框
+            dialog_handlers.show_login_dialog(self)
+            return
+
         # 清除未读消息计数
         self._clear_unread_count()
 
@@ -1215,30 +1127,30 @@ class MainWindow(QMainWindow):
             self._chat_minimized = False
             self._clear_unread_count()
             
-            # 恢复原来的布局：移除聊天面板，重新添加中间和右侧版块
+            # 恢复原来的布局：移除聊天面板，重新按「左列 + 中列 + 右列」顺序添加
             if getattr(self, "_chat_panel_added", False):
-                # 从布局中移除聊天面板
+                # 1. 从布局中移除聊天面板以及中右列（如果存在），避免重复或顺序错乱
                 self.main_content_layout.removeWidget(self.chat_panel)
-                
-                # 重新添加中间版块布局（如果不在布局中）
                 if self.merged_section2_layout:
-                    if self.main_content_layout.indexOf(self.merged_section2_layout) == -1:
-                        # 找到左侧列的位置，在它之后插入中间列
-                        left_index = self.main_content_layout.indexOf(self.left_column_widget)
-                        self.main_content_layout.insertLayout(left_index + 1, self.merged_section2_layout, 3)
-                    # 显示中间版块
+                    self.main_content_layout.removeItem(self.merged_section2_layout)
+                if self.right_column_widget:
+                    self.main_content_layout.removeWidget(self.right_column_widget)
+
+                # 2. 确保左列在布局中（理论上一直存在，这里做一次兜底）
+                if self.left_column_widget and self.main_content_layout.indexOf(self.left_column_widget) == -1:
+                    self.main_content_layout.addWidget(self.left_column_widget, 1)
+
+                # 3. 按最初顺序重新添加：左列(1) + 中列(3) + 右列(1)
+                if self.merged_section2_layout:
+                    self.main_content_layout.addLayout(self.merged_section2_layout, 3)
                     if self.merged_section2:
                         self.merged_section2.show()
-                
-                # 重新添加右侧版块（如果不在布局中）
+
                 if self.right_column_widget:
-                    if self.main_content_layout.indexOf(self.right_column_widget) == -1:
-                        # 在布局末尾添加右侧列（应该在中间列之后）
-                        self.main_content_layout.addWidget(self.right_column_widget, 1)
-                    # 显示右侧版块
+                    self.main_content_layout.addWidget(self.right_column_widget, 1)
                     self.right_column_widget.show()
-                
-                # 重置标志，以便下次打开时可以重新添加
+
+                # 4. 重置标志，以便下次打开时可以重新添加
                 self._chat_panel_added = False
 
     def _add_unread_count(self):
@@ -2213,58 +2125,6 @@ class MainWindow(QMainWindow):
         except Exception:
             return self._bytes_to_data_url(data, mime)
 
-    def show_login_dialog(self):
-        is_logged_in, _, _ = check_login_status()
-        if not is_logged_in:
-            self.login_dialog = LoginDialog(self)
-            self.login_dialog.show()
-
-            # 居中显示
-            dialog_size = self.login_dialog.size()
-            center_x = self.x() + (self.width() - dialog_size.width()) // 2
-            center_y = self.y() + (self.height() - dialog_size.height()) // 2
-            self.login_dialog.move(center_x, center_y)
-
-            self.login_dialog_offset = self.login_dialog.pos() - self.pos()
-
-            # 显示蒙版
-            self.mask_widget.setVisible(True)
-            self._update_mask_geometry()
-            self.mask_widget.setVisible(True)
-
-    def check_auto_login(self):
-        """检查自动登录"""
-        token = read_token()
-        if token:
-            payload = verify_token(token)
-            if payload:
-                email = payload['email']
-                user = self.db_manager.get_user_by_email(email)
-                if user:
-                    logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
-                    save_login_status(user['id'], user['username'])
-
-                    vip_info = self.db_manager.get_user_vip_info(user['id'])
-                    if vip_info:
-                        is_vip = vip_info['is_vip']
-                        diamonds = vip_info['diamonds']
-                        self.update_membership_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
-
-                    # 隐藏蒙版
-                    self.mask_widget.setVisible(False)
-        else:
-            self.show_login_dialog()
-
-    def _update_mask_geometry(self):
-        """让遮罩层始终覆盖 rounded_bg（解决初始化时 rounded_bg 尺寸未定导致遮罩过小的问题）"""
-        if not hasattr(self, "rounded_bg") or not hasattr(self, "mask_widget"):
-            return
-        if not self.rounded_bg or not self.mask_widget:
-            return
-        # mask_widget 的父级就是 rounded_bg，因此直接用 rect 即可
-        self.mask_widget.setGeometry(self.rounded_bg.rect())
-        self.mask_widget.raise_()
-
     def showEvent(self, event):
         super().showEvent(event)
         # 初次显示时布局才最终确定，顺手同步一次遮罩尺寸
@@ -2307,164 +2167,6 @@ class MainWindow(QMainWindow):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = False
-
-    def update_membership_info(self, avatar_data, username, is_vip, diamonds, user_id=None):
-        """更新会员信息显示"""
-        # 更新用户ID
-        self.user_id = user_id
-
-        # 更新文本
-        if username is not None:
-            self.username_display_label.setText(str(username))
-
-        vip = bool(is_vip)
-        self.vip_status_label.setText("会员" if vip else "非会员")
-
-        try:
-            d = int(diamonds)
-        except Exception:
-            d = 0
-        self.diamond_count_label.setText(str(d))
-
-        # 更新头像（None/bytes/memoryview 都可）
-        self.update_user_avatar_display(avatar_data)
-
-    def show_vip_dialog(self):
-        """显示VIP会员对话框"""
-        if not self.user_id:
-            # 如果用户未登录，提示先登录
-            msg_box = CustomMessageBox(self)
-            msg_box.setText("请先登录")
-            msg_box.setWindowTitle("提示")
-            msg_box.exec()
-            return
-        
-        # 获取当前会员状态
-        vip_info = self.db_manager.get_user_vip_info(self.user_id)
-        is_vip = False
-        if vip_info:
-            is_vip = bool(vip_info.get('is_vip', False))
-        
-        # 直接显示新版会员套餐对话框（不再弹出旧的会员提示）
-        vip_dialog = VipPackageDialog(self, user_id=self.user_id)
-        
-        # 居中显示对话框
-        dialog_rect = vip_dialog.geometry()
-        parent_rect = self.geometry()
-        x = parent_rect.x() + (parent_rect.width() - dialog_rect.width()) // 2
-        y = parent_rect.y() + (parent_rect.height() - dialog_rect.height()) // 2
-        vip_dialog.move(x, y)
-        
-        vip_dialog.exec()
-
-    def show_diamond_dialog(self):
-        """显示钻石套餐对话框"""
-        if not self.user_id:
-            msg_box = CustomMessageBox(self)
-            msg_box.setText("请先登录")
-            msg_box.setWindowTitle("提示")
-            msg_box.exec()
-            return
-
-        dialog = DiamondPackageDialog(self, user_id=self.user_id)
-        dialog.exec()
-
-    def upload_avatar(self, event):
-        """上传头像"""
-        if self.user_id:
-            file_path, _ = QFileDialog.getOpenFileName(self, "选择头像", "", "Images (*.png *.jpg *.jpeg *.bmp)")
-            if file_path:
-                # 打开裁剪对话框
-                crop_dialog = AvatarCropDialog(file_path, self)
-                # 居中显示
-                dialog_rect = crop_dialog.geometry()
-                parent_rect = self.geometry()
-                x = parent_rect.x() + (parent_rect.width() - dialog_rect.width()) // 2
-                y = parent_rect.y() + (parent_rect.height() - dialog_rect.height()) // 2
-                crop_dialog.move(x, y)
-                
-                if crop_dialog.exec() == QDialog.DialogCode.Accepted:
-                    # 获取裁剪后的头像数据
-                    avatar_data = crop_dialog.get_cropped_avatar_bytes()
-                    if avatar_data:
-                        if self.db_manager.update_user_avatar(self.user_id, avatar_data):
-                            # 更新成功后，重新加载头像显示
-                            self.update_user_avatar_display(avatar_data)
-                            logging.info("头像更新成功")
-                        else:
-                            msg_box = CustomMessageBox(self, variant="error")
-                            msg_box.setWindowTitle("更新失败")
-                            msg_box.setText("头像更新失败，请稍后重试")
-                            msg_box.exec()
-                    else:
-                        msg_box = CustomMessageBox(self, variant="error")
-                        msg_box.setWindowTitle("错误")
-                        msg_box.setText("无法获取裁剪后的头像")
-                        msg_box.exec()
-        else:
-            msg_box = CustomMessageBox(self, variant="error")
-            msg_box.setWindowTitle("未登录")
-            msg_box.setText("请先登录后再尝试上传头像")
-            msg_box.exec()
-
-    def update_user_avatar_display(self, avatar_data):
-        """更新头像显示"""
-        # 允许 avatar_data 为 None / memoryview
-        if not avatar_data:
-            avatar_data = get_default_avatar()
-        if avatar_data is None:
-            # 兜底：画一个浅色圆形占位
-            pm = QPixmap(self.user_avatar_label.size())
-            pm.fill(Qt.GlobalColor.transparent)
-            painter = QPainter(pm)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setBrush(QColor(241, 245, 249))
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(0, 0, pm.width(), pm.height())
-            painter.end()
-            self.user_avatar_label.setPixmap(pm)
-            return
-        if isinstance(avatar_data, memoryview):
-            avatar_bytes = avatar_data.tobytes()
-        else:
-            avatar_bytes = avatar_data
-
-        pixmap = QPixmap()
-        ok = pixmap.loadFromData(avatar_bytes)
-        if not ok or pixmap.isNull():
-            # 数据非法则回退默认头像
-            fallback = get_default_avatar()
-            if fallback and fallback is not avatar_bytes:
-                pixmap = QPixmap()
-                pixmap.loadFromData(fallback)
-                avatar_bytes = fallback
-
-        size = min(pixmap.width(), pixmap.height())
-        if size <= 0:
-            return
-        cropped_pixmap = QPixmap(size, size)
-        cropped_pixmap.fill(Qt.GlobalColor.transparent)
-        painter = QPainter(cropped_pixmap)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        path = QPainterPath()
-        path.addEllipse(0, 0, size, size)
-        painter.setClipPath(path)
-        painter.drawPixmap(0, 0, pixmap.scaled(size, size, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        painter.end()
-        
-        # 使用足够大的尺寸（例如 100x100）作为 Pixmap 源，配合 setScaledContents(True)
-        # 这样在放大动画过程中图像依然保持清晰
-        display_size = 100
-        self.user_avatar_label.setPixmap(cropped_pixmap.scaled(
-            display_size, display_size,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        ))
-        # 同步更新聊天中使用的用户头像（缩小后用于 QTextEdit）
-        try:
-            self._user_avatar_url = self._avatar_bytes_to_data_url(avatar_bytes)
-        except Exception:
-            pass
 
     def resizeEvent(self, event):
         super().resizeEvent(event)
@@ -2616,219 +2318,21 @@ class MainWindow(QMainWindow):
         except Exception:
             pass
 
+        # 清除内存中的登录状态
+        try:
+            clear_login_status()
+        except Exception:
+            pass
+
+        # 重置当前窗口中的用户 ID
+        self.user_id = None
+
         # 重置会员/用户显示
-        self.update_membership_info(None, "未登录", False, 0, user_id=None)
+        avatar_handlers.update_membership_info(self, None, "未登录", False, 0, user_id=None)
 
         # 隐藏退出浮窗
         if self.logout_popup:
             self.logout_popup.hide()
 
         # 弹出登录对话框
-        self.show_login_dialog()
-
-
-from typing import Optional
-
-
-class ChatBubble(QWidget):
-    """自绘圆角聊天气泡"""
-
-    def __init__(
-        self,
-        text: str,
-        background: QColor,
-        text_color: QColor,
-        border_color: Optional[QColor] = None,
-        max_width: int = 420,
-        align_right: bool = False,
-        rich_text: bool = False,
-        parent: Optional[QWidget] = None,
-    ):
-        super().__init__(parent)
-        self._text = text
-        self._bg = background
-        self._text_color = text_color
-        self._border_color = border_color
-        self._radius = 18
-        self._padding_h = 14
-        self._padding_v = 8
-        self._max_width = max_width
-        self._rich_text = rich_text
-
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(self._padding_h, self._padding_v, self._padding_h, self._padding_v)
-        layout.setSpacing(0)
-
-        self.label = QLabel(text, self)
-        self.label.setWordWrap(True)
-        self.label.setTextFormat(
-            Qt.TextFormat.RichText if self._rich_text else Qt.TextFormat.PlainText
-        )
-        self.label.setStyleSheet("""
-            QLabel {
-                background-color: transparent;
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 13px;
-            }
-        """)
-        self.label.setAlignment(
-            Qt.AlignmentFlag.AlignRight if align_right else Qt.AlignmentFlag.AlignLeft
-        )
-        layout.addWidget(self.label)
-
-        self.setSizePolicy(self.sizePolicy().horizontalPolicy(), self.sizePolicy().verticalPolicy())
-
-    def sizeHint(self):
-        """基于内部 QLabel 的尺寸，自动适应文本或图片大小"""
-        inner = self.label.sizeHint()
-        width = min(self._max_width, inner.width() + self._padding_h * 2)
-        height = inner.height() + self._padding_v * 2
-        return QSize(width, height)
-
-    def minimumSizeHint(self):
-        return self.sizeHint()
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        rect = QRectF(self.rect())
-        path = QPainterPath()
-        path.addRoundedRect(rect, self._radius, self._radius)
-
-        painter.setBrush(self._bg)
-        if self._border_color:
-            pen = painter.pen()
-            pen.setColor(self._border_color)
-            pen.setWidth(1)
-            painter.setPen(pen)
-        else:
-            painter.setPen(Qt.PenStyle.NoPen)
-
-        painter.drawPath(path)
-        painter.setPen(self._text_color)
-
-        super().paintEvent(event)
-
-
-class LogoutPopup(QWidget):
-    """自定义带尖角的退出登录浮窗"""
-    clicked = Qt.MouseButton.LeftButton  # 仅为占位，实际使用 QPushButton
-
-    def __init__(self, parent=None, main_window=None):
-        super().__init__(parent)
-        self.main_window = main_window
-        self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.SubWindow)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(10, 15, 10, 10)  # 顶部留出尖角空间
-        
-        self.button = QPushButton("退出登录")
-        self.button.setObjectName("logoutButton")
-        self.button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.button.setStyleSheet("""
-            QPushButton#logoutButton {
-                background-color: #ffffff;
-                border-radius: 12px;
-                border: none;
-                padding: 8px 20px;
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 13px;
-                font-weight: 600;
-                color: #1f2933;
-            }
-            QPushButton#logoutButton:hover {
-                background-color: #fee2e2;
-                color: #b91c1c;
-            }
-        """)
-        layout.addWidget(self.button)
-        
-        # 添加阴影
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(15)
-        shadow.setOffset(0, 4)
-        shadow.setColor(QColor(0, 0, 0, 40))
-        self.setGraphicsEffect(shadow)
-
-    def enterEvent(self, event):
-        """鼠标进入浮窗，停止隐藏计时器"""
-        if self.main_window and hasattr(self.main_window, "_logout_timer"):
-            self.main_window._logout_timer.stop()
-        super().enterEvent(event)
-
-    def leaveEvent(self, event):
-        """鼠标离开浮窗，启动隐藏计时器"""
-        if self.main_window and hasattr(self.main_window, "_logout_timer"):
-            self.main_window._logout_timer.start(200) # 200ms 缓冲区
-        super().leaveEvent(event)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-        painter.setPen(Qt.PenStyle.NoPen) # 强制不绘制边框线
-        
-        # 绘制背景气泡
-        rect = self.rect()
-        # 减去阴影边距和尖角高度
-        bubble_rect = QRectF(5, 12, rect.width() - 10, rect.height() - 17)
-        
-        path = QPainterPath()
-        # 尖角位置：顶部中央
-        arrow_w = 12
-        arrow_h = 8
-        center_x = rect.width() / 2
-        
-        # 绘制带尖角的路径
-        path.moveTo(center_x - arrow_w/2, bubble_rect.top())
-        path.lineTo(center_x, bubble_rect.top() - arrow_h)
-        path.lineTo(center_x + arrow_w/2, bubble_rect.top())
-        
-        # 添加圆角矩形
-        path.addRoundedRect(bubble_rect, 12, 12)
-        
-        painter.fillPath(path, QBrush(Qt.GlobalColor.white))
-        
-        # 移除边框绘制，保持纯净外观
-        # pen = painter.pen()
-        # pen.setColor(QColor(226, 232, 240, 200))
-        # pen.setWidth(1)
-        # painter.setPen(pen)
-        # painter.drawPath(path)
-
-
-class RoundedBackgroundWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.radius = 20
-
-        # 从本地文件加载背景图片
-        background_image_data = load_icon_data(14)
-        if background_image_data:
-            self.background_image = QPixmap()
-            self.background_image.loadFromData(background_image_data)
-        else:
-            self.background_image = QPixmap()
-
-        # 添加阴影效果
-        self.shadow = QGraphicsDropShadowEffect(self)
-        self.shadow.setBlurRadius(10)  # 设置阴影模糊半径
-        self.shadow.setColor(QColor(0, 0, 0, 150))  # 设置阴影颜色和透明度
-        self.shadow.setOffset(0, 4)  # 设置阴影偏移量
-        self.setGraphicsEffect(self.shadow)
-
-    def paintEvent(self, event):
-        super().paintEvent(event)
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-
-        # 绘制圆角背景
-        painter.setBrush(QBrush(Qt.GlobalColor.white))
-        painter.drawRoundedRect(self.rect(), self.radius, self.radius)
-
-        # 绘制背景图，自适应窗口大小，并裁剪为圆角矩形
-        path = QPainterPath()
-        path.addRoundedRect(QRectF(self.rect()), self.radius, self.radius)
-        painter.setClipPath(path)
-        painter.drawPixmap(self.rect(), self.background_image)
+        dialog_handlers.show_login_dialog(self)

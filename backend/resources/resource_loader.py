@@ -6,9 +6,7 @@ import os
 from pathlib import Path
 from typing import Optional
 import logging
-
-# 配置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+from backend.logging_manager import setup_logging  # noqa: F401
 
 # 获取项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.parent

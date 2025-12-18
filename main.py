@@ -6,9 +6,8 @@ from PyQt6.QtCore import QByteArray  # 引入 QByteArray
 from gui.main_window import MainWindow
 from backend.database.database_manager import DatabaseManager
 from backend.resources import load_icon_data
+from backend.logging_manager import setup_logging  # noqa: F401
 import logging
-
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 
 if __name__ == "__main__":

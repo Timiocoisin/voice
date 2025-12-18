@@ -1,7 +1,7 @@
 # 文件：vip_membership_dialog.py
 import os
-from typing import Optional, Dict
-from datetime import datetime, timedelta
+from typing import Optional, Dict, TYPE_CHECKING
+from datetime import datetime
 from PyQt6.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QWidget,
     QGraphicsDropShadowEffect, QStackedWidget, QGridLayout
@@ -9,12 +9,35 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QPoint, QByteArray
 from PyQt6.QtGui import QPainter, QColor, QCursor, QPixmap
 from backend.resources import load_icon_data, get_default_avatar
-from backend.database.database_manager import DatabaseManager
+from backend.membership_service import MembershipService
+from backend.config import texts as text_cfg
 from gui.custom_message_box import CustomMessageBox
+from gui.base_dialog import BaseDialog
 import logging
+from backend.logging_manager import setup_logging  # noqa: F401
 
-# 配置日志记录
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+if TYPE_CHECKING:
+    from gui.main_window import MainWindow
+
+# ---------------- 统一配置区域：会员套餐 / 钻石套餐 ----------------
+
+# 会员套餐配置：天卡、月卡、年卡、永久（统一文案与展示）
+MEMBERSHIP_CARDS = [
+    {"name": "天卡至尊", "subtitle": "连续使用 1 天", "diamonds": 30, "days": 1, "row": 0, "col": 0},
+    {"name": "月卡至尊", "subtitle": "连续使用 30 天", "diamonds": 300, "days": 30, "row": 0, "col": 1},
+    {"name": "年卡至尊", "subtitle": "连续使用 365 天", "diamonds": 1000, "days": 365, "row": 1, "col": 0},
+    {"name": "永久至尊", "subtitle": "一次开通，永久有效", "diamonds": 3000, "days": None, "row": 1, "col": 1},
+]
+
+# 钻石套餐配置：2×3 网格布局
+DIAMOND_PLANS = [
+    {"diamonds": 300, "price": 30, "row": 0, "col": 0},
+    {"diamonds": 500, "price": 50, "row": 0, "col": 1},
+    {"diamonds": 1000, "price": 100, "row": 0, "col": 2},
+    {"diamonds": 1680, "price": 168, "row": 1, "col": 0},
+    {"diamonds": 3280, "price": 328, "row": 1, "col": 1},
+    {"diamonds": 6480, "price": 648, "row": 1, "col": 2},
+]
 
 
 class VipMembershipDialog(QDialog):
@@ -143,27 +166,29 @@ class VipMembershipDialog(QDialog):
         painter.end()
 
 
-class VipPackageDialog(QDialog):
+class VipPackageDialog(BaseDialog):
     """独立的会员套餐选择弹窗"""
 
     def __init__(self, parent=None, user_id=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.db_manager = DatabaseManager()
+        # 使用会员服务封装数据库访问与业务逻辑
+        self.membership_service = MembershipService()
         self.vip_expiry = None  # type: Optional[datetime]
 
         # 读取当前 VIP 信息
         self._load_vip_info()
 
-        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(0)
 
-        content_widget = QWidget()
-        content_widget.setObjectName("vipPackageCard")
+        # 统一使用基础对话框的卡片容器
+        content_widget, content_layout = self.create_card_container(
+            "vipPackageCard",
+            layout_margins=(36, 24, 36, 24),
+            layout_spacing=20,
+        )
         content_widget.setStyleSheet("""
             #vipPackageCard {
                 background-color: rgba(255, 255, 255, 210);
@@ -171,16 +196,6 @@ class VipPackageDialog(QDialog):
                 border: 1px solid rgba(226, 232, 240, 180);
             }
         """)
-
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(40)
-        shadow.setOffset(0, 12)
-        shadow.setColor(QColor(0, 0, 0, 50))
-        content_widget.setGraphicsEffect(shadow)
-
-        content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(36, 24, 36, 24)
-        content_layout.setSpacing(20)
 
         # 标题
         title = QLabel("选择会员套餐")
@@ -208,15 +223,8 @@ class VipPackageDialog(QDialog):
         cards_grid.setHorizontalSpacing(20)
         cards_grid.setContentsMargins(20, 10, 20, 10)
 
-        # 会员套餐配置：天卡、月卡、年卡、永久
-        membership_cards = [
-            {"name": "天卡至尊", "diamonds": 30, "days": 1, "row": 0, "col": 0},
-            {"name": "月卡至尊", "diamonds": 300, "days": 30, "row": 0, "col": 1},
-            {"name": "年卡至尊", "diamonds": 1000, "days": 365, "row": 1, "col": 0},
-            {"name": "永久至尊", "diamonds": 3000, "days": None, "row": 1, "col": 1},
-        ]
-
-        for card_info in membership_cards:
+        # 使用统一配置的会员套餐列表
+        for card_info in MEMBERSHIP_CARDS:
             card_widget = self._create_membership_card(card_info)
             cards_grid.addWidget(
                 card_widget,
@@ -234,7 +242,7 @@ class VipPackageDialog(QDialog):
         """创建单个会员卡组件"""
         card_widget = QWidget()
         card_widget.setObjectName(f"membershipCard_{card_info['name']}")
-        card_widget.setFixedSize(180, 170)
+        card_widget.setFixedSize(190, 190)
         card_widget.setStyleSheet(f"""
             #membershipCard_{card_info['name']} {{
                 background-color: rgba(255, 255, 255, 240);
@@ -255,8 +263,8 @@ class VipPackageDialog(QDialog):
         card_widget.setGraphicsEffect(shadow)
 
         layout = QVBoxLayout(card_widget)
-        layout.setContentsMargins(15, 16, 15, 16)
-        layout.setSpacing(10)
+        layout.setContentsMargins(16, 16, 16, 16)
+        layout.setSpacing(8)
         layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
         period_label = QLabel(card_info["name"])
@@ -273,11 +281,25 @@ class VipPackageDialog(QDialog):
         period_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         layout.addWidget(period_label)
 
+        # 副标题：使用时长说明，保持所有卡片文案风格一致
+        subtitle = QLabel(card_info.get("subtitle", ""))
+        subtitle.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                color: #6b7280;
+                padding: 0px;
+                margin: 0px;
+            }
+        """)
+        subtitle.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        layout.addWidget(subtitle)
+
         price_label = QLabel(f"{card_info['diamonds']} 钻石")
         price_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 22px;
+                font-size: 20px;
                 font-weight: 600;
                 color: #1e293b;
                 padding: 0px;
@@ -319,12 +341,10 @@ class VipPackageDialog(QDialog):
         self.vip_expiry = None
         if not self.user_id:
             return
-        info = self.db_manager.get_user_vip_info(self.user_id)
-        if not info:
+        vip_info = self.membership_service.get_vip_info(self.user_id)
+        if not vip_info:
             return
-        expiry = info.get("vip_expiry_date")
-        if isinstance(expiry, datetime):
-            self.vip_expiry = expiry
+        self.vip_expiry = vip_info.vip_expiry
 
     def _update_vip_expiry_label(self):
         """根据当前 VIP 信息更新“有效期至”显示"""
@@ -372,27 +392,21 @@ class VipPackageDialog(QDialog):
         """购买会员套餐：消耗钻石并更新 VIP 有效期"""
         if not self.user_id:
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setWindowTitle("提示")
-            msg_box.setText("请先登录后再购买会员")
+            msg_box.setWindowTitle(text_cfg.LOGIN_REQUIRED_TITLE)
+            msg_box.setText(text_cfg.LOGIN_REQUIRED_BEFORE_PURCHASE)
             msg_box.exec()
             return
 
         cost = int(card_info.get("diamonds", 0))
-        days = card_info.get("days", None)
 
-        vip_info = self.db_manager.get_user_vip_info(self.user_id)
-        diamonds = 0
-        if vip_info:
-            try:
-                diamonds = int(vip_info.get("diamonds", 0))
-            except Exception:
-                diamonds = 0
+        vip_info = self.membership_service.get_vip_info(self.user_id)
+        diamonds = vip_info.diamonds if vip_info else 0
 
         if diamonds < cost:
             # 钻石不足：提示并跳转到钻石套餐弹窗
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setWindowTitle("钻石不足")
-            msg_box.setText("您的钻石数量不足，无法购买该会员套餐，请先前往充值钻石。")
+            msg_box.setWindowTitle(text_cfg.DIAMOND_NOT_ENOUGH_TITLE)
+            msg_box.setText(text_cfg.DIAMOND_NOT_ENOUGH_FOR_VIP_MESSAGE)
             msg_box.exec()
 
             self.close()
@@ -400,24 +414,16 @@ class VipPackageDialog(QDialog):
             dialog.exec()
             return
 
-        now = datetime.now()
-        if days is None:
-            # 永久：设置一个很远的时间
-            new_expiry = datetime(2099, 12, 31, 23, 59, 59)
-        else:
-            new_expiry = now + timedelta(days=int(days))
-
-        # 调用数据库方法：扣减钻石并更新 VIP
-        success = self.db_manager.consume_diamonds_and_update_vip(
+        # 调用服务层：扣减钻石并更新 VIP
+        success, new_expiry = self.membership_service.purchase_membership(
             user_id=self.user_id,
-            cost=cost,
-            new_expiry=new_expiry,
+            card_info=card_info,
         )
 
         if not success:
             msg_box = CustomMessageBox(self.parent(), variant="error")
-            msg_box.setWindowTitle("购买失败")
-            msg_box.setText("购买会员失败，请稍后重试或联系管理员。")
+            msg_box.setWindowTitle(text_cfg.VIP_PURCHASE_FAILED_TITLE)
+            msg_box.setText(text_cfg.VIP_PURCHASE_FAILED_MESSAGE)
             msg_box.exec()
             return
 
@@ -425,18 +431,31 @@ class VipPackageDialog(QDialog):
         self.vip_expiry = new_expiry
         self._update_vip_expiry_label()
         msg_box = CustomMessageBox(self.parent())
-        msg_box.setWindowTitle("购买成功")
-        msg_box.setText(f"已成功开通 {card_info.get('name', '会员')}，感谢您的支持！")
+        msg_box.setWindowTitle(text_cfg.VIP_PURCHASE_SUCCESS_TITLE)
+        msg_box.setText(
+            text_cfg.VIP_PURCHASE_SUCCESS_MESSAGE_TEMPLATE.format(
+                name=card_info.get("name", "会员")
+            )
+        )
         msg_box.exec()
 
+        # 购买成功后，自动刷新主界面顶部的 VIP 徽章与钻石数量
+        parent = self.parent()
+        if parent is not None and hasattr(parent, "refresh_membership_from_db"):
+            try:
+                parent.refresh_membership_from_db()
+            except Exception as e:
+                logging.error("刷新主界面会员信息失败：%s", e, exc_info=True)
 
-class DiamondPackageDialog(QDialog):
+
+class DiamondPackageDialog(BaseDialog):
     """独立的钻石套餐弹窗"""
 
     def __init__(self, parent=None, user_id=None):
         super().__init__(parent)
         self.user_id = user_id
-        self.db_manager = DatabaseManager()
+        # 使用会员服务统一处理用户与钻石相关数据
+        self.membership_service = MembershipService()
 
         # 当前选中的钻石套餐与支付方式
         self.selected_plan = None
@@ -449,15 +468,16 @@ class DiamondPackageDialog(QDialog):
         self.avatar_pixmap = self._load_user_avatar()
         self._load_user_diamond_balance()
 
-        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(0)
 
-        content_widget = QWidget()
-        content_widget.setObjectName("diamondPackageCard")
+        # 使用基础对话框的卡片容器
+        content_widget, content_layout = self.create_card_container(
+            "diamondPackageCard",
+            layout_margins=(36, 24, 36, 24),
+            layout_spacing=20,
+        )
         content_widget.setStyleSheet("""
             #diamondPackageCard {
                 background-color: rgba(255, 255, 255, 210);
@@ -465,16 +485,6 @@ class DiamondPackageDialog(QDialog):
                 border: 1px solid rgba(226, 232, 240, 180);
             }
         """)
-
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(40)
-        shadow.setOffset(0, 12)
-        shadow.setColor(QColor(0, 0, 0, 50))
-        content_widget.setGraphicsEffect(shadow)
-
-        content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(36, 24, 36, 24)
-        content_layout.setSpacing(20)
 
         # 顶部用户信息区域（头像 + 用户名 + 钻石余额 + 刷新）
         header = QWidget()
@@ -607,17 +617,8 @@ class DiamondPackageDialog(QDialog):
         cards_grid.setHorizontalSpacing(20)
         cards_grid.setContentsMargins(20, 10, 20, 10)
 
-        # 钻石档位配置
-        diamond_plans = [
-            {"diamonds": 300, "price": 30, "row": 0, "col": 0},
-            {"diamonds": 500, "price": 50, "row": 0, "col": 1},
-            {"diamonds": 1000, "price": 100, "row": 0, "col": 2},
-            {"diamonds": 1680, "price": 168, "row": 1, "col": 0},
-            {"diamonds": 3280, "price": 328, "row": 1, "col": 1},
-            {"diamonds": 6480, "price": 648, "row": 1, "col": 2},
-        ]
-
-        for plan in diamond_plans:
+        # 使用统一配置的钻石档位
+        for plan in DIAMOND_PLANS:
             card = self._create_diamond_card(plan)
             self.diamond_cards.append((card, plan))
             cards_grid.addWidget(
@@ -766,32 +767,22 @@ class DiamondPackageDialog(QDialog):
 
     def _load_user_avatar(self) -> QPixmap:
         """从数据库或默认资源加载用户头像"""
-        avatar_bytes = None
-        if self.user_id:
-            user = self.db_manager.get_user_by_id(self.user_id)
-            if user:
-                self.username = user.get("username") or self.username
-                avatar_bytes = user.get("avatar")
-
-        if not avatar_bytes:
+        if not self.user_id:
+            # 未登录：仅使用默认头像
             avatar_bytes = get_default_avatar()
+            pix = QPixmap()
+            if avatar_bytes and pix.loadFromData(avatar_bytes):
+                return pix
+            return QPixmap()
 
-        pix = QPixmap()
-        if avatar_bytes and pix.loadFromData(avatar_bytes):
-            return pix
-        return QPixmap()
+        # 交由服务层获取用户名与头像
+        username, pixmap = self.membership_service.get_user_basic_with_avatar(self.user_id)
+        self.username = username or self.username
+        return pixmap
 
     def _load_user_diamond_balance(self):
         """加载用户当前钻石余额"""
-        if not self.user_id:
-            self.diamond_balance = 0
-            return
-        info = self.db_manager.get_user_vip_info(self.user_id)
-        if info:
-            try:
-                self.diamond_balance = int(info.get("diamonds", 0))
-            except Exception:
-                self.diamond_balance = 0
+        self.diamond_balance = self.membership_service.get_diamond_balance(self.user_id or 0)
 
     def _refresh_user_info(self):
         """刷新用户名和钻石余额显示"""
@@ -902,7 +893,7 @@ class DiamondPackageDialog(QDialog):
         dialog.exec()
 
 
-class PaymentQRCodeDialog(QDialog):
+class PaymentQRCodeDialog(BaseDialog):
     """展示微信/支付宝收款二维码的弹窗"""
 
     def __init__(self, parent=None, pay_method: str = "wechat", plan: Optional[Dict] = None):
@@ -910,15 +901,19 @@ class PaymentQRCodeDialog(QDialog):
         self.pay_method = pay_method
         self.plan = plan or {}
 
-        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
         main_layout.setSpacing(0)
 
-        card = QWidget()
-        card.setObjectName("payQrCard")
+        # 使用基础对话框卡片容器
+        card, layout = self.create_card_container(
+            "payQrCard",
+            blur_radius=30,
+            y_offset=8,
+            shadow_alpha=60,
+            layout_margins=(24, 24, 24, 24),
+            layout_spacing=16,
+        )
         card.setStyleSheet("""
             #payQrCard {
                 background-color: #ffffff;
@@ -926,16 +921,6 @@ class PaymentQRCodeDialog(QDialog):
                 border: 1px solid rgba(226, 232, 240, 200);
             }
         """)
-
-        shadow = QGraphicsDropShadowEffect(self)
-        shadow.setBlurRadius(30)
-        shadow.setOffset(0, 8)
-        shadow.setColor(QColor(0, 0, 0, 60))
-        card.setGraphicsEffect(shadow)
-
-        layout = QVBoxLayout(card)
-        layout.setContentsMargins(24, 24, 24, 24)
-        layout.setSpacing(16)
 
         # 标题
         pay_name = "微信支付" if self.pay_method == "wechat" else "支付宝支付"
