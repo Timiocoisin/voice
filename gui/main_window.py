@@ -782,7 +782,29 @@ class MainWindow(QMainWindow):
             QScrollArea > QWidget > QWidget {
                 background-color: #f4f5f7;
             }
+            QScrollBar:vertical {
+                width: 6px;
+                background: transparent;
+                margin: 0px;
+                padding: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(148, 163, 184, 0);
+                border-radius: 3px;
+                min-height: 30px;
+            }
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical {
+                background: transparent;
+            }
         """)
+        # 悬停时显示滚动条手柄
+        self.chat_scroll_area.enterEvent = lambda e: self._show_scrollbar_handle(self.chat_scroll_area)
+        self.chat_scroll_area.leaveEvent = lambda e: self._hide_scrollbar_handle(self.chat_scroll_area)
 
         self.chat_scroll_widget = QWidget()
         self.chat_layout = QVBoxLayout(self.chat_scroll_widget)
@@ -892,41 +914,152 @@ class MainWindow(QMainWindow):
         # 右侧常见问题栏目（嵌在同一容器内部）
         faq_container = QWidget()
         faq_container.setObjectName("faqContainer")
-        faq_container.setFixedWidth(240)
+        faq_container.setFixedWidth(280)
         faq_container.setStyleSheet("""
             #faqContainer {
                 background-color: #ffffff;
-                border-left: 1px solid rgba(226, 232, 240, 200);
+                border-left: 1px solid rgba(226, 232, 240, 0.5);
             }
         """)
         faq_layout = QVBoxLayout(faq_container)
-        faq_layout.setContentsMargins(16, 16, 16, 16)
-        faq_layout.setSpacing(12)
+        faq_layout.setContentsMargins(14, 14, 14, 14)
+        faq_layout.setSpacing(8)
 
-        faq_title = QLabel("常见问题")
+        faq_title = QLabel("💡 常见问题")
         faq_title.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 15px;
+                font-size: 14px;
                 font-weight: 700;
-                color: #1f2937;
+                color: #7c3aed;
+                padding-bottom: 8px;
             }
         """)
         faq_layout.addWidget(faq_title)
 
-        self.faq_list = QTextEdit()
-        self.faq_list.setReadOnly(True)
-        self.faq_list.setStyleSheet("""
-            QTextEdit {
+        # 可滚动的 FAQ 内容区域
+        faq_scroll = QScrollArea()
+        faq_scroll.setWidgetResizable(True)
+        faq_scroll.setStyleSheet("""
+            QScrollArea {
                 border: none;
-                background-color: #ffffff;
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 12px;
-                color: #334155;
+                background-color: transparent;
+            }
+            QScrollBar:vertical {
+                width: 6px;
+                background: transparent;
+                margin: 0px;
+                padding: 0px;
+            }
+            QScrollBar::handle:vertical {
+                background: rgba(148, 163, 184, 0);
+                border-radius: 3px;
+                min-height: 30px;
+            }
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical {
+                height: 0px;
+            }
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical {
+                background: transparent;
             }
         """)
-        self.faq_list.setPlaceholderText("这里展示常见问题列表，可根据需要填充内容。")
-        faq_layout.addWidget(self.faq_list, stretch=1)
+        # 悬停时显示滚动条手柄
+        faq_scroll.enterEvent = lambda e: self._show_scrollbar_handle(faq_scroll)
+        faq_scroll.leaveEvent = lambda e: self._hide_scrollbar_handle(faq_scroll)
+
+        faq_content = QWidget()
+        faq_content_layout = QVBoxLayout(faq_content)
+        faq_content_layout.setContentsMargins(0, 0, 0, 0)
+        faq_content_layout.setSpacing(10)
+
+        # FAQ 问题 1：手机能不能使用变声器？
+        faq1 = self._create_faq_item(
+            "📱 手机能不能使用变声器？",
+            """<p style="color:#374151; margin:0 0 8px 0;">软件需要电脑运行，可转接到手机：</p>
+
+<p style="margin:0 0 4px 0;"><span style="color:#7c3aed;">▸</span> <b>方法一</b></p>
+<p style="margin:0 0 6px 12px; color:#64748b;">
+买转接器（如 <span style="color:#7c3aed;">直播一号</span> / <span style="color:#7c3aed;">ds7pro</span>），把声音转到手机。
+</p>
+
+<p style="margin:0 0 4px 0;"><span style="color:#7c3aed;">▸</span> <b>方法二</b></p>
+<p style="margin:0 0 0 12px; color:#64748b;">
+用支持 OTG 的声卡（如 <span style="color:#7c3aed;">艾肯micu</span> / <span style="color:#7c3aed;">midi r2</span>），直接插上即可。
+</p>"""
+        )
+        faq_content_layout.addWidget(faq1)
+
+        # FAQ 问题 2：变声参数怎么设置？
+        faq2 = self._create_faq_item(
+            "🎛️ 变声参数怎么设置？",
+            """<p style="color:#374151; margin:0 0 8px 0;">参数：<b>音调、音量、延迟、阈值</b></p>
+
+<p style="margin:0 0 3px 0;"><span style="color:#7c3aed;">▸</span> <b>音调</b></p>
+<p style="margin:0 0 6px 12px; color:#64748b;">
+男→女：<span style="color:#7c3aed;">10~14</span><br/>
+女→男：<span style="color:#7c3aed;">-14~-10</span><br/>
+同性：<span style="color:#7c3aed;">0 左右</span>
+</p>
+
+<p style="margin:0 0 3px 0;"><span style="color:#7c3aed;">▸</span> <b>音量</b></p>
+<p style="margin:0 0 6px 12px; color:#64748b;">
+不要太高，易爆音失真<br/>
+建议 <span style="color:#7c3aed;">0.5 左右</span>
+</p>
+
+<p style="margin:0 0 3px 0;"><span style="color:#7c3aed;">▸</span> <b>延迟</b></p>
+<p style="margin:0 0 6px 12px; color:#64748b;">
+一般 <span style="color:#7c3aed;">0.5~0.7</span><br/>
+配置好可压低到 <span style="color:#7c3aed;">0.3</span><br/>
+打游戏时适当调高
+</p>
+
+<p style="margin:0 0 3px 0;"><span style="color:#7c3aed;">▸</span> <b>阈值</b></p>
+<p style="margin:0 0 0 12px; color:#64748b;">
+默认 <span style="color:#7c3aed;">-60</span><br/>
+环境吵选 <span style="color:#7c3aed;">-57</span> 减少噪音
+</p>"""
+        )
+        faq_content_layout.addWidget(faq2)
+
+        # FAQ 问题 3：虚拟声卡安装
+        faq3 = self._create_faq_item_with_images(
+            "🔊 如何安装虚拟声卡？",
+            """<p style="color:#374151; margin:0 0 8px 0;"><b>步骤：</b></p>
+
+<p style="margin:0 0 4px 0;"><span style="color:#7c3aed;">▸</span> <b>打开设置中心，安装虚拟声卡</b></p>
+<p style="margin:0 0 6px 12px; color:#64748b;">
+点击虚拟声卡，一键安装后，打开声音设置。<br/>
+确保系统声音中：<br/>
+• 默认播放：<span style="color:#7c3aed;">耳机</span><br/>
+• 默认录制：<span style="color:#7c3aed;">幻音麦克风</span>
+</p>
+
+<p style="margin:0 0 4px 0;"><span style="color:#7c3aed;">▸</span> <b>设置幻音麦克风</b></p>
+<p style="margin:0 0 6px 12px; color:#64748b;">
+需要设置采样和监听：<br/>
+• 不设置采样 → 无法变声<br/>
+• 不设置监听 → 听不到效果
+</p>
+
+<p style="margin:0 0 4px 0;"><span style="color:#7c3aed;">▸</span> <b>对齐采样 48000</b>（点击图片放大）</p>""",
+            [("resources/images/play.png", "采样设置")],
+            """<p style="margin:8px 0 4px 0;"><span style="color:#7c3aed;">▸</span> <b>监听设置</b>（不想听可去掉）</p>""",
+            [("resources/images/monitor.png", "监听设置")],
+            """<p style="margin:8px 0 4px 0;"><span style="color:#7c3aed;">▸</span> <b>无法直接安装？</b></p>
+<p style="margin:0 0 0 12px; color:#64748b;">
+找到安装目录：<br/>
+<span style="color:#7c3aed;">\\resources\\server\\driver</span><br/>
+右键管理员运行 <span style="color:#7c3aed;">Setup.exe</span>
+</p>"""
+        )
+        faq_content_layout.addWidget(faq3)
+
+        faq_content_layout.addStretch()
+        faq_scroll.setWidget(faq_content)
+        faq_layout.addWidget(faq_scroll, stretch=1)
 
         # 将聊天与 FAQ 放入同一主体
         body_layout.addLayout(left_layout, stretch=4)
@@ -973,8 +1106,8 @@ class MainWindow(QMainWindow):
         # 模拟客服稍后回复
         QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
 
-    def _append_file_message(self, filename: str, size_str: str):
-        """以卡片形式追加一条用户发送的文件消息"""
+    def _append_file_message(self, filename: str, size_str: str, from_self: bool = True):
+        """以卡片形式追加一条文件消息（用户或客服）"""
         if not hasattr(self, "chat_layout"):
             return
 
@@ -983,23 +1116,24 @@ class MainWindow(QMainWindow):
         v_layout.setContentsMargins(4, 0, 4, 0)
         v_layout.setSpacing(2)
 
-        # 时间行（右对齐）
-        time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        time_label = QLabel(time_str)
-        time_label.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 11px;
-                color: #9ca3af;
-            }
-        """)
-        time_row = QHBoxLayout()
-        time_row.setContentsMargins(0, 0, 0, 0)
-        time_row.addStretch()
-        time_row.addWidget(time_label)
-        v_layout.addLayout(time_row)
+        # 用户消息：上方一行时间（右对齐）
+        if from_self:
+            time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            time_label = QLabel(time_str)
+            time_label.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 11px;
+                    color: #9ca3af;
+                }
+            """)
+            time_row = QHBoxLayout()
+            time_row.setContentsMargins(0, 0, 0, 0)
+            time_row.addStretch()
+            time_row.addWidget(time_label)
+            v_layout.addLayout(time_row)
 
-        # 主行：右侧为文件卡片 + 头像
+        # 主行：文件卡片 + 头像
         row = QHBoxLayout()
         row.setContentsMargins(0, 0, 0, 0)
         row.setSpacing(6)
@@ -1080,22 +1214,46 @@ class MainWindow(QMainWindow):
 
         card_layout.addWidget(icon_bg, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-        # 头像（右侧）
+        # 头像
         avatar_label = QLabel()
         avatar_label.setFixedSize(32, 32)
-        if self.user_avatar_label.pixmap():
-            pm = self.user_avatar_label.pixmap().scaled(
-                32, 32,
-                Qt.AspectRatioMode.KeepAspectRatio,
-                Qt.TransformationMode.SmoothTransformation,
-            )
-            avatar_label.setPixmap(pm)
+        if from_self:
+            if self.user_avatar_label.pixmap():
+                pm = self.user_avatar_label.pixmap().scaled(
+                    32, 32,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                avatar_label.setPixmap(pm)
+        else:
+            # 客服头像
+            default_bytes = get_default_avatar()
+            if default_bytes:
+                pm = QPixmap()
+                pm.loadFromData(default_bytes)
+                pm = pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                # 裁剪成圆形
+                cropped = QPixmap(32, 32)
+                cropped.fill(Qt.GlobalColor.transparent)
+                p = QPainter(cropped)
+                p.setRenderHint(QPainter.RenderHint.Antialiasing)
+                clip_path = QPainterPath()
+                clip_path.addEllipse(0, 0, 32, 32)
+                p.setClipPath(clip_path)
+                p.drawPixmap(0, 0, pm)
+                p.end()
+                avatar_label.setPixmap(cropped)
 
         avatar_label.setStyleSheet("border-radius:16px;")
 
-        row.addStretch()
-        row.addWidget(card)
-        row.addWidget(avatar_label)
+        if from_self:
+            row.addStretch()
+            row.addWidget(card)
+            row.addWidget(avatar_label)
+        else:
+            row.addWidget(avatar_label)
+            row.addWidget(card)
+            row.addStretch()
 
         v_layout.addLayout(row)
 
@@ -1275,6 +1433,346 @@ class MainWindow(QMainWindow):
     def _insert_emoji(self, emoji: str):
         self.chat_input.insert(emoji)
 
+    def _show_scrollbar_handle(self, scroll_area: QScrollArea):
+        """鼠标进入时显示滚动条手柄（不改变宽度，只改变透明度）"""
+        style = scroll_area.styleSheet()
+        style = style.replace(
+            "background: rgba(148, 163, 184, 0);",
+            "background: rgba(148, 163, 184, 0.6);"
+        )
+        scroll_area.setStyleSheet(style)
+
+    def _hide_scrollbar_handle(self, scroll_area: QScrollArea):
+        """鼠标离开时隐藏滚动条手柄（不改变宽度，只改变透明度）"""
+        style = scroll_area.styleSheet()
+        style = style.replace(
+            "background: rgba(148, 163, 184, 0.6);",
+            "background: rgba(148, 163, 184, 0);"
+        )
+        scroll_area.setStyleSheet(style)
+
+    def _create_faq_item(self, question: str, answer: str) -> QWidget:
+        """创建一个无边框的 FAQ 问答条目"""
+        item = QWidget()
+        item.setStyleSheet("background-color: transparent;")
+
+        item_layout = QVBoxLayout(item)
+        item_layout.setContentsMargins(0, 0, 0, 10)
+        item_layout.setSpacing(6)
+
+        # 问题标题
+        q_label = QLabel(question)
+        q_label.setWordWrap(True)
+        q_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                font-weight: 700;
+                color: #1e293b;
+                background-color: rgba(124, 58, 237, 0.08);
+                padding: 6px 8px;
+                border-radius: 6px;
+            }
+        """)
+        item_layout.addWidget(q_label)
+
+        # 答案内容（支持 HTML 富文本）
+        a_label = QLabel()
+        a_label.setWordWrap(True)
+        a_label.setTextFormat(Qt.TextFormat.RichText)
+        a_label.setText(answer)
+        a_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 11px;
+                color: #475569;
+                padding: 4px 6px;
+                line-height: 1.5;
+            }
+        """)
+        item_layout.addWidget(a_label)
+
+        return item
+
+    def _create_faq_item_with_images(
+        self, question: str, text1: str, images1: list,
+        text2: str = "", images2: list = None, text3: str = ""
+    ) -> QWidget:
+        """创建一个带图片的 FAQ 问答条目，图片可点击放大"""
+        item = QWidget()
+        item.setStyleSheet("background-color: transparent;")
+
+        item_layout = QVBoxLayout(item)
+        item_layout.setContentsMargins(0, 0, 0, 10)
+        item_layout.setSpacing(6)
+
+        # 问题标题
+        q_label = QLabel(question)
+        q_label.setWordWrap(True)
+        q_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                font-weight: 700;
+                color: #1e293b;
+                background-color: rgba(124, 58, 237, 0.08);
+                padding: 6px 8px;
+                border-radius: 6px;
+            }
+        """)
+        item_layout.addWidget(q_label)
+
+        # 第一段文字
+        if text1:
+            label1 = QLabel()
+            label1.setWordWrap(True)
+            label1.setTextFormat(Qt.TextFormat.RichText)
+            label1.setText(text1)
+            label1.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 11px;
+                    color: #475569;
+                    padding: 4px 6px;
+                }
+            """)
+            item_layout.addWidget(label1)
+
+        # 第一组图片
+        if images1:
+            for img_path, img_title in images1:
+                img_widget = self._create_clickable_image(img_path, img_title)
+                if img_widget:
+                    item_layout.addWidget(img_widget)
+
+        # 第二段文字
+        if text2:
+            label2 = QLabel()
+            label2.setWordWrap(True)
+            label2.setTextFormat(Qt.TextFormat.RichText)
+            label2.setText(text2)
+            label2.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 11px;
+                    color: #475569;
+                    padding: 4px 6px;
+                }
+            """)
+            item_layout.addWidget(label2)
+
+        # 第二组图片
+        if images2:
+            for img_path, img_title in images2:
+                img_widget = self._create_clickable_image(img_path, img_title)
+                if img_widget:
+                    item_layout.addWidget(img_widget)
+
+        # 第三段文字
+        if text3:
+            label3 = QLabel()
+            label3.setWordWrap(True)
+            label3.setTextFormat(Qt.TextFormat.RichText)
+            label3.setText(text3)
+            label3.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 11px;
+                    color: #475569;
+                    padding: 4px 6px;
+                }
+            """)
+            item_layout.addWidget(label3)
+
+        return item
+
+    def _create_clickable_image(self, img_path: str, title: str) -> QWidget:
+        """创建一个可点击放大的图片控件"""
+        # 尝试加载图片
+        full_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), img_path)
+        if not os.path.exists(full_path):
+            # 如果相对路径不存在，尝试直接使用
+            full_path = img_path
+            if not os.path.exists(full_path):
+                return None
+
+        pixmap = QPixmap(full_path)
+        if pixmap.isNull():
+            return None
+
+        # 缩略图容器
+        container = QWidget()
+        container_layout = QVBoxLayout(container)
+        container_layout.setContentsMargins(6, 4, 6, 4)
+        container_layout.setSpacing(4)
+
+        # 缩略图（最大宽度 200，保持比例）
+        thumb = pixmap.scaled(
+            200, 120,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+
+        img_label = QLabel()
+        img_label.setPixmap(thumb)
+        img_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        img_label.setStyleSheet("""
+            QLabel {
+                border: 1px solid #e5e7eb;
+                border-radius: 6px;
+                padding: 2px;
+                background-color: #f8fafc;
+            }
+            QLabel:hover {
+                border-color: #7c3aed;
+            }
+        """)
+        img_label.setToolTip(f"点击查看大图：{title}")
+
+        # 点击事件 - 放大图片
+        img_label.mousePressEvent = lambda event, p=full_path, t=title: self._show_image_popup(p, t)
+        container_layout.addWidget(img_label, alignment=Qt.AlignmentFlag.AlignLeft)
+
+        # 图片标题
+        title_label = QLabel(f"📷 {title}")
+        title_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 10px;
+                color: #64748b;
+                padding-left: 2px;
+            }
+        """)
+        container_layout.addWidget(title_label)
+
+        return container
+
+    def _show_image_popup(self, img_path: str, title: str):
+        """显示图片放大弹窗"""
+        pixmap = QPixmap(img_path)
+        if pixmap.isNull():
+            return
+
+        # 创建弹窗对话框
+        dialog = QDialog(self)
+        dialog.setWindowTitle(title)
+        dialog.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
+        dialog.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+        dialog.setModal(True)
+
+        # 主布局
+        layout = QVBoxLayout(dialog)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+
+        # 背景容器（带圆角和阴影）
+        bg_widget = QWidget()
+        bg_widget.setObjectName("imagePopupBg")
+        bg_widget.setStyleSheet("""
+            #imagePopupBg {
+                background-color: #ffffff;
+                border-radius: 12px;
+                border: 1px solid #e5e7eb;
+            }
+        """)
+        bg_layout = QVBoxLayout(bg_widget)
+        bg_layout.setContentsMargins(12, 12, 12, 12)
+        bg_layout.setSpacing(8)
+
+        # 标题栏
+        header = QHBoxLayout()
+        header.setContentsMargins(0, 0, 0, 0)
+
+        title_lbl = QLabel(f"📷 {title}")
+        title_lbl.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 14px;
+                font-weight: 600;
+                color: #1e293b;
+            }
+        """)
+        header.addWidget(title_lbl)
+        header.addStretch()
+
+        # 关闭按钮
+        close_btn = QPushButton("✕")
+        close_btn.setFixedSize(28, 28)
+        close_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        close_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #f1f5f9;
+                border: none;
+                border-radius: 14px;
+                font-size: 14px;
+                color: #64748b;
+            }
+            QPushButton:hover {
+                background-color: #fee2e2;
+                color: #dc2626;
+            }
+        """)
+        close_btn.clicked.connect(dialog.close)
+        header.addWidget(close_btn)
+
+        bg_layout.addLayout(header)
+
+        # 图片（按屏幕大小缩放，最大 80% 屏幕尺寸）
+        screen = QApplication.primaryScreen().size()
+        max_w = int(screen.width() * 0.7)
+        max_h = int(screen.height() * 0.7)
+
+        scaled = pixmap.scaled(
+            max_w, max_h,
+            Qt.AspectRatioMode.KeepAspectRatio,
+            Qt.TransformationMode.SmoothTransformation
+        )
+
+        img_label = QLabel()
+        img_label.setPixmap(scaled)
+        img_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        img_label.setStyleSheet("""
+            QLabel {
+                border-radius: 8px;
+            }
+        """)
+        bg_layout.addWidget(img_label)
+
+        # 提示文字
+        hint = QLabel("点击任意位置关闭")
+        hint.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        hint.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 11px;
+                color: #94a3b8;
+                padding-top: 4px;
+            }
+        """)
+        bg_layout.addWidget(hint)
+
+        layout.addWidget(bg_widget)
+
+        # 点击任意位置关闭
+        dialog.mousePressEvent = lambda event: dialog.close()
+
+        # 调整对话框大小并居中
+        dialog.adjustSize()
+        dialog_rect = dialog.geometry()
+        parent_rect = self.geometry()
+        x = parent_rect.x() + (parent_rect.width() - dialog_rect.width()) // 2
+        y = parent_rect.y() + (parent_rect.height() - dialog_rect.height()) // 2
+        dialog.move(x, y)
+
+        # 添加阴影
+        shadow = QGraphicsDropShadowEffect(bg_widget)
+        shadow.setBlurRadius(30)
+        shadow.setOffset(0, 8)
+        shadow.setColor(QColor(0, 0, 0, 60))
+        bg_widget.setGraphicsEffect(shadow)
+
+        dialog.exec()
+
     def send_image(self):
         """选择并发送图片（内联展示），限制 100MB"""
         file_path, _ = QFileDialog.getOpenFileName(
@@ -1295,19 +1793,105 @@ class MainWindow(QMainWindow):
         # 这里设置一个最大边 160，让图片清晰但不会太大
         scaled = pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
 
-        from PyQt6.QtCore import QBuffer, QIODevice
-        buffer = QBuffer()
-        buffer.open(QIODevice.OpenModeFlag.WriteOnly)
-        scaled.save(buffer, "PNG")
-        data = base64.b64encode(buffer.data()).decode("utf-8")
-        buffer.close()
-
-        data_url = f"data:image/png;base64,{data}"
-        # 仅发送图片本身，使用 HTML img 标签，气泡将自适应图片大小
-        html = f'<img src="{data_url}" />'
-        self._append_chat_message(html, from_self=True, is_html=True)
+        # 发送图片消息（不带气泡）
+        self._append_image_message(scaled, from_self=True)
         # 模拟客服稍后回复
         QTimer.singleShot(600, lambda: self.append_support_message("请稍后"))
+
+    def _append_image_message(self, pixmap: QPixmap, from_self: bool = True):
+        """发送图片消息，不使用气泡，直接显示圆角图片 + 头像"""
+        if not hasattr(self, "chat_layout"):
+            return
+
+        message_widget = QWidget()
+        v_layout = QVBoxLayout(message_widget)
+        v_layout.setContentsMargins(4, 0, 4, 0)
+        v_layout.setSpacing(2)
+
+        # 用户消息：上方一行时间（右对齐）
+        if from_self:
+            time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+            time_label = QLabel(time_str)
+            time_label.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 11px;
+                    color: #9ca3af;
+                }
+            """)
+            time_row = QHBoxLayout()
+            time_row.setContentsMargins(0, 0, 0, 0)
+            time_row.addStretch()
+            time_row.addWidget(time_label)
+            v_layout.addLayout(time_row)
+
+        # 主行：图片 + 头像
+        row = QHBoxLayout()
+        row.setContentsMargins(0, 0, 0, 0)
+        row.setSpacing(6)
+
+        # 创建圆角图片 Label
+        img_label = QLabel()
+        img_label.setFixedSize(pixmap.width(), pixmap.height())
+        # 绘制圆角图片
+        rounded_pix = QPixmap(pixmap.size())
+        rounded_pix.fill(Qt.GlobalColor.transparent)
+        painter = QPainter(rounded_pix)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        path = QPainterPath()
+        path.addRoundedRect(QRectF(0, 0, pixmap.width(), pixmap.height()), 12, 12)
+        painter.setClipPath(path)
+        painter.drawPixmap(0, 0, pixmap)
+        painter.end()
+        img_label.setPixmap(rounded_pix)
+
+        # 头像
+        avatar_label = QLabel()
+        avatar_label.setFixedSize(32, 32)
+        if from_self:
+            if self.user_avatar_label.pixmap():
+                pm = self.user_avatar_label.pixmap().scaled(
+                    32, 32,
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+                avatar_label.setPixmap(pm)
+        else:
+            # 客服头像
+            default_bytes = get_default_avatar()
+            if default_bytes:
+                pm = QPixmap()
+                pm.loadFromData(default_bytes)
+                pm = pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                # 裁剪成圆形
+                cropped = QPixmap(32, 32)
+                cropped.fill(Qt.GlobalColor.transparent)
+                p = QPainter(cropped)
+                p.setRenderHint(QPainter.RenderHint.Antialiasing)
+                clip_path = QPainterPath()
+                clip_path.addEllipse(0, 0, 32, 32)
+                p.setClipPath(clip_path)
+                p.drawPixmap(0, 0, pm)
+                p.end()
+                avatar_label.setPixmap(cropped)
+
+        avatar_label.setStyleSheet("border-radius: 16px;")
+
+        if from_self:
+            row.addStretch()
+            row.addWidget(img_label)
+            row.addWidget(avatar_label)
+        else:
+            row.addWidget(avatar_label)
+            row.addWidget(img_label)
+            row.addStretch()
+
+        v_layout.addLayout(row)
+        self.chat_layout.addWidget(message_widget)
+
+        if hasattr(self, "chat_scroll_area"):
+            bar = self.chat_scroll_area.verticalScrollBar()
+            bar.setValue(bar.maximum())
 
     def send_file(self):
         """发送文件，限制 100MB；展示文件名和大小"""
