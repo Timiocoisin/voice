@@ -843,24 +843,28 @@ class DiamondPackageDialog(QDialog):
         if not hasattr(self, "wechat_button") or not hasattr(self, "alipay_button"):
             return
 
-        def style(selected: bool):
+        def get_style(selected: bool, method: str):
             if selected:
-                return """
-                    QPushButton {
+                # 微信选中使用绿色，支付宝选中使用蓝色
+                bg_color = "#22c55e" if method == "wechat" else "#3b82f6"
+                hover_color = "#16a34a" if method == "wechat" else "#2563eb"
+                pressed_color = "#15803d" if method == "wechat" else "#1d4ed8"
+                return f"""
+                    QPushButton {{
                         font-family: "Microsoft YaHei", "SimHei", "Arial";
                         font-size: 14px;
                         font-weight: 700;
                         color: #ffffff;
-                        background-color: #22c55e;
+                        background-color: {bg_color};
                         border-radius: 18px;
                         padding: 0 20px;
-                    }
-                    QPushButton:hover {
-                        background-color: #16a34a;
-                    }
-                    QPushButton:pressed {
-                        background-color: #15803d;
-                    }
+                    }}
+                    QPushButton:hover {{
+                        background-color: {hover_color};
+                    }}
+                    QPushButton:pressed {{
+                        background-color: {pressed_color};
+                    }}
                 """
             return """
                 QPushButton {
@@ -880,8 +884,8 @@ class DiamondPackageDialog(QDialog):
                 }
             """
 
-        self.wechat_button.setStyleSheet(style(self.selected_pay_method == "wechat"))
-        self.alipay_button.setStyleSheet(style(self.selected_pay_method == "alipay"))
+        self.wechat_button.setStyleSheet(get_style(self.selected_pay_method == "wechat", "wechat"))
+        self.alipay_button.setStyleSheet(get_style(self.selected_pay_method == "alipay", "alipay"))
 
     def _on_confirm_recharge(self):
         """点击确认充值后，弹出对应软件的收款码窗口"""
@@ -937,13 +941,14 @@ class PaymentQRCodeDialog(QDialog):
         pay_name = "微信支付" if self.pay_method == "wechat" else "支付宝支付"
         title = QLabel(pay_name)
         title.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        title.setStyleSheet("""
-            QLabel {
+        title_color = "#16a34a" if self.pay_method == "wechat" else "#2563eb"
+        title.setStyleSheet(f"""
+            QLabel {{
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
                 font-size: 20px;
                 font-weight: 700;
-                color: #16a34a;
-            }
+                color: {title_color};
+            }}
         """)
         layout.addWidget(title)
 
