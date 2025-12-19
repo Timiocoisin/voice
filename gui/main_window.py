@@ -111,7 +111,8 @@ class MainWindow(QMainWindow):
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         main_layout = QVBoxLayout(central_widget)
-        main_layout.setContentsMargins(20, 20, 20, 20)
+        # 收紧整体留白，让内容更紧凑
+        main_layout.setContentsMargins(16, 16, 16, 16)
 
         (self.rounded_bg, self.main_content_widget, self.main_content_layout,
          self.merged_section2, self.merged_section2_layout,

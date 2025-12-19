@@ -1,33 +1,26 @@
 """登录对话框样式配置。"""
 
-# 登录卡片样式
+# 登录卡片样式（柔和渐变 + 阴影友好边框）
 LOGIN_CARD_STYLE = """
     #loginCard {
-        background-color: rgba(255, 255, 255, 235);
-        border-radius: 24px;
-        border: 1px solid rgba(226, 232, 240, 170);
+        background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+            stop:0 rgba(255, 255, 255, 250),
+            stop:1 rgba(249, 250, 251, 250));
+        border-radius: 28px;
+        border: 1px solid rgba(226, 232, 240, 200);
     }
 """
 
-# Logo样式  
-LOGO_STYLE = """
-    QLabel {
-        font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
-        font-size: 28px;
-        font-weight: 700;
-        color: #1e293b;
-        padding: 4px 0px;
-    }
 """
+预留：登录对话框顶部 Logo / 副标题样式，如需再次使用可在此定义：
 
-# 副标题样式
-SUBTITLE_STYLE = """
-    QLabel {
-        font-family: "Microsoft YaHei", "SimHei", "Arial";
-        font-size: 13px;
-        color: #64748b;
-        padding: 2px 0px 12px 0px;
-    }
+LOGO_STYLE = \"\"\"
+    QLabel { ... }
+\"\"\"
+
+SUBTITLE_STYLE = \"\"\"
+    QLabel { ... }
+\"\"\"
 """
 
 # 输入框样式
@@ -54,14 +47,15 @@ INPUT_STYLE = """
 PRIMARY_BUTTON_STYLE = """
     QPushButton {
         font-family: "Microsoft YaHei", "SimHei", "Arial";
-        font-size: 14px;
+        font-size: 16px;
         font-weight: 700;
         color: white;
         background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
             stop:0 #8b5cf6, stop:1 #6366f1);
         border: none;
-        border-radius: 12px;
-        padding: 11px 20px;
+        border-radius: 16px;
+        padding: 12px 32px;
+        letter-spacing: 1px;
     }
     QPushButton:hover {
         background: qlineargradient(x1:0, y1:0, x2:1, y2:1,

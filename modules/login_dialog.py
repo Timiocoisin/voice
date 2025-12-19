@@ -2,7 +2,7 @@ from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QL
                                 QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QWidget,
                                 QGraphicsDropShadowEffect)
 from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtCore import Qt, QEvent, QByteArray
+from PyQt6.QtCore import Qt, QEvent, QByteArray, QPropertyAnimation, QRect, QEasingCurve, QTimer
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath, QKeyEvent
 from gui.clickable_label import ClickableLabel
 from modules.agreement_dialog import AgreementDialog
@@ -15,6 +15,11 @@ from gui.custom_message_box import CustomMessageBox
 from backend.config import texts as text_cfg
 from backend.database.database_manager import DatabaseManager
 from backend.resources import load_icon_data
+from gui.styles.login_styles import (
+    LOGIN_CARD_STYLE,
+    PRIMARY_BUTTON_STYLE,
+    SECONDARY_BUTTON_STYLE,
+)
 import bcrypt
 from backend.login.token_utils import generate_token, verify_token
 from backend.login.token_storage import save_token, read_token
@@ -49,16 +54,8 @@ class LoginDialog(QDialog):
 
         content_widget = QWidget()
         content_widget.setObjectName("loginCard")
-        # 现代化设计：渐变背景、柔和阴影、精致边框
-        content_widget.setStyleSheet("""
-            #loginCard {
-                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                    stop:0 rgba(255, 255, 255, 250),
-                    stop:1 rgba(249, 250, 251, 250));
-                border-radius: 28px;
-                border: 1px solid rgba(226, 232, 240, 200);
-            }
-        """)
+        # 统一使用样式配置中的卡片样式，便于全局风格管理
+        content_widget.setStyleSheet(LOGIN_CARD_STYLE)
         shadow = QGraphicsDropShadowEffect(self)
         shadow.setBlurRadius(48)
         shadow.setOffset(0, 16)
@@ -66,6 +63,7 @@ class LoginDialog(QDialog):
         content_widget.setGraphicsEffect(shadow)
 
         content_layout = QVBoxLayout(content_widget)
+        # 使用相对宽松的边距，保持卡片简洁
         content_layout.setContentsMargins(48, 48, 48, 40)
         content_layout.setSpacing(20)
 
@@ -76,21 +74,28 @@ class LoginDialog(QDialog):
         icon_container_width = 24
         icon_spacing = 12
 
-        # 头部布局，包含用户登录和用户注册
+        # 头部容器，包含“用户登录 / 用户注册”标题和滑动下划线
+        header_widget = QWidget()
+        # 固定高度为滑动线预留空间
+        header_widget.setFixedHeight(64)
+        header_widget_layout = QVBoxLayout(header_widget)
+        header_widget_layout.setContentsMargins(0, 0, 0, 0)
+        header_widget_layout.setSpacing(0)
+
         header_layout = QHBoxLayout()
         header_layout.setContentsMargins(0, 0, 0, 8)
         header_layout.setSpacing(24)
 
-        # 用户登录标签
+        # 用户登录标签（主标题）
         self.user_login_label = QLabel("用户登录")
+        # 只保留文字样式，不再使用 border-bottom，下划线交给 underline_widget 实现
         self.user_login_label.setStyleSheet("""
-            font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 30px; 
-            font-weight: 700; 
-            color: #1e40af;
-            letter-spacing: 0.8px;
-            padding: 6px 0px 12px 0px;
-            border-bottom: 3px solid #3b82f6;
+            font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+            font-size: 24px;
+            font-weight: 700;
+            color: #1d4ed8;
+            letter-spacing: 1px;
+            padding: 4px 0px 10px 0px;
             background: transparent;
         """)
         self.user_login_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -101,16 +106,15 @@ class LoginDialog(QDialog):
         spacer = QSpacerItem(40, 20, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         header_layout.addItem(spacer)
 
-        # 用户注册标签
+        # 用户注册标签（主标题）
         self.user_register_label = QLabel("用户注册")
         self.user_register_label.setStyleSheet("""
-            font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 30px; 
-            font-weight: 600; 
-            color: #94a3b8;
-            letter-spacing: 0.8px;
-            padding: 6px 0px 12px 0px;
-            border-bottom: 3px solid transparent;
+            font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+            font-size: 24px;
+            font-weight: 600;
+            color: #9ca3af;
+            letter-spacing: 1px;
+            padding: 4px 0px 10px 0px;
             background: transparent;
         """)
         self.user_register_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
@@ -118,7 +122,32 @@ class LoginDialog(QDialog):
         self.user_register_label.mousePressEvent = lambda event: self.switch_mode("register")
         header_layout.addWidget(self.user_register_label)
 
-        content_layout.addLayout(header_layout)
+        # 预先计算两端标签的最大宽度，保持下划线宽度恒定，避免视觉上“一段一段”变化
+        self._tab_underline_width = max(
+            self.user_login_label.sizeHint().width(),
+            self.user_register_label.sizeHint().width(),
+        )
+
+        # 将标题行放入顶部容器
+        header_widget_layout.addLayout(header_layout)
+
+        # 创建可动画的下划线条，初始几何在界面显示后设置
+        self.underline_widget = QWidget(header_widget)
+        # 稍微加粗一点，配合慢速动画更顺滑
+        self.underline_widget.setFixedHeight(4)
+        self.underline_widget.setStyleSheet("""
+            background-color: #3b82f6;
+            border-radius: 2px;
+        """)
+        self.underline_widget.hide()
+
+        # 下划线动画（几何动画：x + 宽度）
+        self.underline_animation = QPropertyAnimation(self.underline_widget, b"geometry")
+        # 接近线性匀速：使用 Linear 缓动，时长适中
+        self.underline_animation.setDuration(360)
+        self.underline_animation.setEasingCurve(QEasingCurve.Type.Linear)
+
+        content_layout.addWidget(header_widget)
 
         # 输入框样式（存储为实例变量以便后续使用）
         self.input_style = """
@@ -261,32 +290,8 @@ class LoginDialog(QDialog):
 
         # 登录获取验证码按钮
         self.login_get_verification_code_button = QPushButton("获取验证码")
-        self.login_get_verification_code_button.setStyleSheet("""
-            QPushButton {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #60a5fa, stop:1 #3b82f6);
-                color: white;
-                border: none;
-                border-radius: 16px;
-                padding: 0px 20px;
-                font-size: 13px;
-                font-weight: 600;
-                min-width: 120px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #3b82f6, stop:1 #2563eb);
-            }
-            QPushButton:pressed {
-                background: #2563eb;
-            }
-            QPushButton:disabled {
-                background-color: rgba(241, 245, 249, 1);
-                color: #cbd5e1;
-                border: 1px solid rgba(226, 232, 240, 1);
-            }
-        """)
+        # 使用统一的次要按钮样式，让验证码按钮与主按钮形成层级对比
+        self.login_get_verification_code_button.setStyleSheet(SECONDARY_BUTTON_STYLE)
         self.login_get_verification_code_button.setFixedHeight(field_height)
         self.login_get_verification_code_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.login_get_verification_code_button.clicked.connect(lambda: self.send_verification_code("login"))
@@ -337,32 +342,7 @@ class LoginDialog(QDialog):
 
         # 注册获取验证码按钮
         self.register_get_verification_code_button = QPushButton("获取验证码")
-        self.register_get_verification_code_button.setStyleSheet("""
-            QPushButton {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #60a5fa, stop:1 #3b82f6);
-                color: white;
-                border: none;
-                border-radius: 16px;
-                padding: 0px 20px;
-                font-size: 13px;
-                font-weight: 600;
-                min-width: 120px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #3b82f6, stop:1 #2563eb);
-            }
-            QPushButton:pressed {
-                background: #2563eb;
-            }
-            QPushButton:disabled {
-                background-color: rgba(241, 245, 249, 1);
-                color: #cbd5e1;
-                border: 1px solid rgba(226, 232, 240, 1);
-            }
-        """)
+        self.register_get_verification_code_button.setStyleSheet(SECONDARY_BUTTON_STYLE)
         self.register_get_verification_code_button.setFixedHeight(field_height)
         self.register_get_verification_code_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.register_get_verification_code_button.clicked.connect(lambda: self.send_verification_code("register"))
@@ -488,32 +468,8 @@ class LoginDialog(QDialog):
 
         # 登录按钮
         self.login_button = QPushButton("登录")
-        self.login_button.setStyleSheet("""
-            QPushButton {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #60a5fa, stop:1 #3b82f6);
-                color: white;
-                border: none;
-                border-radius: 16px;
-                padding: 0px 40px;
-                font-size: 17px;
-                font-weight: 600;
-                letter-spacing: 1px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #3b82f6, stop:1 #2563eb);
-            }
-            QPushButton:pressed {
-                background: #2563eb;
-            }
-            QPushButton:disabled {
-                background-color: rgba(241, 245, 249, 1);
-                color: #cbd5e1;
-                border: 1px solid rgba(226, 232, 240, 1);
-            }
-        """)
+        # 使用统一的主按钮样式
+        self.login_button.setStyleSheet(PRIMARY_BUTTON_STYLE)
         self.login_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.login_button.setFixedHeight(52)
         self.login_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -522,32 +478,7 @@ class LoginDialog(QDialog):
 
         # 注册按钮
         self.register_button = QPushButton("注册")
-        self.register_button.setStyleSheet("""
-            QPushButton {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #60a5fa, stop:1 #3b82f6);
-                color: white;
-                border: none;
-                border-radius: 16px;
-                padding: 0px 40px;
-                font-size: 17px;
-                font-weight: 600;
-                letter-spacing: 1px;
-            }
-            QPushButton:hover {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:1,
-                    stop:0 #3b82f6, stop:1 #2563eb);
-            }
-            QPushButton:pressed {
-                background: #2563eb;
-            }
-            QPushButton:disabled {
-                background-color: rgba(241, 245, 249, 1);
-                color: #cbd5e1;
-                border: 1px solid rgba(226, 232, 240, 1);
-            }
-        """)
+        self.register_button.setStyleSheet(PRIMARY_BUTTON_STYLE)
         self.register_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.register_button.setFixedHeight(52)
         self.register_button.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
@@ -588,6 +519,11 @@ class LoginDialog(QDialog):
         self.switch_mode("login")
         self.installEventFilter(self)
         self.clear_focus()  # 确保初始化时不选中任何输入框
+
+        # 等布局完成后再初始化下划线位置，避免宽度为 0 导致看不到
+        QTimer.singleShot(0, lambda: self._move_underline_to_label(
+            self.user_login_label if self.current_mode == "login" else self.user_register_label
+        ))
         
         # 设置实时验证
         self._setup_realtime_validation()
@@ -617,27 +553,27 @@ class LoginDialog(QDialog):
     def switch_mode(self, mode):
         self.current_mode = mode
         if mode == "login":
-            # 登录模式样式
+            # 登录模式样式（文字颜色高亮，底部下划线由 underline_widget 控制）
             self.user_login_label.setStyleSheet("""
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 30px; 
+                font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+                font-size: 24px; 
                 font-weight: 700; 
-                color: #1e40af;
-                letter-spacing: 0.8px;
-                padding: 6px 0px 12px 0px;
-                border-bottom: 3px solid #3b82f6;
+                color: #1d4ed8;
+                letter-spacing: 1px;
+                padding: 4px 0px 10px 0px;
                 background: transparent;
             """)
             self.user_register_label.setStyleSheet("""
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 30px; 
+                font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+                font-size: 24px; 
                 font-weight: 600; 
-                color: #94a3b8;
-                letter-spacing: 0.8px;
-                padding: 6px 0px 12px 0px;
-                border-bottom: 3px solid transparent;
+                color: #9ca3af;
+                letter-spacing: 1px;
+                padding: 4px 0px 10px 0px;
                 background: transparent;
             """)
+            # 下划线滑动到“用户登录”
+            self._move_underline_to_label(self.user_login_label)
             # 显示/隐藏按钮
             self.login_button.setVisible(True)
             self.register_button.setVisible(False)
@@ -662,33 +598,28 @@ class LoginDialog(QDialog):
             self._clear_input_error(self.login_email_input, self.login_email_error_label)
             self._clear_input_error(self.login_password_input, self.login_password_error_label)
             self.clear_focus()
-            # 强制重新计算布局，确保间距一致
-            # 先更新几何信息，然后处理事件，最后更新显示
-            self.updateGeometry()
-            QApplication.processEvents()
-            self.update()
         elif mode == "register":
-            # 注册模式样式
+            # 注册模式样式（文字颜色高亮，底部下划线由 underline_widget 控制）
             self.user_login_label.setStyleSheet("""
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 30px; 
+                font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+                font-size: 24px; 
                 font-weight: 600; 
-                color: #94a3b8;
-                letter-spacing: 0.8px;
-                padding: 6px 0px 12px 0px;
-                border-bottom: 3px solid transparent;
+                color: #9ca3af;
+                letter-spacing: 1px;
+                padding: 4px 0px 10px 0px;
                 background: transparent;
             """)
             self.user_register_label.setStyleSheet("""
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 30px; 
+                font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+                font-size: 24px; 
                 font-weight: 700; 
-                color: #1e40af;
-                letter-spacing: 0.8px;
-                padding: 6px 0px 12px 0px;
-                border-bottom: 3px solid #3b82f6;
+                color: #1d4ed8;
+                letter-spacing: 1px;
+                padding: 4px 0px 10px 0px;
                 background: transparent;
             """)
+            # 下划线滑动到“用户注册”
+            self._move_underline_to_label(self.user_register_label)
             # 显示/隐藏按钮
             self.login_button.setVisible(False)
             self.register_button.setVisible(True)
@@ -715,11 +646,45 @@ class LoginDialog(QDialog):
             self._clear_input_error(self.register_password_input, self.register_password_error_label)
             self._clear_input_error(self.username_input, self.username_error_label)
             self.clear_focus()
-            # 强制重新计算布局，确保间距一致
-            # 先更新几何信息，然后处理事件，最后更新显示
-            self.updateGeometry()
-            QApplication.processEvents()
-            self.update()
+
+    def _move_underline_to_label(self, label: QLabel):
+        """将下划线平滑移动到指定标题下方（只在 X 方向滑动，形成连续感）"""
+        if not hasattr(self, "underline_widget") or self.underline_widget is None:
+            return
+
+        parent = self.underline_widget.parent()
+        if parent is None:
+            return
+
+        # 目标位置：与标题左对齐，宽度固定；Y 固定在 header 底部，避免被裁剪
+        label_pos = label.mapTo(parent, label.rect().topLeft())
+        target_x = label_pos.x()
+        # 使用预计算的最大宽度，避免切换时宽度跳变导致“不连贯”感
+        target_width = getattr(self, "_tab_underline_width", label.width() or 40)
+        underline_h = self.underline_widget.height() or 3
+        base_y = max(0, parent.height() - underline_h - 4)
+
+        current_rect = self.underline_widget.geometry()
+
+        # 第一次显示时：放在当前标题正下方一点，不做动画
+        if (not self.underline_widget.isVisible()) or current_rect.isNull():
+            init_rect = QRect(target_x, base_y, target_width, underline_h)
+            self.underline_widget.setGeometry(init_rect)
+            self.underline_widget.show()
+            return
+
+        # 后续：仅在 X 和宽度上做动画，保持 Y 和高度不变，实现“从 A 滑到 B”的效果
+        target_rect = QRect(
+            target_x,
+            base_y,
+            target_width,
+            underline_h,
+        )
+
+        self.underline_animation.stop()
+        self.underline_animation.setStartValue(current_rect)
+        self.underline_animation.setEndValue(target_rect)
+        self.underline_animation.start()
 
     def _setup_realtime_validation(self):
         """设置实时输入验证"""

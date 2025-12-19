@@ -1,10 +1,8 @@
 from typing import TYPE_CHECKING
 
-from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QSizePolicy
+from PyQt6.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QLabel, QSizePolicy, QGraphicsDropShadowEffect
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap, QCursor
-
-from backend.resources import get_logo
+from PyQt6.QtGui import QPixmap, QCursor, QColor
 from gui.marquee_label import MarqueeLabel
 from gui.handlers import dialog_handlers, avatar_handlers
 from gui.handlers.window_handlers import minimize_app, close_app
@@ -55,28 +53,60 @@ def create_top_bar(main_window: "MainWindow") -> QWidget:
 
 
 def create_logo_label(main_window: "MainWindow", parent_widget: QWidget) -> QLabel:
-    """创建Logo标签"""
-    logo_label = QLabel()
+    """创建艺术字风格 Logo（云汐幻声）"""
+    logo_widget = QWidget(parent_widget)
+    layout = QVBoxLayout(logo_widget)
+    layout.setContentsMargins(0, 0, 0, 0)
+    layout.setSpacing(0)
 
-    # 从本地文件加载 logo 数据
-    logo_data = get_logo()
-    if logo_data:
-        logo_pixmap = QPixmap()
-        logo_pixmap.loadFromData(logo_data)
+    # 主标题使用富文本 + 渐变配色，模拟艺术字效果
+    title_label = QLabel(logo_widget)
+    title_label.setTextFormat(Qt.TextFormat.RichText)
+    # 通过在字之间加入不间断空格，再配合 letter-spacing 拉开间距
+    title_label.setText(
+        '<span style="color:#38bdf8;">云</span>&nbsp;&nbsp;'
+        '<span style="color:#6366f1;">汐</span>&nbsp;&nbsp;'
+        '<span style="color:#a855f7;">幻</span>&nbsp;&nbsp;'
+        '<span style="color:#22c55e;">声</span>'
+    )
+    title_label.setStyleSheet("""
+        QLabel {
+            font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+            font-size: 26px;
+            font-weight: 800;
+            letter-spacing: 8px;
+            padding: 0px;
+            margin: 0px;
+            background: transparent;
+        }
+    """)
+    # 加强阴影参数，让文字更有立体悬浮感
+    shadow = QGraphicsDropShadowEffect(logo_widget)
+    shadow.setBlurRadius(32)
+    shadow.setOffset(0, 4)
+    shadow.setColor(QColor(15, 23, 42, 120))
+    title_label.setGraphicsEffect(shadow)
 
-        # 调整Logo大小（整体再缩小一些）
-        logo_height = int(parent_widget.height() * 1.6)
-        logo_pixmap = logo_pixmap.scaled(
-            logo_height * 2,  # 同步缩小宽度比例
-            logo_height,
-            Qt.AspectRatioMode.KeepAspectRatio,
-            Qt.TransformationMode.SmoothTransformation
-        )
-        logo_label.setPixmap(logo_pixmap)
-    # 略微上移一点，让整体更"贴顶"
-    logo_label.setStyleSheet("margin: -4px 0 0 0; padding: 0px;")
+    subtitle_label = QLabel("CloudVox · AI 实时变声", logo_widget)
+    subtitle_label.setStyleSheet("""
+        QLabel {
+            font-family: "Microsoft YaHei", "Segoe UI", "SimHei", "Arial";
+            font-size: 11px;
+            font-weight: 500;
+            color: #6b7280;
+            letter-spacing: 1px;
+            padding: 0px;
+            margin-top: 2px;
+        }
+    """)
 
-    return logo_label
+    layout.addWidget(title_label)
+    layout.addWidget(subtitle_label)
+
+    logo_widget.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+    logo_widget.setStyleSheet("margin: 0 0 0 0; padding: 0px;")
+
+    return logo_widget
 
 
 def create_announcement_layout(main_window: "MainWindow") -> QHBoxLayout:

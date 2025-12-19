@@ -14,21 +14,21 @@ def create_section_widget(index: int) -> QWidget:
     section_widget = QWidget()
     section_widget.setObjectName(f"section{index}")
     
-    # 优化板块样式：使用不透明浅色渐变和阴影
+    # 优化板块样式：使用约 50% 透明的浅色渐变和阴影，让中间区域与背景更融合
     section_widget.setStyleSheet(f"""
         #section{index} {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 rgba(255, 255, 255, 255),
-                stop:1 rgba(236, 252, 203, 255));
-            border: 1px solid rgba(226, 232, 240, 255);
+                stop:0 rgba(255, 255, 255, 140),
+                stop:1 rgba(236, 252, 203, 130));
+            border: 1px solid rgba(226, 232, 240, 140);
             border-radius: 16px;
             padding: 16px 18px;
         }}
         #section{index}:hover {{
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 rgba(255, 255, 255, 255),
-                stop:1 rgba(219, 234, 254, 255));
-            border: 1px solid rgba(203, 213, 225, 255);
+                stop:0 rgba(255, 255, 255, 170),
+                stop:1 rgba(219, 234, 254, 155));
+            border: 1px solid rgba(203, 213, 225, 170);
         }}
     """)
     
@@ -84,21 +84,21 @@ def create_merged_section_widget() -> QWidget:
     section_widget = QWidget()
     section_widget.setObjectName("section2_merged")
     
-    # 优化板块样式：添加不透明渐变背景、阴影效果
+    # 优化板块样式：添加约 50% 透明的渐变背景、阴影效果
     section_widget.setStyleSheet("""
         #section2_merged {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 rgba(255, 255, 255, 255),
-                stop:1 rgba(255, 255, 255, 255));
-            border: 1px solid rgba(226, 232, 240, 255);
+                stop:0 rgba(255, 255, 255, 150),
+                stop:1 rgba(255, 255, 255, 135));
+            border: 1px solid rgba(226, 232, 240, 150);
             border-radius: 16px;
             padding: 20px;
         }
         #section2_merged:hover {
             background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 rgba(255, 255, 255, 255),
-                stop:1 rgba(255, 255, 255, 255));
-            border: 1px solid rgba(203, 213, 225, 255);
+                stop:0 rgba(255, 255, 255, 180),
+                stop:1 rgba(255, 255, 255, 165));
+            border: 1px solid rgba(203, 213, 225, 175);
         }
     """)
     

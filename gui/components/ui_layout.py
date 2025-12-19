@@ -31,8 +31,9 @@ def create_main_layout(main_window: "MainWindow") -> tuple:
 
     main_content_widget = QWidget()
     main_content_layout = QHBoxLayout(main_content_widget)
-    main_content_layout.setContentsMargins(20, 8, 20, 15)
-    main_content_layout.setSpacing(18)
+    # 收紧左右留白与行间距，使整体更紧凑
+    main_content_layout.setContentsMargins(14, 6, 14, 10)
+    main_content_layout.setSpacing(12)
     main_content_layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 
     left_column_widget, merged_section2, merged_section2_layout, right_column_widget = create_content_layout(main_window)
@@ -52,7 +53,7 @@ def create_main_layout(main_window: "MainWindow") -> tuple:
     return rounded_bg, main_content_widget, main_content_layout, merged_section2, merged_section2_layout, left_column_widget, right_column_widget, chat_panel
 
 
-def _add_section_to_layout(layout: QVBoxLayout, section_index: int, min_height: int = 280) -> None:
+def _add_section_to_layout(layout: QVBoxLayout, section_index: int, min_height: int = 250) -> None:
     section = create_section_widget(section_index)
     section.setMinimumHeight(min_height)
     section_layout = QVBoxLayout()
@@ -65,13 +66,13 @@ def create_content_layout(main_window: "MainWindow") -> tuple:
     left_column_widget = QWidget()
     left_column_layout = QVBoxLayout(left_column_widget)
     left_column_layout.setContentsMargins(0, 0, 0, 0)
-    left_column_layout.setSpacing(15)
+    left_column_layout.setSpacing(10)
 
     _add_section_to_layout(left_column_layout, 0)
     _add_section_to_layout(left_column_layout, 3)
 
     merged_section2 = create_merged_section_widget()
-    merged_section2.setMinimumHeight(560)
+    merged_section2.setMinimumHeight(520)
     merged_section2_layout = QVBoxLayout()
     merged_section2_layout.setContentsMargins(0, 0, 0, 0)
     merged_section2_layout.addWidget(merged_section2)
@@ -79,7 +80,7 @@ def create_content_layout(main_window: "MainWindow") -> tuple:
     right_column_widget = QWidget()
     right_column_layout = QVBoxLayout(right_column_widget)
     right_column_layout.setContentsMargins(0, 0, 0, 0)
-    right_column_layout.setSpacing(15)
+    right_column_layout.setSpacing(10)
 
     _add_section_to_layout(right_column_layout, 2)
     _add_section_to_layout(right_column_layout, 5)
