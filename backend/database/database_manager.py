@@ -25,8 +25,9 @@ class DatabaseManager:
             self.ensure_tables_exist()
         except pymysql.Error as e:
             logging.error(f"连接数据库失败: {e}")
+            # 返回连接状态，让上层决定如何提示用户
             self.connection = None
-            raise ConnectionError(f"无法连接到数据库。请检查数据库服务是否运行。\n错误详情: {e}")
+            raise ConnectionError(f"无法连接到数据库：{e}")
 
     def ensure_tables_exist(self):
         """确保所有表存在"""

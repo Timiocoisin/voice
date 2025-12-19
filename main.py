@@ -20,13 +20,8 @@ if __name__ == "__main__":
     try:
         _manager = DatabaseManager()
     except ConnectionError as e:
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Icon.Critical)
-        msg.setWindowTitle("数据库连接失败")
-        msg.setText("无法连接到数据库")
-        msg.setInformativeText(str(e))
-        msg.setDetailedText("请检查：\n1. MySQL 服务是否已启动\n2. 数据库配置是否正确\n3. 网络连接是否正常")
-        msg.exec()
+        QMessageBox.critical(None, "数据库连接失败", 
+                            f"{e}\n\n请检查数据库服务是否运行。")
         sys.exit(1)
 
     app_icon_data = load_icon_data(5)

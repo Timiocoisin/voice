@@ -7,9 +7,9 @@ from PyQt6.QtGui import QPixmap, QPainter, QColor, QPainterPath
 
 from backend.resources import get_default_avatar
 from backend.config import texts as text_cfg
-from gui.custom_message_box import CustomMessageBox
 from gui.avatar_crop_dialog import AvatarCropDialog
 from gui.handlers.dialog_handlers import exec_centered_dialog
+from gui.handlers.message_utils import show_message
 
 if TYPE_CHECKING:
     from gui.main_window import MainWindow
@@ -34,24 +34,30 @@ def upload_avatar(main_window: "MainWindow", event) -> None:
                         update_user_avatar_display(main_window, avatar_data)
                         logging.info("头像更新成功")
                     else:
-                        msg_box = CustomMessageBox(main_window, variant="error")
-                        msg_box.setWindowTitle("更新失败")
-                        msg_box.setText("头像更新失败，请稍后重试")
-                        msg_box.exec()
+                        show_message(
+                            main_window,
+                            "头像更新失败，请稍后重试",
+                            "更新失败",
+                            variant="error"
+                        )
                 else:
-                    msg_box = CustomMessageBox(main_window, variant="error")
-                    msg_box.setWindowTitle("错误")
-                    msg_box.setText("无法获取裁剪后的头像")
-                    msg_box.exec()
+                    show_message(
+                        main_window,
+                        "无法获取裁剪后的头像",
+                        "错误",
+                        variant="error"
+                    )
     else:
-        msg_box = CustomMessageBox(main_window, variant="error")
-        msg_box.setWindowTitle(text_cfg.LOGIN_REQUIRED_TITLE)
-        msg_box.setText(text_cfg.LOGIN_REQUIRED_BEFORE_UPLOAD_AVATAR)
-        msg_box.exec()
+        show_message(
+            main_window,
+            text_cfg.LOGIN_REQUIRED_BEFORE_UPLOAD_AVATAR,
+            text_cfg.LOGIN_REQUIRED_TITLE,
+            variant="error"
+        )
 
 
 def update_user_avatar_display(main_window: "MainWindow", avatar_data) -> None:
-    """更新头像显示"""
+    """更新头像显示（使用异步加载，避免阻塞UI）"""
     # 允许 avatar_data 为 None / memoryview
     if not avatar_data:
         avatar_data = get_default_avatar()
@@ -67,21 +73,60 @@ def update_user_avatar_display(main_window: "MainWindow", avatar_data) -> None:
         painter.end()
         main_window.user_avatar_label.setPixmap(pm)
         return
+    
     if isinstance(avatar_data, memoryview):
         avatar_bytes = avatar_data.tobytes()
     else:
         avatar_bytes = avatar_data
+    
+    # 对于较大的头像（>100KB），使用异步加载
+    if len(avatar_bytes) > 100 * 1024:
+        from backend.utils.image_load_thread import ImageLoadThread
+        
+        def on_image_loaded(pixmap: QPixmap, loaded_bytes: bytes):
+            _process_and_set_avatar(main_window, pixmap, loaded_bytes)
+        
+        def on_image_load_failed(error_msg: str):
+            logging.warning(f"异步加载头像失败，回退到默认头像: {error_msg}")
+            fallback = get_default_avatar()
+            if fallback:
+                update_user_avatar_display(main_window, fallback)
+            else:
+                # 使用占位符
+                pm = QPixmap(main_window.user_avatar_label.size())
+                pm.fill(Qt.GlobalColor.transparent)
+                painter = QPainter(pm)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+                painter.setBrush(QColor(241, 245, 249))
+                painter.setPen(Qt.PenStyle.NoPen)
+                painter.drawEllipse(0, 0, pm.width(), pm.height())
+                painter.end()
+                main_window.user_avatar_label.setPixmap(pm)
+        
+        # 启动异步加载线程（限制最大尺寸为500px，避免处理过大的图片）
+        image_thread = ImageLoadThread(avatar_bytes, max_size=500)
+        image_thread.setParent(main_window)  # 设置父对象，确保生命周期管理
+        image_thread.finished.connect(image_thread.deleteLater)  # 完成后自动清理
+        image_thread.image_loaded.connect(on_image_loaded)
+        image_thread.load_failed.connect(on_image_load_failed)
+        image_thread.start()
+    else:
+        # 小图片直接在主线程处理（不会阻塞太久）
+        pixmap = QPixmap()
+        ok = pixmap.loadFromData(avatar_bytes)
+        if not ok or pixmap.isNull():
+            # 数据非法则回退默认头像
+            fallback = get_default_avatar()
+            if fallback and fallback is not avatar_bytes:
+                pixmap = QPixmap()
+                pixmap.loadFromData(fallback)
+                avatar_bytes = fallback
+        
+        _process_and_set_avatar(main_window, pixmap, avatar_bytes)
 
-    pixmap = QPixmap()
-    ok = pixmap.loadFromData(avatar_bytes)
-    if not ok or pixmap.isNull():
-        # 数据非法则回退默认头像
-        fallback = get_default_avatar()
-        if fallback and fallback is not avatar_bytes:
-            pixmap = QPixmap()
-            pixmap.loadFromData(fallback)
-            avatar_bytes = fallback
 
+def _process_and_set_avatar(main_window: "MainWindow", pixmap: QPixmap, avatar_bytes: bytes) -> None:
+    """处理并设置头像（在主线程调用）"""
     size = min(pixmap.width(), pixmap.height())
     if size <= 0:
         return

@@ -15,8 +15,8 @@ from PyQt6.QtGui import (
 
 from backend.resources import get_default_avatar
 from gui.components.chat_bubble import ChatBubble
-from gui.custom_message_box import CustomMessageBox
 from gui.handlers import dialog_handlers
+from gui.handlers.message_utils import show_message
 
 if TYPE_CHECKING:
     from gui.main_window import MainWindow
@@ -28,10 +28,12 @@ def open_customer_service_chat(main_window: "MainWindow", event):
 
     # 未登录时，引导用户先登录，再联系客服
     if not main_window.user_id:
-        msg_box = CustomMessageBox(main_window, variant="warning")
-        msg_box.setWindowTitle("请先登录")
-        msg_box.setText("登录后即可联系客服为你处理问题。")
-        msg_box.exec()
+        show_message(
+            main_window,
+            "登录后即可联系客服为你处理问题。",
+            "请先登录",
+            variant="warning"
+        )
         # 顺便弹出登录框
         dialog_handlers.show_login_dialog(main_window)
         return
@@ -134,19 +136,25 @@ def close_chat_panel(main_window: "MainWindow"):
 
 def handle_chat_send(main_window: "MainWindow"):
     """发送消息并使用关键词匹配生成客服回复"""
-    text = main_window.chat_input.text().strip()
+    # 首先检查是否正在发送中，防止重复点击
+    if hasattr(main_window, 'chat_send_button') and not main_window.chat_send_button.isEnabled():
+        return
+    if not main_window.chat_input.isEnabled():
+        return
+    
+    # QTextEdit 使用 toPlainText() 方法获取文本内容
+    text = main_window.chat_input.toPlainText().strip()
     if not text:
         return
     
-    # 禁用发送按钮和输入框，防止重复发送
+    # 立即禁用发送按钮和输入框，防止重复发送
     main_window.chat_input.setEnabled(False)
+    original_text = None
     if hasattr(main_window, 'chat_send_button'):
-        main_window.chat_send_button.setEnabled(False)
         original_text = main_window.chat_send_button.text()
+        main_window.chat_send_button.setEnabled(False)
         main_window.chat_send_button.setText("发送中...")
         main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
-    else:
-        original_text = None
     
     append_chat_message(main_window, text, from_self=True)
     main_window.chat_input.clear()
@@ -161,12 +169,13 @@ def handle_chat_send(main_window: "MainWindow"):
         append_support_message(main_window, reply)
         # 恢复按钮和输入框状态
         main_window.chat_input.setEnabled(True)
-        main_window.chat_input.setFocus()  # 自动聚焦，方便继续输入
         if hasattr(main_window, 'chat_send_button'):
             main_window.chat_send_button.setEnabled(True)
             if original_text:
                 main_window.chat_send_button.setText(original_text)
             main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        # 延迟聚焦，确保 UI 更新完成后再聚焦
+        QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
     
     QTimer.singleShot(delay, send_reply_and_enable)
 
@@ -695,19 +704,51 @@ def show_image_popup(main_window: "MainWindow", img_path: str, title: str):
 
 def send_image(main_window: "MainWindow"):
     """选择并发送图片（内联展示），限制 100MB"""
+    # 检查是否正在发送中，防止重复操作
+    if hasattr(main_window, 'chat_send_button') and not main_window.chat_send_button.isEnabled():
+        return
+    if not main_window.chat_input.isEnabled():
+        return
+    
     file_path, _ = QFileDialog.getOpenFileName(
         main_window, "选择图片", "", "Images (*.png *.jpg *.jpeg *.bmp *.gif)"
     )
     if not file_path:
         return
+    
+    # 禁用发送相关控件
+    main_window.chat_input.setEnabled(False)
+    original_text = None
+    if hasattr(main_window, 'chat_send_button'):
+        original_text = main_window.chat_send_button.text()
+        main_window.chat_send_button.setEnabled(False)
+        main_window.chat_send_button.setText("发送中...")
+        main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+    
     size = os.path.getsize(file_path)
     if size > 100 * 1024 * 1024:
         append_chat_message(main_window, "图片超过 100MB，未发送。", from_self=False)
+        # 恢复状态
+        main_window.chat_input.setEnabled(True)
+        if hasattr(main_window, 'chat_send_button') and original_text:
+            main_window.chat_send_button.setEnabled(True)
+            main_window.chat_send_button.setText(original_text)
+            main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        # 自动聚焦输入框
+        QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
         return
 
     pix = QPixmap(file_path)
     if pix.isNull():
         append_chat_message(main_window, "图片加载失败。", from_self=False)
+        # 恢复状态
+        main_window.chat_input.setEnabled(True)
+        if hasattr(main_window, 'chat_send_button') and original_text:
+            main_window.chat_send_button.setEnabled(True)
+            main_window.chat_send_button.setText(original_text)
+            main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        # 自动聚焦输入框
+        QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
         return
     
     scaled = pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
@@ -715,7 +756,20 @@ def send_image(main_window: "MainWindow"):
     
     reply = main_window.keyword_matcher.generate_reply("图片", add_greeting=True)
     delay = random.randint(500, 1500)
-    QTimer.singleShot(delay, lambda: append_support_message(main_window, reply))
+    
+    def send_reply_and_enable():
+        append_support_message(main_window, reply)
+        # 恢复按钮和输入框状态
+        main_window.chat_input.setEnabled(True)
+        if hasattr(main_window, 'chat_send_button'):
+            main_window.chat_send_button.setEnabled(True)
+            if original_text:
+                main_window.chat_send_button.setText(original_text)
+            main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        # 延迟聚焦，确保 UI 更新完成后再聚焦
+        QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+    
+    QTimer.singleShot(delay, send_reply_and_enable)
 
 
 def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: bool = True):
@@ -807,31 +861,133 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
         bar.setValue(bar.maximum())
 
 
+def _handle_file_upload_result(main_window: "MainWindow", success: bool, filename: str, size: int, error: str = ""):
+    """处理文件上传结果"""
+    if success:
+        # 格式化文件大小
+        if size < 1024 * 1024:
+            size_kb = size / 1024
+            size_str = f"{size_kb:.1f} KB"
+        else:
+            size_mb = size / (1024 * 1024)
+            size_str = f"{size_mb:.1f} MB"
+        append_file_message(main_window, filename, size_str)
+        
+        reply = main_window.keyword_matcher.generate_reply("文件", add_greeting=True)
+        delay = random.randint(500, 1500)
+        
+        def send_reply_and_enable():
+            append_support_message(main_window, reply)
+            main_window.chat_input.setEnabled(True)
+            if hasattr(main_window, 'chat_send_button'):
+                main_window.chat_send_button.setEnabled(True)
+            QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+        
+        QTimer.singleShot(delay, send_reply_and_enable)
+    else:
+        error_msg = error if error else "未知错误"
+        append_chat_message(main_window, f"文件 {filename} 上传失败：{error_msg}", from_self=False)
+        main_window.chat_input.setEnabled(True)
+        if hasattr(main_window, 'chat_send_button'):
+            main_window.chat_send_button.setEnabled(True)
+        QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+
+
 def send_file(main_window: "MainWindow"):
-    """发送文件，限制 100MB；展示文件名和大小"""
+    """发送文件，限制 100MB；展示文件名和大小，显示上传进度"""
+    # 检查是否正在发送中，防止重复操作
+    if hasattr(main_window, 'chat_send_button') and not main_window.chat_send_button.isEnabled():
+        return
+    if not main_window.chat_input.isEnabled():
+        return
+    
     file_path, _ = QFileDialog.getOpenFileName(
         main_window, "选择文件", "", "All Files (*.*)"
     )
     if not file_path:
         return
+    
     size = os.path.getsize(file_path)
     if size > 100 * 1024 * 1024:
-        append_chat_message(main_window, "文件超过 100MB，未发送。", from_self=False)
+        # 显示错误提示框给用户，而不是在聊天框中显示
+        show_message(
+            main_window,
+            f"文件大小超过 100MB 限制，无法发送。\n\n请选择小于 100MB 的文件。",
+            "文件过大",
+            variant="error"
+        )
         return
 
-    if size < 1024 * 1024:
+    # 显示上传进度对话框（仅对大于1MB的文件显示）
+    filename = os.path.basename(file_path)
+    if size > 1024 * 1024:  # 大于1MB的文件显示进度
+        from gui.components.file_upload_progress import FileUploadProgressDialog
+        progress_dialog = FileUploadProgressDialog(main_window, filename, size)
+        # 居中显示
+        dialog_size = progress_dialog.size()
+        center_x = main_window.x() + (main_window.width() - dialog_size.width()) // 2
+        center_y = main_window.y() + (main_window.height() - dialog_size.height()) // 2
+        progress_dialog.move(center_x, center_y)
+        
+        # 保存原始完成处理方法
+        original_on_finished = progress_dialog.on_upload_finished
+        
+        def custom_on_finished(success: bool, error: str = ""):
+            # 调用原始处理（更新UI状态、关闭对话框）
+            original_on_finished(success, error)
+            
+            # 延迟处理文件发送逻辑，等待对话框关闭动画
+            QTimer.singleShot(350, lambda: _handle_file_upload_result(
+                main_window, success, filename, size, error
+            ))
+        
+        # 启动上传
+        progress_dialog.start_upload(file_path)
+        # 替换完成处理信号（断开原有连接，连接自定义处理）
+        if progress_dialog.upload_thread:
+            try:
+                progress_dialog.upload_thread.finished.disconnect(progress_dialog.on_upload_finished)
+            except TypeError:
+                pass  # 如果未连接，忽略错误
+            progress_dialog.upload_thread.finished.connect(custom_on_finished)
+        
+        progress_dialog.show()
+        
+        # 禁用发送相关控件
+        main_window.chat_input.setEnabled(False)
+        if hasattr(main_window, 'chat_send_button'):
+            main_window.chat_send_button.setEnabled(False)
+    else:
+        # 小于1MB的文件直接发送，不显示进度
+        # 禁用发送相关控件
+        main_window.chat_input.setEnabled(False)
+        original_text = None
+        if hasattr(main_window, 'chat_send_button'):
+            original_text = main_window.chat_send_button.text()
+            main_window.chat_send_button.setEnabled(False)
+            main_window.chat_send_button.setText("发送中...")
+            main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
+        
         size_kb = size / 1024
         size_str = f"{size_kb:.1f} KB"
-    else:
-        size_mb = size / (1024 * 1024)
-        size_str = f"{size_mb:.1f} MB"
+        append_file_message(main_window, filename, size_str)
 
-    filename = os.path.basename(file_path)
-    append_file_message(main_window, filename, size_str)
-    
-    reply = main_window.keyword_matcher.generate_reply("文件", add_greeting=True)
-    delay = random.randint(500, 1500)
-    QTimer.singleShot(delay, lambda: append_support_message(main_window, reply))
+        reply = main_window.keyword_matcher.generate_reply("文件", add_greeting=True)
+        delay = random.randint(500, 1500)
+        
+        def send_reply_and_enable():
+            append_support_message(main_window, reply)
+            # 恢复按钮和输入框状态
+            main_window.chat_input.setEnabled(True)
+            if hasattr(main_window, 'chat_send_button'):
+                main_window.chat_send_button.setEnabled(True)
+                if original_text:
+                    main_window.chat_send_button.setText(original_text)
+                main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            # 延迟聚焦，确保 UI 更新完成后再聚焦
+            QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+        
+        QTimer.singleShot(delay, send_reply_and_enable)
 
 
 def append_file_message(main_window: "MainWindow", filename: str, size_str: str, from_self: bool = True):

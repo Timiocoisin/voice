@@ -22,11 +22,13 @@ def refresh_membership_from_db(main_window: "MainWindow") -> None:
         main_window.update_membership_info(avatar_bytes, username, is_vip, diamonds, main_window.user_id)
     except Exception as e:
         logging.error("刷新会员信息失败：%s", e, exc_info=True)
-        from gui.custom_message_box import CustomMessageBox
-        msg_box = CustomMessageBox(main_window, variant="error")
-        msg_box.setWindowTitle("错误")
-        msg_box.setText("刷新会员信息失败，请稍后重试")
-        msg_box.exec()
+        from gui.handlers.message_utils import show_message
+        show_message(
+            main_window,
+            "刷新会员信息失败，请稍后重试",
+            "错误",
+            variant="error"
+        )
 
 
 def refresh_vip_tooltip(main_window: "MainWindow") -> None:

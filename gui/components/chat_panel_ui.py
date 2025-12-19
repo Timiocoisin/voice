@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
-from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QPushButton, QLineEdit
+from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QPushButton, QTextEdit
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QCursor, QKeySequence, QShortcut
+from PyQt6.QtGui import QCursor, QKeySequence, QShortcut, QKeyEvent
 from backend.resources import get_default_avatar
 from gui.window_utils import set_icon_button
 from gui.handlers import chat_handlers
@@ -43,6 +43,19 @@ def create_chat_panel_ui(main_window: "MainWindow", parent=None):
     container_layout.addWidget(body)
 
     root_layout.addWidget(container)
+    
+    # 为聊天面板添加ESC键关闭功能
+    def chat_panel_key_press_event(event: QKeyEvent):
+        if event.key() == Qt.Key.Key_Escape:
+            chat_handlers.close_chat_panel(main_window)
+        else:
+            # 调用父类的keyPressEvent
+            QWidget.keyPressEvent(chat_panel, event)
+    
+    chat_panel.keyPressEvent = chat_panel_key_press_event
+    # 确保聊天面板可以接收键盘事件
+    chat_panel.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
+    
     return chat_panel
 
 
@@ -243,11 +256,11 @@ def _create_chat_input_bar(main_window: "MainWindow") -> QWidget:
     input_row.setContentsMargins(0, 0, 0, 0)
     input_row.setSpacing(10)
 
-    main_window.chat_input = QLineEdit()
-    main_window.chat_input.setPlaceholderText("输入消息，回车或点击发送")
-    main_window.chat_input.setFixedHeight(40)
+    main_window.chat_input = QTextEdit()
+    main_window.chat_input.setPlaceholderText("输入消息，回车发送，Ctrl+Enter换行")
+    main_window.chat_input.setFixedHeight(70)
     main_window.chat_input.setStyleSheet("""
-        QLineEdit {
+        QTextEdit {
             border-radius: 20px;
             border: 1px solid rgba(203, 213, 225, 200);
             padding: 8px 14px;
@@ -255,19 +268,33 @@ def _create_chat_input_bar(main_window: "MainWindow") -> QWidget:
             font-size: 13px;
             background-color: #ffffff;
         }
-        QLineEdit:focus {
+        QTextEdit:focus {
             border-color: #7c3aed;
         }
-        QLineEdit:disabled {
+        QTextEdit:disabled {
             background-color: #f1f5f9;
             color: #94a3b8;
         }
     """)
-    main_window.chat_input.returnPressed.connect(lambda: chat_handlers.handle_chat_send(main_window))
-    
-    # 快捷键：Ctrl+Enter 发送消息
-    ctrl_enter_shortcut = QShortcut(QKeySequence("Ctrl+Return"), main_window.chat_input)
-    ctrl_enter_shortcut.activated.connect(lambda: chat_handlers.handle_chat_send(main_window))
+    main_window.chat_input.setAcceptRichText(False)
+
+    # 自定义按键行为：Enter 发送，Ctrl+Enter 换行
+    def chat_input_key_press_event(event: QKeyEvent):
+        if event.key() in (Qt.Key.Key_Return, Qt.Key.Key_Enter):
+            if event.modifiers() & Qt.KeyboardModifier.ControlModifier:
+                cursor = main_window.chat_input.textCursor()
+                cursor.insertText("\n")
+                main_window.chat_input.setTextCursor(cursor)
+                event.accept()
+                return
+            else:
+                chat_handlers.handle_chat_send(main_window)
+                event.accept()
+                return
+        # 默认处理
+        QTextEdit.keyPressEvent(main_window.chat_input, event)
+
+    main_window.chat_input.keyPressEvent = chat_input_key_press_event
 
     main_window.chat_send_button = QPushButton("发送")
     main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
