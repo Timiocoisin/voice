@@ -1,10 +1,9 @@
-# 文件 3：login_dialog.py
 from PyQt6.QtWidgets import (QApplication, QDialog, QVBoxLayout, QHBoxLayout, QLabel,
                                 QPushButton, QLineEdit, QSpacerItem, QSizePolicy, QWidget,
                                 QGraphicsDropShadowEffect)
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import Qt, QEvent, QByteArray
-from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath
+from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath, QKeyEvent
 from gui.clickable_label import ClickableLabel
 from modules.agreement_dialog import AgreementDialog
 from backend.validation.validator import validate_email, validate_password
@@ -163,7 +162,7 @@ class LoginDialog(QDialog):
         self.login_email_row.setStyleSheet(row_bg_style)
         self.login_email_layout = QHBoxLayout(self.login_email_row)
         self.login_email_layout.setContentsMargins(0, 0, 0, 0)
-        self.login_email_layout.setSpacing(12)
+        self.login_email_layout.setSpacing(8)
         icon_data = load_icon_data(3)
         if icon_data:
             login_email_icon = QSvgWidget()
@@ -216,7 +215,7 @@ class LoginDialog(QDialog):
         self.register_email_row.setStyleSheet(row_bg_style)
         self.register_email_layout = QHBoxLayout(self.register_email_row)
         self.register_email_layout.setContentsMargins(0, 0, 0, 0)
-        self.register_email_layout.setSpacing(12)
+        self.register_email_layout.setSpacing(8)
         icon_data = load_icon_data(3)
         if icon_data:
             register_email_icon = QSvgWidget()
@@ -446,10 +445,7 @@ class LoginDialog(QDialog):
         self.agreement_dialog.show()
 
     def eventFilter(self, obj, event):
-        if event.type() == QEvent.Type.MouseButtonPress:
-            if (self.agreement_dialog and self.agreement_dialog.isVisible() and
-                    not self.agreement_dialog.geometry().contains(event.globalPosition().toPoint())):
-                self.agreement_dialog.close()
+        # 用户协议对话框现在自己处理外部点击关闭，这里不再需要处理
         return super().eventFilter(obj, event)
 
     def paintEvent(self, event):
@@ -702,6 +698,15 @@ class LoginDialog(QDialog):
             msg_box.setWindowTitle(text_cfg.LOGIN_FAILED_TITLE)
             msg_box.exec()
 
+    def keyPressEvent(self, event: QKeyEvent):
+        """支持 ESC 键关闭登录对话框"""
+        if event.key() == Qt.Key.Key_Escape:
+            if self.parent():
+                self.parent().mask_widget.setVisible(False)
+            self.reject()
+        else:
+            super().keyPressEvent(event)
+    
     def check_token(self):
         token = read_token()
         if token:

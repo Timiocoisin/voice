@@ -1,4 +1,3 @@
-"""聊天气泡和相关UI组件。"""
 from typing import Optional
 
 from PyQt6.QtCore import Qt, QSize, QRectF

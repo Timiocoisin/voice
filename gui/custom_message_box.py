@@ -1,6 +1,6 @@
 from PyQt6.QtWidgets import QDialog, QLabel, QHBoxLayout, QWidget
 from PyQt6.QtCore import Qt, pyqtProperty, QTimer, QPropertyAnimation, QRectF
-from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QLinearGradient, QPainterPath
+from PyQt6.QtGui import QPainter, QBrush, QColor, QPen, QLinearGradient, QPainterPath, QKeyEvent
 from PyQt6 import QtCore
 
 class CustomMessageBox(QDialog):
@@ -115,6 +115,13 @@ class CustomMessageBox(QDialog):
     
     def fadeOut(self):
         self.fadeOutAnimation.start()
+    
+    def keyPressEvent(self, event: QKeyEvent):
+        """支持 ESC 键关闭对话框"""
+        if event.key() == Qt.Key.Key_Escape:
+            self.reject()
+        else:
+            super().keyPressEvent(event)
     
     def paintEvent(self, event):
         painter = QPainter(self)

@@ -1,8 +1,8 @@
 import sys
-from PyQt6.QtWidgets import QApplication
+from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap
-from PyQt6.QtCore import QByteArray  # 引入 QByteArray
+from PyQt6.QtCore import QByteArray
 from gui.main_window import MainWindow
 from backend.database.database_manager import DatabaseManager
 from backend.resources import load_icon_data
@@ -11,27 +11,31 @@ import logging
 
 
 if __name__ == "__main__":
-    # 设置高DPI策略
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
     
     app = QApplication(sys.argv)
-    db_manager = DatabaseManager()
+    
+    try:
+        _manager = DatabaseManager()
+    except ConnectionError as e:
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Icon.Critical)
+        msg.setWindowTitle("数据库连接失败")
+        msg.setText("无法连接到数据库")
+        msg.setInformativeText(str(e))
+        msg.setDetailedText("请检查：\n1. MySQL 服务是否已启动\n2. 数据库配置是否正确\n3. 网络连接是否正常")
+        msg.exec()
+        sys.exit(1)
 
-    # 从本地文件加载应用图标
     app_icon_data = load_icon_data(5)
-
-    # 如果获取到的图标数据是字节类型，则将其转换为 QIcon
     if app_icon_data:
-        # 将字节数据转换为 QByteArray
         byte_array = QByteArray(app_icon_data)
         pixmap = QPixmap()
-        if pixmap.loadFromData(byte_array):  # 使用 QByteArray 加载图像
+        if pixmap.loadFromData(byte_array):
             app_icon = QIcon(pixmap)
-
-    # 设置窗口图标
-    app.setWindowIcon(app_icon)
+            app.setWindowIcon(app_icon)
     
     window = MainWindow() 
     window.show()  

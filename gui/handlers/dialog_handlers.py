@@ -1,9 +1,8 @@
-"""对话框处理模块。"""
 import logging
 from typing import Optional, TYPE_CHECKING
 
 from PyQt6.QtWidgets import QDialog
-from PyQt6.QtCore import QPoint
+from PyQt6.QtCore import QPoint, QRect, QTimer
 
 from backend.login.login_status_manager import check_login_status, save_login_status
 from backend.login.token_storage import read_token
@@ -18,7 +17,6 @@ if TYPE_CHECKING:
 
 
 def show_login_dialog(main_window: "MainWindow") -> None:
-    """显示登录对话框"""
     is_logged_in, _, _ = check_login_status()
     if is_logged_in:
         return
@@ -34,35 +32,43 @@ def show_login_dialog(main_window: "MainWindow") -> None:
 
     main_window.login_dialog_offset = main_window.login_dialog.pos() - main_window.pos()
 
+    # 先更新蒙版几何位置（立即执行一次）
+    _update_mask_geometry(main_window)
     # 显示蒙版
     main_window.mask_widget.setVisible(True)
-    _update_mask_geometry(main_window)
-    main_window.mask_widget.setVisible(True)
+    # 延迟再次更新几何位置，确保rounded_bg的尺寸已完全设置
+    QTimer.singleShot(50, lambda: _update_mask_geometry(main_window))
+    
+    # 聚焦到登录对话框的输入框
+    if hasattr(main_window.login_dialog, 'email_input'):
+        main_window.login_dialog.email_input.setFocus()
 
 
 def check_auto_login(main_window: "MainWindow") -> None:
     """检查自动登录"""
-    token = read_token()
-    if token:
-        payload = verify_token(token)
-        if payload:
-            email = payload['email']
-            user = main_window.db_manager.get_user_by_email(email)
-            if user:
-                logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
-                save_login_status(user['id'], user['username'])
+    try:
+        token = read_token()
+        if token:
+            payload = verify_token(token)
+            if payload:
+                email = payload['email']
+                user = main_window.db_manager.get_user_by_email(email)
+                if user:
+                    logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
+                    save_login_status(user['id'], user['username'])
 
-                vip_info = main_window.db_manager.get_user_vip_info(user['id'])
-                if vip_info:
-                    is_vip = vip_info['is_vip']
-                    diamonds = vip_info['diamonds']
-                    main_window.update_membership_info(
-                        user['avatar'], user['username'], is_vip, diamonds, user['id']
-                    )
+                    vip_info = main_window.db_manager.get_user_vip_info(user['id'])
+                    if vip_info:
+                        is_vip = vip_info['is_vip']
+                        diamonds = vip_info['diamonds']
+                        main_window.update_membership_info(
+                            user['avatar'], user['username'], is_vip, diamonds, user['id']
+                        )
 
-                # 隐藏蒙版
-                main_window.mask_widget.setVisible(False)
-                return
+                    main_window.mask_widget.setVisible(False)
+                    return
+    except Exception as e:
+        logging.error(f"自动登录失败：{e}", exc_info=True)
     
     # 未登录或token无效，显示登录对话框
     show_login_dialog(main_window)
@@ -106,10 +112,22 @@ def exec_centered_dialog(main_window: "MainWindow", dialog: QDialog) -> int:
 
 def _update_mask_geometry(main_window: "MainWindow") -> None:
     """更新遮罩层几何位置（内部辅助函数）"""
-    # 现在遮罩挂在 main_content_widget 上，只需要覆盖主内容区域，避免挡住顶部导航
-    if not hasattr(main_window, "main_content_widget") or not hasattr(main_window, "mask_widget"):
+    # 蒙版应该覆盖整个rounded_bg（包括顶部导航栏、主内容区域和底部导航栏）
+    # 这样可以阻止用户点击主界面的任何部分
+    if not hasattr(main_window, "rounded_bg") or not hasattr(main_window, "mask_widget"):
         return
-    if not main_window.main_content_widget or not main_window.mask_widget:
+    if not main_window.rounded_bg or not main_window.mask_widget:
         return
-    main_window.mask_widget.setGeometry(main_window.main_content_widget.rect())
+    # 确保使用明确的坐标和尺寸覆盖整个rounded_bg区域
+    # 使用 rect() 获取完整的矩形区域（相对于父组件）
+    bg_rect = main_window.rounded_bg.rect()
+    # 如果 rect 有效，使用它；否则手动获取宽高
+    if bg_rect.width() > 0 and bg_rect.height() > 0:
+        main_window.mask_widget.setGeometry(bg_rect)
+    else:
+        # 备用方案：使用 size() 和明确的坐标
+        bg_size = main_window.rounded_bg.size()
+        if bg_size.width() > 0 and bg_size.height() > 0:
+            main_window.mask_widget.setGeometry(QRect(0, 0, bg_size.width(), bg_size.height()))
+    # 确保蒙版在最上层
     main_window.mask_widget.raise_()

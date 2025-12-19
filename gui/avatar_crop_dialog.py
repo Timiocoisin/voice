@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (QDialog, QVBoxLayout, QHBoxLayout, QLabel, QPushBut
                              QWidget, QGraphicsDropShadowEffect)
 from PyQt6.QtCore import Qt, QPoint, QRect, QRectF, QSize, QByteArray, QBuffer, QIODevice
 from PyQt6.QtGui import (QPixmap, QPainter, QPainterPath, QBrush, QColor, QPen, 
-                        QMouseEvent, QWheelEvent, QImage, QCursor)
+                        QMouseEvent, QWheelEvent, QImage, QCursor, QKeyEvent)
 import logging
 from backend.logging_manager import setup_logging  # noqa: F401
 
@@ -535,5 +535,12 @@ class AvatarCropDialog(QDialog):
             if image.save(buffer, "PNG"):
                 buffer.close()
                 return bytes(byte_array)
-            buffer.close()
+                buffer.close()
         return None
+    
+    def keyPressEvent(self, event: QKeyEvent):
+        """支持 ESC 键关闭对话框"""
+        if event.key() == Qt.Key.Key_Escape:
+            self.reject()
+        else:
+            super().keyPressEvent(event)

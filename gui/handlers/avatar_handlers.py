@@ -1,4 +1,3 @@
-"""头像上传和更新处理模块。"""
 import logging
 from typing import TYPE_CHECKING, Optional
 

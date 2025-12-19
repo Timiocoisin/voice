@@ -1,7 +1,6 @@
 from typing import Tuple
-
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPainter, QColor
+from PyQt6.QtGui import QPainter, QColor, QKeyEvent
 from PyQt6.QtWidgets import (
     QDialog,
     QWidget,
@@ -55,4 +54,11 @@ class BaseDialog(QDialog):
         layout.setSpacing(layout_spacing)
 
         return card, layout
+    
+    def keyPressEvent(self, event: QKeyEvent):
+        """支持 ESC 键关闭对话框"""
+        if event.key() == Qt.Key.Key_Escape:
+            self.reject()
+        else:
+            super().keyPressEvent(event)
 
