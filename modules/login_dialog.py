@@ -13,19 +13,18 @@ from backend.timer.timer_manager import TimerManager
 from backend.config.config import email_config
 from gui.custom_message_box import CustomMessageBox
 from backend.config import texts as text_cfg
-from backend.database.database_manager import DatabaseManager
 from backend.resources import load_icon_data
 from gui.styles.login_styles import (
     LOGIN_CARD_STYLE,
     PRIMARY_BUTTON_STYLE,
     SECONDARY_BUTTON_STYLE,
 )
-import bcrypt
+import logging
+from backend.logging_manager import setup_logging  # noqa: F401
 from backend.login.token_utils import generate_token, verify_token
 from backend.login.token_storage import save_token, read_token
 from backend.login.login_status_manager import save_login_status
-import logging
-from backend.logging_manager import setup_logging  # noqa: F401
+from gui import api_client
 
 
 class LoginDialog(QDialog):
@@ -43,9 +42,6 @@ class LoginDialog(QDialog):
         self.current_mode = "login"  # 默认当前模式为登录
         self.verification_manager = VerificationManager()
         self.email_sender = EmailSender(email_config)
-
-        # 初始化数据库管理器
-        self.db_manager = DatabaseManager()
 
         main_layout = QVBoxLayout(self)
         # 给阴影留出空间
@@ -842,41 +838,35 @@ class LoginDialog(QDialog):
             msg_box.exec()
             return
 
-        # 检查用户名是否已存在
-        if self.db_manager.get_user_by_email(email):
-            msg_box = CustomMessageBox()
-            msg_box.setText(text_cfg.LOGIN_USER_EXISTS_MESSAGE)
-            msg_box.setWindowTitle(text_cfg.LOGIN_USER_EXISTS_TITLE)
-            msg_box.exec()
-            return
-
-        # 插入用户信息
-        if self.db_manager.insert_user_info(username, email, password):
-            # 注册成功后，模拟登录操作
-            user = self.db_manager.get_user_by_email(email)
-            if user:
-                logging.info(f"用户 {user['username']} 注册成功，ID: {user['id']}")
-                save_login_status(user['id'], user['username'])
-                token = generate_token(email)
-                save_token(token)
-
-                vip_info = self.db_manager.get_user_vip_info(user['id'])
-                if vip_info:
-                    is_vip = vip_info['is_vip']
-                    diamonds = vip_info['diamonds']
-                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
-
-                # 隐藏蒙版
-                if self.parent():
-                    self.parent().mask_widget.setVisible(False)
-
-                self.clear_focus()  # 关闭前移除焦点
-                self.accept()  # 关闭登录对话框
-        else:
+        # 通过统一的 API 客户端完成注册与用户信息获取
+        result = api_client.register_user(username=username, email=email, password=password)
+        if not result or not result.get("user"):
+            # 可能是邮箱已存在或插入失败
             msg_box = CustomMessageBox(self.parent())
             msg_box.setText(text_cfg.LOGIN_REGISTER_FAILED_MESSAGE)
             msg_box.setWindowTitle(text_cfg.LOGIN_REGISTER_FAILED_TITLE)
             msg_box.exec()
+            return
+
+        user = result["user"]
+        vip_info = result.get("vip_info")
+
+        logging.info(f"用户 {user['username']} 注册成功，ID: {user['id']}")
+        save_login_status(user["id"], user["username"])
+        token = generate_token(email)
+        save_token(token)
+
+        if vip_info:
+            is_vip = vip_info.get("is_vip") if isinstance(vip_info, dict) else getattr(vip_info, "is_vip", False)
+            diamonds = vip_info.get("diamonds") if isinstance(vip_info, dict) else getattr(vip_info, "diamonds", 0)
+            self.update_user_info(user.get("avatar"), user["username"], bool(is_vip), diamonds, user["id"])
+
+        # 隐藏蒙版
+        if self.parent():
+            self.parent().mask_widget.setVisible(False)
+
+        self.clear_focus()  # 关闭前移除焦点
+        self.accept()  # 关闭登录对话框
 
     def login(self):
         email = self.login_email_input.text()
@@ -899,37 +889,34 @@ class LoginDialog(QDialog):
             msg_box.exec()
             return
 
-        user = self.db_manager.get_user_by_email(email)
-        if user:
-            hashed = user['password'].encode('utf-8')
-            if bcrypt.checkpw(password.encode('utf-8'), hashed):
-                logging.info(f"用户 {user['username']} 登录成功，ID: {user['id']}")
-                save_login_status(user['id'], user['username'])
-                token = generate_token(email)
-                save_token(token)
-
-                vip_info = self.db_manager.get_user_vip_info(user['id'])
-                if vip_info:
-                    is_vip = vip_info['is_vip']
-                    diamonds = vip_info['diamonds']
-                    self.update_user_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
-
-                # 隐藏蒙版
-                if self.parent():
-                    self.parent().mask_widget.setVisible(False)
-
-                self.clear_focus()  # 关闭前移除焦点
-                self.accept()  # 关闭登录对话框
-            else:
-                msg_box = CustomMessageBox(self.parent())
-                msg_box.setText(text_cfg.LOGIN_PASSWORD_WRONG_MESSAGE)
-                msg_box.setWindowTitle(text_cfg.LOGIN_FAILED_TITLE)
-                msg_box.exec()
-        else:
+        # 通过统一的 API 客户端完成登录与用户信息获取
+        result = api_client.login_user(email=email, password=password)
+        if not result or not result.get("user"):
             msg_box = CustomMessageBox(self.parent())
-            msg_box.setText(text_cfg.LOGIN_USER_NOT_FOUND_MESSAGE)
+            msg_box.setText(text_cfg.LOGIN_PASSWORD_WRONG_MESSAGE)
             msg_box.setWindowTitle(text_cfg.LOGIN_FAILED_TITLE)
             msg_box.exec()
+            return
+
+        user = result["user"]
+        vip_info = result.get("vip_info")
+
+        logging.info(f"用户 {user['username']} 登录成功，ID: {user['id']}")
+        save_login_status(user["id"], user["username"])
+        token = generate_token(email)
+        save_token(token)
+
+        if vip_info:
+            is_vip = vip_info.get("is_vip") if isinstance(vip_info, dict) else getattr(vip_info, "is_vip", False)
+            diamonds = vip_info.get("diamonds") if isinstance(vip_info, dict) else getattr(vip_info, "diamonds", 0)
+            self.update_user_info(user.get("avatar"), user["username"], bool(is_vip), diamonds, user["id"])
+
+        # 隐藏蒙版
+        if self.parent():
+            self.parent().mask_widget.setVisible(False)
+
+        self.clear_focus()  # 关闭前移除焦点
+        self.accept()  # 关闭登录对话框
 
     def keyPressEvent(self, event: QKeyEvent):
         """支持 ESC 键关闭登录对话框"""
@@ -945,17 +932,19 @@ class LoginDialog(QDialog):
         if token:
             payload = verify_token(token)
             if payload:
-                email = payload['email']
-                user = self.db_manager.get_user_by_email(email)
-                if user:
-                    logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
-                    save_login_status(user['id'], user['username'])
+                email = payload["email"]
+                result = api_client.get_user_by_token(email_from_token=email)
+                if result and result.get("user"):
+                    user = result["user"]
+                    vip_info = result.get("vip_info")
 
-                    vip_info = self.db_manager.get_user_vip_info(user['id'])
+                    logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
+                    save_login_status(user["id"], user["username"])
+
                     if vip_info:
-                        is_vip = vip_info['is_vip']
-                        diamonds = vip_info['diamonds']
-                        self.update_user_info(user['avatar'], user['username'], is_vip, diamonds, user['id'])
+                        is_vip = vip_info.get("is_vip") if isinstance(vip_info, dict) else getattr(vip_info, "is_vip", False)
+                        diamonds = vip_info.get("diamonds") if isinstance(vip_info, dict) else getattr(vip_info, "diamonds", 0)
+                        self.update_user_info(user.get("avatar"), user["username"], bool(is_vip), diamonds, user["id"])
 
                     # 隐藏蒙版
                     if self.parent():

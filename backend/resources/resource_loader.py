@@ -2,7 +2,6 @@
 资源加载器模块
 用于从本地文件加载图标和背景图片
 """
-import os
 from pathlib import Path
 from typing import Optional
 import logging
@@ -10,9 +9,44 @@ from backend.logging_manager import setup_logging  # noqa: F401
 
 # 获取项目根目录
 PROJECT_ROOT = Path(__file__).parent.parent.parent
-RESOURCES_DIR = PROJECT_ROOT / "resources"
-ICONS_DIR = RESOURCES_DIR / "icons"
-IMAGES_DIR = RESOURCES_DIR / "images"
+
+# 兼容旧结构（根目录下的 resources）与新结构（client/resources）
+_ROOT_RESOURCES_DIR = PROJECT_ROOT / "resources"
+_CLIENT_RESOURCES_DIR = PROJECT_ROOT / "client" / "resources"
+
+# 优先级：根目录 resources -> client/resources
+_CANDIDATE_RESOURCE_DIRS = [
+    _ROOT_RESOURCES_DIR,
+    _CLIENT_RESOURCES_DIR,
+]
+
+
+def _resolve_resource(subdir: str, filename: str) -> Optional[Path]:
+    """
+    在候选资源目录中解析文件路径，找到第一个存在的文件。
+    """
+    for base in _CANDIDATE_RESOURCE_DIRS:
+        if not base:
+            continue
+        if subdir == "icons":
+            file_path = base / "icons" / filename
+        elif subdir == "images":
+            file_path = base / "images" / filename
+        else:
+            # 兼容旧格式，直接放在 resources 根目录
+            file_path = base / filename
+
+        if file_path.exists():
+            return file_path
+
+    # 所有候选目录均未找到
+    logging.warning(
+        "资源文件不存在: %s (subdir=%s, candidates=%s)",
+        filename,
+        subdir,
+        ", ".join(str(d) for d in _CANDIDATE_RESOURCE_DIRS),
+    )
+    return None
 
 # 图标ID到文件路径的映射（相对路径，会在对应的目录下查找）
 ICON_MAPPING = {
@@ -51,21 +85,7 @@ def get_resource_path(icon_id: int) -> Optional[Path]:
         return None
     
     subdir, filename = ICON_MAPPING[icon_id]
-    
-    # 根据子目录类型选择对应的目录
-    if subdir == "icons":
-        file_path = ICONS_DIR / filename
-    elif subdir == "images":
-        file_path = IMAGES_DIR / filename
-    else:
-        # 兼容旧格式，直接放在 resources 根目录
-        file_path = RESOURCES_DIR / filename
-    
-    if not file_path.exists():
-        logging.warning(f"资源文件不存在: {file_path}")
-        return None
-    
-    return file_path
+    return _resolve_resource(subdir, filename)
 
 
 def load_icon_data(icon_id: int) -> Optional[bytes]:

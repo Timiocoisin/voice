@@ -1,14 +1,17 @@
 import os
+from pathlib import Path
 from backend.encryption.encryption_utils import encrypt_file, decrypt_file
 
-# 定义存放 token.enc 的文件夹路径
-TOKEN_DIR = 'tokens'
+# 将 token 存放在客户端目录下的 tokens 子目录中：<项目根>/client/tokens
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+CLIENT_DIR = PROJECT_ROOT / "client"
+TOKEN_DIR = CLIENT_DIR / "tokens"
+
 # 确保文件夹存在
-if not os.path.exists(TOKEN_DIR):
-    os.makedirs(TOKEN_DIR)
+TOKEN_DIR.mkdir(parents=True, exist_ok=True)
 
 # 完整的文件路径
-TOKEN_FILE = os.path.join(TOKEN_DIR, 'token.enc')
+TOKEN_FILE = TOKEN_DIR / "token.enc"
 
 def save_token(token):
     """将加密后的令牌保存到文件中"""
@@ -18,7 +21,7 @@ def save_token(token):
 
 def read_token():
     """读取并解密令牌文件"""
-    if os.path.exists(TOKEN_FILE):
+    if TOKEN_FILE.exists():
         with open(TOKEN_FILE, 'rb') as f:
             encrypted_token = f.read()
         try:
@@ -30,8 +33,8 @@ def read_token():
 
 def clear_token():
     """清除本地保存的 token 文件"""
-    if os.path.exists(TOKEN_FILE):
+    if TOKEN_FILE.exists():
         try:
-            os.remove(TOKEN_FILE)
+            TOKEN_FILE.unlink()
         except OSError:
             pass

@@ -6,6 +6,7 @@ from PyQt6.QtGui import QPixmap, QCursor, QColor
 from gui.marquee_label import MarqueeLabel
 from gui.handlers import dialog_handlers, avatar_handlers
 from gui.handlers.window_handlers import minimize_app, close_app
+from gui import api_client
 
 if TYPE_CHECKING:
     from gui.main_window import MainWindow
@@ -139,12 +140,38 @@ def create_announcement_layout(main_window: "MainWindow") -> QHBoxLayout:
     container_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
 
     # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
+    # 公告左侧喇叭图标（放在容器内的最左侧）
     speaker_icon = main_window.create_svg_widget(10, 20, 20, "margin: 0px; opacity: 0.75;")
     if speaker_icon:
         container_layout.addWidget(speaker_icon, alignment=Qt.AlignmentFlag.AlignVCenter)
 
-    # 从数据库获取公告文本
-    announcement_text = main_window.db_manager.get_latest_announcement()
+    # 从“远程服务”获取公告文本（当前本地模拟）
+    announcement_text = api_client.get_latest_announcement()
     if not announcement_text:
         announcement_text = "欢迎使用《声音序章》软件！！！"
 

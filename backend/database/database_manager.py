@@ -11,33 +11,79 @@ class DatabaseManager:
     def __init__(self):
         self.connection = None
         self.connect()
-
+    
     def connect(self):
-        """建立与 MySQL 数据库的连接"""
+        """
+        建立与 MySQL 数据库的连接。
+
+        若目标数据库不存在，则自动创建 `voice` 数据库后再连接，并初始化表结构。
+        """
+        db_name = "voice"
         try:
+            # 优先直接连接指定数据库
             self.connection = pymysql.connect(
                 host="localhost",
                 user="root",
                 password="123456",
-                database="voice"
+                database=db_name,
             )
             logging.info("数据库连接成功")
             self.ensure_tables_exist()
         except pymysql.Error as e:
+            msg = str(e)
             logging.error(f"连接数据库失败: {e}")
-            # 返回连接状态，让上层决定如何提示用户
+
+            # 若是数据库不存在，则先连接 MySQL 服务器创建数据库
+            if "Unknown database" in msg or f"'{db_name}'" in msg:
+                logging.info("检测到数据库不存在，正在自动创建数据库 %s ...", db_name)
+                try:
+                    # 先连接到服务器（不指定 database）
+                    server_conn = pymysql.connect(
+                        host="localhost",
+                        user="root",
+                        password="123456",
+                    )
+                    with server_conn.cursor() as cursor:
+                        cursor.execute(
+                            f"CREATE DATABASE IF NOT EXISTS `{db_name}` "
+                            "DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
+                        )
+                    server_conn.commit()
+                    server_conn.close()
+                    logging.info("数据库 %s 创建/存在检查完成", db_name)
+
+                    # 再次连接到新建好的数据库
+                    self.connection = pymysql.connect(
+                        host="localhost",
+                        user="root",
+                        password="123456",
+                        database=db_name,
+                    )
+                    logging.info("重新连接到新创建的数据库成功")
+                    self.ensure_tables_exist()
+                    return
+                except pymysql.Error as ce:
+                    logging.error(f"自动创建数据库 {db_name} 失败: {ce}")
+                    self.connection = None
+                    raise ConnectionError(f"无法创建数据库 {db_name}：{ce}")
+
+            # 其他错误直接抛给上层
             self.connection = None
             raise ConnectionError(f"无法连接到数据库：{e}")
 
     def ensure_tables_exist(self):
         """确保所有表存在"""
         self.create_user_table()
+        self._ensure_user_avatar_column()
         self.create_user_vip_table()
-        self.create_logo_table()
         self.create_announcement_table()
 
     def create_user_table(self):
-        """创建用户表（如果不存在）"""
+        """创建用户表（如果不存在）。
+
+        注意：avatar 列的增加会通过 `_ensure_user_avatar_column` 进行迁移，
+        以兼容早期已存在但未包含 avatar 列的表结构。
+        """
         try:
             cursor = self.connection.cursor()
             create_table_query = """
@@ -55,6 +101,32 @@ class DatabaseManager:
             self.connection.commit()
         except pymysql.Error as e:
             logging.error(f"创建用户表失败: {e}")
+
+    def _ensure_user_avatar_column(self) -> None:
+        """
+        确保 users 表中存在 avatar 列。
+
+        早期版本可能没有 avatar 列，这里通过 SHOW COLUMNS 检查并按需执行 ALTER TABLE，
+        保证用户上传的头像可以长期保存在单独字段中，而不会在升级后丢失。
+        """
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'avatar'")
+            result = cursor.fetchone()
+            if result:
+                return  # 已存在 avatar 列
+
+            logging.info("检测到 users 表缺少 avatar 列，正在自动添加该列...")
+            alter_sql = """
+            ALTER TABLE users
+            ADD COLUMN avatar LONGBLOB NULL AFTER password
+            """
+            cursor.execute(alter_sql)
+            self.connection.commit()
+            logging.info("users 表 avatar 列添加完成")
+        except pymysql.Error as e:
+            # 如果列已存在或其他错误，这里仅记录日志，不阻止服务启动
+            logging.error(f"确保 users.avatar 列存在时出错: {e}")
 
     def create_user_vip_table(self):
         """创建用户 VIP 信息表（如果不存在）"""
@@ -75,21 +147,22 @@ class DatabaseManager:
         except pymysql.Error as e:
             logging.error(f"创建用户 VIP 信息表失败: {e}")
 
-    def create_logo_table(self):
-        """创建 logo 表（如果不存在）"""
-        try:
-            cursor = self.connection.cursor()
-            create_table_query = """
-            CREATE TABLE IF NOT EXISTS logos (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                icon_data LONGBLOB NOT NULL,
-                comment VARCHAR(255) NULL COMMENT '图标注释信息'
-            )
-            """
-            cursor.execute(create_table_query)
-            self.connection.commit()
-        except pymysql.Error as e:
-            logging.error(f"创建 logo 表失败: {e}")
+    # 已废弃：logos 表与相关功能不再使用，保留注释以便历史追溯
+    # def create_logo_table(self):
+    #     """创建 logo 表（如果不存在）"""
+    #     try:
+    #         cursor = self.connection.cursor()
+    #         create_table_query = """
+    #         CREATE TABLE IF NOT EXISTS logos (
+    #             id INT AUTO_INCREMENT PRIMARY KEY,
+    #             icon_data LONGBLOB NOT NULL,
+    #             comment VARCHAR(255) NULL COMMENT '图标注释信息'
+    #         )
+    #         """
+    #         cursor.execute(create_table_query)
+    #         self.connection.commit()
+    #     except pymysql.Error as e:
+    #         logging.error(f"创建 logo 表失败: {e}")
 
     def create_announcement_table(self):
         """创建公告表（如果不存在）"""
@@ -205,24 +278,25 @@ class DatabaseManager:
         """读取默认头像文件并返回二进制数据，从本地文件加载"""
         return get_default_avatar()
 
-    def get_icon_by_id(self, icon_id: int):
-        """根据图标ID获取图标数据"""
-        try:
-            cursor = self.connection.cursor()
-            query = "SELECT icon_data FROM logos WHERE id = %s"
-            cursor.execute(query, (icon_id,))
-            result = cursor.fetchone()
-            if result:
-                return result[0]
-            logging.info(f"未找到ID为 {icon_id} 的图标")
-            return None
-        except pymysql.Error as e:
-            logging.error(f"查询图标 ID {icon_id} 失败: {e}")
-            return None
-
-    def get_latest_logo(self):
-        """获取最新的 logo 数据，这里获取 logos 表中 id 为 6 的 icon"""
-        return self.get_icon_by_id(6)
+    # 已废弃：logos 表相关查询不再使用
+    # def get_icon_by_id(self, icon_id: int):
+    #     """根据图标ID获取图标数据"""
+    #     try:
+    #         cursor = self.connection.cursor()
+    #         query = "SELECT icon_data FROM logos WHERE id = %s"
+    #         cursor.execute(query, (icon_id,))
+    #         result = cursor.fetchone()
+    #         if result:
+    #             return result[0]
+    #         logging.info(f"未找到ID为 {icon_id} 的图标")
+    #         return None
+    #     except pymysql.Error as e:
+    #         logging.error(f"查询图标 ID {icon_id} 失败: {e}")
+    #         return None
+    #
+    # def get_latest_logo(self):
+    #     """获取最新的 logo 数据，这里获取 logos 表中 id 为 6 的 icon"""
+    #     return self.get_icon_by_id(6)
 
     def get_latest_announcement(self):
         """获取最新的公告内容"""

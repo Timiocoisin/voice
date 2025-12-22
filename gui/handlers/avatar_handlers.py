@@ -10,6 +10,7 @@ from backend.config import texts as text_cfg
 from gui.avatar_crop_dialog import AvatarCropDialog
 from gui.handlers.dialog_handlers import exec_centered_dialog
 from gui.handlers.message_utils import show_message
+from gui import api_client
 
 if TYPE_CHECKING:
     from gui.main_window import MainWindow
@@ -29,7 +30,7 @@ def upload_avatar(main_window: "MainWindow", event) -> None:
                 # 获取裁剪后的头像数据
                 avatar_data = crop_dialog.get_cropped_avatar_bytes()
                 if avatar_data:
-                    if main_window.db_manager.update_user_avatar(main_window.user_id, avatar_data):
+                        if api_client.update_user_avatar(main_window.user_id, avatar_data):
                         # 更新成功后，重新加载头像显示
                         update_user_avatar_display(main_window, avatar_data)
                         logging.info("头像更新成功")

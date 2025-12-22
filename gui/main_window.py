@@ -9,15 +9,15 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QPixmap
 from modules.login_dialog import LoginDialog
-from backend.database.database_manager import DatabaseManager
-from backend.customer_service.keyword_matcher import get_matcher
-from backend.membership_service import MembershipService
 
 from gui.components.chat_bubble import ChatBubble
 from gui.components.chat_panel import create_chat_panel
 from gui.components.ui_layout import create_main_layout
 from gui.handlers import dialog_handlers, avatar_handlers, chat_handlers
-from gui.handlers.membership_handlers import refresh_membership_from_db as refresh_membership_from_db_handler, refresh_vip_tooltip as refresh_vip_tooltip_handler
+from gui.handlers.membership_handlers import (
+    refresh_membership_from_db as refresh_membership_from_db_handler,
+    refresh_vip_tooltip as refresh_vip_tooltip_handler,
+)
 from gui.handlers.window_handlers import (
     on_avatar_hover_enter, on_avatar_hover_leave,
     update_logout_popup_position, really_hide_logout, handle_logout_click
@@ -40,8 +40,6 @@ class MainWindow(QMainWindow):
         self.login_dialog_offset = QPoint()
         self.draggable_height = 40
 
-        self.db_manager = DatabaseManager()
-        self.membership_service = MembershipService(self.db_manager)
         self.user_id = None
 
         self._avatar_normal_geometry = None

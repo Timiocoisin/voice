@@ -1,27 +1,38 @@
+import os
 import sys
+
+# 确保项目根目录在 sys.path 中，便于导入 backend 等顶层包
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if BASE_DIR not in sys.path:
+    sys.path.insert(0, BASE_DIR)
+
 from PyQt6.QtWidgets import QApplication, QMessageBox
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QIcon, QPixmap
 from PyQt6.QtCore import QByteArray
 from gui.main_window import MainWindow
-from backend.database.database_manager import DatabaseManager
 from backend.resources import load_icon_data
 from backend.logging_manager import setup_logging  # noqa: F401
 import logging
+import requests
 
 
 if __name__ == "__main__":
     QApplication.setHighDpiScaleFactorRoundingPolicy(
         Qt.HighDpiScaleFactorRoundingPolicy.PassThrough
     )
-    
     app = QApplication(sys.argv)
-    
+
+    # 启动时改为检查后端 HTTP 服务是否可用，而不是直接连接数据库
     try:
-        _manager = DatabaseManager()
-    except ConnectionError as e:
-        QMessageBox.critical(None, "数据库连接失败", 
-                            f"{e}\n\n请检查数据库服务是否运行。")
+        resp = requests.get("http://127.0.0.1:8000/api/health", timeout=3)
+        resp.raise_for_status()
+    except Exception as e:
+        QMessageBox.critical(
+            None,
+            "后端连接失败",
+            f"{e}\n\n请检查后端服务是否已启动（http://127.0.0.1:8000）。",
+        )
         sys.exit(1)
 
     app_icon_data = load_icon_data(5)

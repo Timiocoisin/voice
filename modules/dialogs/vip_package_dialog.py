@@ -8,7 +8,6 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QColor
 
-from backend.membership_service import MembershipService
 from backend.config import texts as text_cfg
 from gui.custom_message_box import CustomMessageBox
 from gui.base_dialog import BaseDialog
@@ -16,6 +15,7 @@ from gui.styles.membership_styles import (
     VIP_CARD_CONTAINER, TITLE_STYLE, MEMBERSHIP_CARD_STYLE,
     BUY_BUTTON_STYLE
 )
+from gui import api_client
 
 
 class VipPackageDialog(BaseDialog):
@@ -24,8 +24,6 @@ class VipPackageDialog(BaseDialog):
     def __init__(self, parent=None, user_id=None):
         super().__init__(parent)
         self.user_id = user_id
-        # 使用会员服务封装数据库访问与业务逻辑
-        self.membership_service = MembershipService()
         self.vip_expiry = None  # type: Optional[datetime]
 
         # 读取当前 VIP 信息
@@ -162,10 +160,10 @@ class VipPackageDialog(BaseDialog):
         self.vip_expiry = None
         if not self.user_id:
             return
-        vip_info = self.membership_service.get_vip_info(self.user_id)
+        vip_info = api_client.get_vip_info_by_user_id(self.user_id)
         if not vip_info:
             return
-        self.vip_expiry = vip_info.vip_expiry
+        self.vip_expiry = getattr(vip_info, "vip_expiry", None)
 
     def _update_vip_expiry_label(self):
         """根据当前 VIP 信息更新"有效期至"显示"""
@@ -223,8 +221,8 @@ class VipPackageDialog(BaseDialog):
 
         cost = int(card_info.get("diamonds", 0))
 
-        vip_info = self.membership_service.get_vip_info(self.user_id)
-        diamonds = vip_info.diamonds if vip_info else 0
+        vip_info = api_client.get_vip_info_by_user_id(self.user_id)
+        diamonds = getattr(vip_info, "diamonds", 0) if vip_info else 0
 
         if diamonds < cost:
             # 钻石不足：提示并跳转到钻石套餐弹窗
@@ -238,11 +236,8 @@ class VipPackageDialog(BaseDialog):
             dialog.exec()
             return
 
-        # 调用服务层：扣减钻石并更新 VIP
-        success, new_expiry = self.membership_service.purchase_membership(
-            user_id=self.user_id,
-            card_info=card_info,
-        )
+        # 调用统一 API：扣减钻石并更新 VIP
+        success, new_expiry = api_client.purchase_membership(self.user_id, card_info)
 
         if not success:
             msg_box = CustomMessageBox(self.parent(), variant="error")

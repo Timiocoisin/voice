@@ -397,7 +397,9 @@ def open_emoji_menu(main_window: "MainWindow"):
 
 def insert_emoji(main_window: "MainWindow", emoji: str):
     """插入表情到输入框"""
-    main_window.chat_input.insert(emoji)
+    if hasattr(main_window, "chat_input") and main_window.chat_input is not None:
+        # QTextEdit 使用 insertPlainText 来插入文本
+        main_window.chat_input.insertPlainText(emoji)
 
 
 def create_faq_item(question: str, answer: str) -> QWidget:

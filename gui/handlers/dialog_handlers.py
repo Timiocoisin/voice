@@ -4,7 +4,7 @@ from typing import Optional, TYPE_CHECKING
 from PyQt6.QtWidgets import QDialog, QWidget, QVBoxLayout, QLabel
 from PyQt6.QtCore import QPoint, QRect, QTimer, Qt
 
-from backend.login.login_status_manager import check_login_status, save_login_status
+from backend.login.login_status_manager import check_login_status
 from backend.login.token_storage import read_token
 from backend.login.token_utils import verify_token
 from backend.config import texts as text_cfg
@@ -63,84 +63,17 @@ def check_auto_login(main_window: "MainWindow") -> None:
             QTimer.singleShot(100, safe_update)
         
         token = read_token()
-        if token:
-            payload = verify_token(token)
-            if payload:
-                email = payload['email']
-                # 使用异步数据库查询
-                from backend.database.database_thread import DatabaseQueryThread
-                
-                # 保存线程引用，避免被垃圾回收，设置父对象为main_window以确保生命周期
-                user_thread = DatabaseQueryThread('get_user_by_email', email)
-                user_thread.setParent(main_window)  # 设置父对象，确保生命周期管理
-                
-                def on_user_query_finished(user):
-                    if user:
-                        logging.info(f"用户 {user['username']} 自动登录成功，ID: {user['id']}")
-                        save_login_status(user['id'], user['username'])
-                        
-                        # 查询VIP信息
-                        vip_thread = DatabaseQueryThread('get_user_vip_info', user['id'])
-                        vip_thread.setParent(main_window)  # 设置父对象
-                        vip_thread.finished.connect(vip_thread.deleteLater)  # 完成后自动清理
-                        
-                        def on_vip_query_finished(vip_info):
-                            if vip_info:
-                                is_vip = vip_info['is_vip']
-                                diamonds = vip_info['diamonds']
-                                main_window.update_membership_info(
-                                    user['avatar'], user['username'], is_vip, diamonds, user['id']
-                                )
-                            
-                            # 隐藏加载蒙版和mask_widget
-                            if loading_overlay:
-                                try:
-                                    loading_overlay.setVisible(False)
-                                    loading_overlay.deleteLater()
-                                except RuntimeError:
-                                    pass  # 对象已被删除，忽略
-                            main_window.mask_widget.setVisible(False)
-                        
-                        def on_vip_query_error(error_msg):
-                            logging.error(f"查询VIP信息失败: {error_msg}")
-                            # 即使VIP查询失败，也继续登录流程
-                            if loading_overlay:
-                                try:
-                                    loading_overlay.setVisible(False)
-                                    loading_overlay.deleteLater()
-                                except RuntimeError:
-                                    pass
-                            main_window.mask_widget.setVisible(False)
-                        
-                        vip_thread.query_finished.connect(on_vip_query_finished)
-                        vip_thread.query_error.connect(on_vip_query_error)
-                        vip_thread.start()
-                    else:
-                        # 用户查询失败，隐藏加载蒙版
-                        if loading_overlay:
-                            try:
-                                loading_overlay.setVisible(False)
-                                loading_overlay.deleteLater()
-                            except RuntimeError:
-                                pass
-                        main_window.mask_widget.setVisible(False)
-                
-                def on_user_query_error(error_msg):
-                    logging.error(f"查询用户信息失败: {error_msg}")
-                    # 隐藏加载蒙版
-                    if loading_overlay:
-                        try:
-                            loading_overlay.setVisible(False)
-                            loading_overlay.deleteLater()
-                        except RuntimeError:
-                            pass
-                    main_window.mask_widget.setVisible(False)
-                
-                # 确保线程完成后自动清理
-                user_thread.finished.connect(user_thread.deleteLater)
-                user_thread.query_finished.connect(on_user_query_finished)
-                user_thread.query_error.connect(on_user_query_error)
-                user_thread.start()
+        if token and verify_token(token):
+            # 复用 LoginDialog.check_token 中的统一逻辑（内部已通过 api_client 获取用户与会员信息）
+            login_dialog = LoginDialog(main_window)
+            if login_dialog.check_token():
+                # LoginDialog.check_token 内部已完成用户信息更新和蒙版隐藏
+                if loading_overlay:
+                    try:
+                        loading_overlay.setVisible(False)
+                        loading_overlay.deleteLater()
+                    except RuntimeError:
+                        pass
                 return
     except Exception as e:
         logging.error(f"自动登录失败：{e}", exc_info=True)

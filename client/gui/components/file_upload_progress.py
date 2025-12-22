@@ -65,11 +65,12 @@ class FileUploadProgressDialog(QDialog):
         self.upload_thread = None
         self.canceled = False
         
-        self.setWindowTitle("上传文件")
+        self.setWindowTitle("正在上传文件")
         self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.Dialog)
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.setModal(True)
-        self.setFixedSize(400, 200)
+        # 适当增大整体高度和宽度，避免内容被压缩成一条线
+        self.setFixedSize(480, 280)
         
         self.init_ui()
     
@@ -77,7 +78,7 @@ class FileUploadProgressDialog(QDialog):
         """初始化UI"""
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(20, 20, 20, 20)
-        main_layout.setSpacing(16)
+        main_layout.setSpacing(18)
         
         # 内容容器
         content_widget = QWidget()
@@ -85,12 +86,12 @@ class FileUploadProgressDialog(QDialog):
         content_widget.setStyleSheet("""
             #progressDialog {
                 background-color: rgba(255, 255, 255, 250);
-                border-radius: 16px;
+                border-radius: 18px;
                 border: 1px solid rgba(226, 232, 240, 200);
             }
         """)
         content_layout = QVBoxLayout(content_widget)
-        content_layout.setContentsMargins(24, 24, 24, 24)
+        content_layout.setContentsMargins(26, 22, 26, 22)
         content_layout.setSpacing(16)
         
         # 标题
@@ -98,7 +99,7 @@ class FileUploadProgressDialog(QDialog):
         title_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 18px;
+                font-size: 20px;
                 font-weight: 600;
                 color: #1e293b;
             }
@@ -106,14 +107,16 @@ class FileUploadProgressDialog(QDialog):
         content_layout.addWidget(title_label)
         
         # 文件名
-        filename_label = QLabel(self.filename)
+        filename_label = QLabel(self.filename or "正在上传选中的文件…")
         filename_label.setWordWrap(True)
+        filename_label.setMinimumHeight(32)
         filename_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
                 font-size: 14px;
-                color: #64748b;
-                padding: 8px 12px;
+                font-weight: 500;
+                color: #111827;
+                padding: 6px 10px;
                 background-color: #f8fafc;
                 border-radius: 8px;
             }
@@ -122,59 +125,59 @@ class FileUploadProgressDialog(QDialog):
         
         # 文件大小
         size_str = self._format_size(self.file_size)
-        size_label = QLabel(f"文件大小: {size_str}")
+        size_label = QLabel(f"文件大小：{size_str}")
         size_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
                 font-size: 12px;
-                color: #94a3b8;
+                color: #6b7280;
             }
         """)
         content_layout.addWidget(size_label)
-        
-        # 进度条
-        self.progress_bar = QProgressBar()
-        self.progress_bar.setRange(0, 100)
-        self.progress_bar.setValue(0)
-        self.progress_bar.setTextVisible(True)
-        self.progress_bar.setStyleSheet("""
-            QProgressBar {
-                border: 1px solid #e2e8f0;
-                border-radius: 8px;
-                text-align: center;
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 12px;
-                font-weight: 500;
-                color: #1e293b;
-                background-color: #f1f5f9;
-                height: 28px;
-            }
-            QProgressBar::chunk {
-                background-color: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 #60a5fa, stop:1 #3b82f6);
-                border-radius: 7px;
-            }
-        """)
-        content_layout.addWidget(self.progress_bar)
-        
-        # 进度文本
-        self.progress_label = QLabel("0%")
+
+        # 进度百分比文本（放在进度条上方，独立一行）
+        self.progress_label = QLabel("0 %")
         self.progress_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.progress_label.setStyleSheet("""
             QLabel {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 14px;
-                font-weight: 600;
-                color: #3b82f6;
+                font-size: 16px;
+                font-weight: 700;
+                color: #1d4ed8;
             }
         """)
         content_layout.addWidget(self.progress_label)
+
+        # 进度条
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(False)
+        # 适度高度的进度条，既清晰又不压缩其它控件
+        self.progress_bar.setFixedHeight(16)
+        self.progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 1px solid #cbd5e1;
+                border-radius: 7px;
+                background-color: #e5e7eb;
+            }
+            QProgressBar::chunk {
+                background-color: qlineargradient(
+                    x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #3b82f6,
+                    stop:1 #2563eb
+                );
+                border-radius: 6px;
+            }
+        """)
+        content_layout.addWidget(self.progress_bar)
         
         # 取消按钮
         button_layout = QVBoxLayout()
         button_layout.setContentsMargins(0, 8, 0, 0)
         
-        self.cancel_button = QPushButton("取消")
+        self.cancel_button = QPushButton("取消上传")
+        self.cancel_button.setMinimumHeight(36)
         self.cancel_button.setStyleSheet("""
             QPushButton {
                 font-family: "Microsoft YaHei", "SimHei", "Arial";
