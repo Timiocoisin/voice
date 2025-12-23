@@ -42,13 +42,26 @@
         <div class="sidebar-header">
           <h2>会话队列</h2>
           <div class="tabs">
-            <button class="tab active">我的会话</button>
-            <button class="tab">待接入</button>
+            <button 
+              class="tab" 
+              :class="{ active: activeTab === 'my' }"
+              @click="switchTab('my')"
+            >
+              我的会话
+            </button>
+            <button 
+              class="tab" 
+              :class="{ active: activeTab === 'pending' }"
+              @click="switchTab('pending')"
+            >
+              待接入
+              <span v-if="pendingCount > 0" class="tab-badge">{{ pendingCount }}</span>
+            </button>
           </div>
         </div>
         <ul class="session-list">
           <li
-            v-for="session in sessions"
+            v-for="session in filteredSessions"
             :key="session.id"
             :class="['session-item', { active: session.id === activeSessionId }]"
             @click="selectSession(session.id)"
@@ -94,11 +107,25 @@
             :class="['msg-row', msg.from === 'agent' ? 'from-agent' : 'from-user']"
           >
             <div class="msg-avatar">
-              <span>{{ msg.from === 'agent' ? '客' : '用' }}</span>
+              <img 
+                v-if="msg.avatar" 
+                :src="msg.avatar" 
+                :alt="msg.from === 'agent' ? '客服' : '用户'"
+                @error="handleAvatarError"
+              />
+              <span v-else>{{ msg.from === 'agent' ? '客' : '用' }}</span>
             </div>
             <div class="msg-bubble">
               <div class="msg-text">
-                {{ msg.text }}
+                <template v-if="msg.messageType === 'image'">
+                  <img class="msg-image" :src="msg.text" alt="图片" />
+                </template>
+                <template v-else-if="msg.messageType === 'file'">
+                  <span class="file-placeholder">📎 {{ msg.text || '[文件]' }}</span>
+                </template>
+                <template v-else>
+                  {{ msg.text }}
+                </template>
               </div>
               <div class="msg-time">{{ msg.time }}</div>
             </div>
@@ -183,12 +210,14 @@ const router = useRouter();
 interface Session {
   id: string;
   userName: string;
+  userId?: number;
   isVip: boolean;
   category: string;
   lastMessage: string;
   lastTime: string;
   duration: string;
   unread: number;
+  avatar?: string;
 }
 
 interface ChatMessage {
@@ -196,6 +225,9 @@ interface ChatMessage {
   from: 'user' | 'agent';
   text: string;
   time: string;
+  userId?: number;
+  avatar?: string;
+  messageType?: 'text' | 'image' | 'file';
 }
 
 interface QuickReply {
@@ -211,6 +243,11 @@ const token = ref<string>('');
 const sessions = ref<Session[]>([]);
 const messages = ref<ChatMessage[]>([]);
 const loading = ref(false);
+const pendingCount = ref<number>(0);
+
+// HTTP轮询：已接收消息ID集合（用于去重）
+const receivedMessageIds = new Set<string>();
+let messagePollTimer: number | null = null;
 
 // 状态管理
 type StatusType = 'online' | 'offline' | 'away' | 'busy';
@@ -279,10 +316,19 @@ const toggleStatusMenu = () => {
 };
 
 // 切换状态
-const changeStatus = (status: StatusOption) => {
+const changeStatus = async (status: StatusOption) => {
   currentStatus.value = status;
   saveStatus(status.type);
   showStatusMenu.value = false;
+  
+  // 更新后端状态
+  if (currentUser.value && token.value) {
+    try {
+      await customerServiceApi.updateStatus(currentUser.value.id, status.type, token.value);
+    } catch (error) {
+      console.error('更新状态失败:', error);
+    }
+  }
 };
 
 // 获取状态样式
@@ -324,10 +370,25 @@ const quickReplies = ref<QuickReply[]>([
 const activeSessionId = ref<string>('');
 const inputText = ref('');
 const messagesRef = ref<HTMLDivElement | null>(null);
+const activeTab = ref<'my' | 'pending'>('my');
 
 const activeSession = computed(() =>
   sessions.value.find((s) => s.id === activeSessionId.value)
 );
+
+// 根据当前标签过滤会话列表（现在直接从API获取，不需要过滤）
+const filteredSessions = computed(() => {
+  return sessions.value;
+});
+
+// 切换标签
+const switchTab = async (tab: 'my' | 'pending') => {
+  activeTab.value = tab;
+  // 切换标签时，重新加载对应的会话列表
+  await loadSessions();
+  // 切换标签时也更新待接入数量
+  await updatePendingCount();
+};
 
 // 检查登录状态并验证 token
 onMounted(async () => {
@@ -364,6 +425,23 @@ onMounted(async () => {
         currentUser.value = verifyResponse.user;
         localStorage.setItem('user', JSON.stringify(verifyResponse.user));
       }
+      
+      // 登录成功后自动设置为在线状态
+      if (currentUser.value && token.value) {
+        try {
+          await customerServiceApi.updateStatus(currentUser.value.id, 'online', token.value);
+          // 更新当前状态显示
+          const onlineStatus = statusOptions.find(s => s.type === 'online');
+          if (onlineStatus) {
+            currentStatus.value = onlineStatus;
+            saveStatus('online');
+          }
+        } catch (error) {
+          console.error('设置在线状态失败:', error);
+        }
+      }
+      // 启动消息轮询（必须在 token 与 user 准备好之后）
+      startMessagePolling();
     } catch (error) {
       console.error('Token 验证失败:', error);
       // Token 验证失败，清除并跳转登录
@@ -374,6 +452,26 @@ onMounted(async () => {
     }
 
     loadSessions();
+    
+    // 启动心跳机制，每30秒更新一次状态
+    startHeartbeat();
+    
+    // 定期刷新待接入数量（每5秒）
+    let refreshPendingInterval: number | null = null;
+    refreshPendingInterval = window.setInterval(() => {
+      updatePendingCount();
+    }, 5000);
+    
+    // 组件卸载时清除定时器
+    onUnmounted(() => {
+      document.removeEventListener('click', handleClickOutside);
+      stopHeartbeat();
+      if (refreshPendingInterval) {
+        clearInterval(refreshPendingInterval);
+      }
+      // 组件卸载时停止消息轮询
+      stopMessagePolling();
+    });
   } catch (error) {
     console.error('解析用户信息失败:', error);
     // 清除无效数据
@@ -383,10 +481,33 @@ onMounted(async () => {
   }
 });
 
-// 组件卸载时移除事件监听
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside);
-});
+// 心跳机制
+let heartbeatInterval: number | null = null;
+
+const startHeartbeat = () => {
+  // 清除旧的定时器
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+  }
+  
+  // 每30秒发送一次心跳，更新 last_heartbeat
+  heartbeatInterval = window.setInterval(async () => {
+    if (currentUser.value && token.value && currentStatus.value.type !== 'offline') {
+      try {
+        await customerServiceApi.updateStatus(currentUser.value.id, currentStatus.value.type, token.value);
+      } catch (error) {
+        console.error('心跳更新失败:', error);
+      }
+    }
+  }, 30000); // 30秒
+};
+
+const stopHeartbeat = () => {
+  if (heartbeatInterval) {
+    clearInterval(heartbeatInterval);
+    heartbeatInterval = null;
+  }
+};
 
 // 加载会话列表
 const loadSessions = async () => {
@@ -394,21 +515,25 @@ const loadSessions = async () => {
 
   loading.value = true;
   try {
-    const response = await customerServiceApi.getSessions(currentUser.value.id, token.value);
+    // 根据当前tab加载不同的会话列表
+    const sessionType = activeTab.value === 'pending' ? 'pending' : 'my';
+    const response = await customerServiceApi.getSessions(currentUser.value.id, token.value, sessionType);
     if (response.success) {
       sessions.value = response.sessions.map((s: any) => ({
         id: s.id,
         userName: s.userName,
+        userId: s.userId,
         isVip: s.isVip,
         category: s.category || '待分类',
         lastMessage: s.lastMessage || '',
         lastTime: s.lastTime || '刚刚',
         duration: s.duration || '00:00',
-        unread: s.unread || 0
+        unread: s.unread || 0,
+        avatar: s.avatar
       }));
 
-      // 自动选择第一个会话
-      if (sessions.value.length > 0 && !activeSessionId.value) {
+      // 自动选择第一个会话（仅在我的会话tab）
+      if (activeTab.value === 'my' && sessions.value.length > 0 && !activeSessionId.value) {
         selectSession(sessions.value[0].id);
       }
     }
@@ -417,12 +542,68 @@ const loadSessions = async () => {
   } finally {
     loading.value = false;
   }
+  
+  // 无论当前tab是什么，都更新待接入数量
+  await updatePendingCount();
+};
+
+// 更新待接入数量
+const updatePendingCount = async () => {
+  if (!currentUser.value || !token.value) return;
+  
+  try {
+    const response = await customerServiceApi.getSessions(currentUser.value.id, token.value, 'pending');
+    if (response.success) {
+      pendingCount.value = response.sessions.length;
+    }
+  } catch (error) {
+    console.error('获取待接入数量失败:', error);
+  }
 };
 
 // 选择会话
 const selectSession = async (id: string) => {
+  // 如果是待接入tab，执行接入操作
+  if (activeTab.value === 'pending') {
+    await acceptSession(id);
+    return;
+  }
+  
   activeSessionId.value = id;
   await loadMessages(id);
+  // 切换会话时重新启动轮询
+  startMessagePolling();
+};
+
+// 接入会话（从待接入移到我的会话）
+const acceptSession = async (sessionId: string) => {
+  if (!currentUser.value || !token.value) return;
+
+  try {
+    const response = await customerServiceApi.acceptSession(currentUser.value.id, sessionId, token.value);
+    if (response.success) {
+      // 立即更新待接入数量（减1）
+      if (pendingCount.value > 0) {
+        pendingCount.value -= 1;
+      }
+      
+      // 接入成功，切换到我的会话tab并刷新列表
+      activeTab.value = 'my';
+      await loadSessions();
+      // 再次更新待接入数量（确保同步）
+      await updatePendingCount();
+      // 选择刚接入的会话
+      activeSessionId.value = sessionId;
+      await loadMessages(sessionId);
+      // 接入会话后启动轮询
+      startMessagePolling();
+    } else {
+      alert(response.message || '接入失败');
+    }
+  } catch (error: any) {
+    console.error('接入会话失败:', error);
+    alert(error.response?.data?.message || '接入失败，请稍后重试');
+  }
 };
 
 // 加载消息
@@ -432,12 +613,24 @@ const loadMessages = async (sessionId: string) => {
   try {
     const response = await customerServiceApi.getMessages(sessionId, currentUser.value.id, token.value);
     if (response.success) {
-      messages.value = (response.messages || []).map((m: any) => ({
+      const mapped = (response.messages || []).map((m: any) => ({
         id: m.id,
         from: m.from || 'user',
         text: m.text || '',
-        time: m.time || '刚刚'
+        time: m.time || '刚刚',
+        userId: m.userId,
+        avatar: m.avatar,
+        messageType: (m.message_type || 'text') as ChatMessage['messageType'],
       }));
+      messages.value = mapped;
+
+      // 同步已接收消息ID，避免HTTP轮询重复追加
+      receivedMessageIds.clear();
+      for (const m of mapped) {
+        if (m.id) {
+          receivedMessageIds.add(String(m.id));
+        }
+      }
       scrollToBottom();
     } else {
       console.error('加载消息失败:', response.message);
@@ -472,54 +665,59 @@ watch(
   () => scrollToBottom()
 );
 
-// 发送消息
+// 发送消息（HTTP接口）
 const handleSend = async () => {
   const text = inputText.value.trim();
   if (!text || !activeSessionId.value || !currentUser.value || !token.value) return;
 
-  // 检查消息长度
   if (text.length > 5000) {
     alert('消息内容过长，不能超过5000个字符');
     return;
   }
 
-  const tempMessageId = `m-${Date.now()}`;
-  try {
-    // 先添加到本地消息列表（乐观更新）
-    const tempMessage = {
-      id: tempMessageId,
-      from: 'agent' as const,
-      text,
-      time: '现在'
-    };
-    messages.value.push(tempMessage);
-    const originalText = inputText.value;
-    inputText.value = '';
-    scrollToBottom();
+  const toUserId = sessions.value.find(s => s.id === activeSessionId.value)?.userId;
 
-    // 发送到后端
+  const originalText = inputText.value;
+  inputText.value = '';
+
+  try {
     const response = await customerServiceApi.sendMessage({
       session_id: activeSessionId.value,
       from_user_id: currentUser.value.id,
+      to_user_id: toUserId,
       message: text,
-      token: token.value
+      token: token.value,
+      message_type: 'text'
     });
 
-    if (!response.success) {
-      throw new Error(response.message || '发送失败');
+    if (!response || !response.success) {
+      // 失败时恢复输入框
+      inputText.value = originalText;
+      const msg = response?.message || '发送失败，请稍后重试';
+      alert(msg);
+    } else {
+      // 发送成功，立即轮询一次以获取自己的消息
+      if (activeSessionId.value) {
+        await loadMessages(activeSessionId.value);
+      }
     }
-
-    // 重新加载消息以确保同步（使用真实的消息ID）
-    await loadMessages(activeSessionId.value);
   } catch (error: any) {
+    // 失败时恢复输入框
+    inputText.value = originalText;
     console.error('发送消息失败:', error);
-    // 移除临时消息
-    messages.value = messages.value.filter(m => m.id !== tempMessageId);
-    // 恢复输入框内容
-    inputText.value = text;
-    // 显示错误提示
-    const errorMsg = error.response?.data?.message || error.message || '发送失败，请稍后重试';
-    alert(errorMsg);
+    alert('发送失败，请稍后重试');
+  }
+};
+
+// 处理头像加载错误
+const handleAvatarError = (event: Event) => {
+  const img = event.target as HTMLImageElement;
+  if (img && img.parentElement) {
+    img.style.display = 'none';
+    // 显示默认文字
+    const span = document.createElement('span');
+    span.textContent = img.alt === '客服' ? '客' : '用';
+    img.parentElement.appendChild(span);
   }
 };
 
@@ -532,10 +730,122 @@ const appendQuickReply = (content: string) => {
   }
 };
 
-const handleLogout = () => {
+const handleLogout = async () => {
+  // 退出前设置为离线状态
+  if (currentUser.value && token.value) {
+    try {
+      await customerServiceApi.updateStatus(currentUser.value.id, 'offline', token.value);
+    } catch (error) {
+      console.error('设置离线状态失败:', error);
+    }
+  }
+  
+  // 停止心跳
+  stopHeartbeat();
+
+  // 停止消息轮询
+  stopMessagePolling();
+  
   localStorage.removeItem('token');
   localStorage.removeItem('user');
   router.push('/login');
+};
+
+// 启动消息轮询（HTTP轮询获取新消息）
+const startMessagePolling = () => {
+  if (!token.value || !currentUser.value) return;
+
+  // 清除旧的定时器
+  stopMessagePolling();
+
+  // 轮询函数：检查当前活动会话是否有新消息
+  const pollMessages = async () => {
+    if (!activeSessionId.value || !currentUser.value || !token.value) return;
+
+    try {
+      const response = await customerServiceApi.getMessages(
+        activeSessionId.value,
+        currentUser.value.id,
+        token.value
+      );
+
+      if (response.success && response.messages) {
+        const currentSessionId = activeSessionId.value; // 保存当前会话ID，避免在异步过程中变化
+        
+        // 检查是否有新消息
+        for (const msg of response.messages) {
+          const msgId = String(msg.id || '');
+          if (!msgId) {
+            continue;
+          }
+
+          // 检查是否是新消息（不在当前消息列表中且未记录）
+          const existingMsg = messages.value.find((m) => m.id === msgId);
+          if (existingMsg) {
+            // 如果消息已存在，也记录到receivedMessageIds
+            if (!receivedMessageIds.has(msgId)) {
+              receivedMessageIds.add(msgId);
+            }
+            continue;
+          }
+
+          // 标记为已接收
+          receivedMessageIds.add(msgId);
+
+          // 添加新消息到列表
+          const msgType = (msg.message_type || 'text') as ChatMessage['messageType'];
+          const displayText =
+            msgType === 'image'
+              ? '[图片]'
+              : msgType === 'file'
+                ? msg.text || '[文件]'
+                : msg.text || '';
+
+          const chatMsg: ChatMessage = {
+            id: msgId,
+            from: msg.from === 'agent' ? 'agent' : 'user',
+            text: msg.text || '',
+            time: msg.time || '刚刚',
+            userId: msg.userId,
+            avatar: msg.avatar,
+            messageType: msgType
+          };
+
+          // 更新会话概览
+          const session = sessions.value.find((s) => s.id === currentSessionId);
+          if (session) {
+            session.lastMessage = displayText;
+            session.lastTime = chatMsg.time;
+            if (chatMsg.from === 'user' && currentSessionId === activeSessionId.value) {
+              // 如果是用户消息且是当前会话，不增加未读数（因为正在查看）
+            }
+          }
+
+          // 如果是当前会话，添加到消息列表
+          if (currentSessionId === activeSessionId.value) {
+            messages.value.push(chatMsg);
+            scrollToBottom();
+          }
+        }
+      }
+    } catch (error) {
+      console.error('轮询消息失败:', error);
+    }
+  };
+
+  // 立即执行一次
+  pollMessages();
+
+  // 每1秒轮询一次
+  messagePollTimer = window.setInterval(pollMessages, 1000);
+};
+
+// 停止消息轮询
+const stopMessagePolling = () => {
+  if (messagePollTimer !== null) {
+    clearInterval(messagePollTimer);
+    messagePollTimer = null;
+  }
 };
 </script>
 
@@ -839,28 +1149,69 @@ const handleLogout = () => {
 
 .tabs {
   display: inline-flex;
-  padding: 4px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.06);
+  padding: 3px;
+  border-radius: 10px;
+  background: rgba(243, 244, 246, 0.8);
+  border: 1px solid rgba(229, 231, 235, 0.6);
+  box-shadow: 
+    0 1px 3px rgba(15, 23, 42, 0.06),
+    inset 0 1px 1px rgba(255, 255, 255, 0.8);
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  max-width: 240px;
 }
 
 .tab {
   border: none;
   background: transparent;
-  color: var(--text-secondary);
-  font-size: 11px;
-  padding: 6px 12px;
-  border-radius: 999px;
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 8px 16px;
+  border-radius: 8px;
   cursor: pointer;
-  transition: all 0.18s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  z-index: 1;
+  white-space: nowrap;
+  flex: 1;
+  text-align: center;
+  user-select: none;
+}
+
+.tab:hover:not(.active) {
+  color: #374151;
+  background: rgba(255, 255, 255, 0.4);
 }
 
 .tab.active {
   background: #ffffff;
-  color: var(--accent);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.12);
+  color: #3370ff;
+  font-weight: 600;
+  box-shadow: 
+    0 2px 6px rgba(15, 23, 42, 0.1),
+    0 1px 2px rgba(15, 23, 42, 0.06);
+  transform: translateY(0);
+}
+
+.tab-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  background: #ef4444;
+  color: #ffffff;
+  border-radius: 9px;
+  font-size: 11px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #ffffff;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
 }
 
 .session-list {
@@ -879,20 +1230,22 @@ const handleLogout = () => {
   flex-direction: column;
   gap: 5px;
   margin-bottom: 8px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
   transition: all 0.16s ease;
 }
 
 .session-item:hover {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(51, 112, 255, 0.35);
+  background: #ffffff;
+  border-color: rgba(51, 112, 255, 0.4);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.12);
 }
 
 .session-item.active {
-  background: rgba(232, 241, 255, 0.14);
-  border-color: var(--accent-soft);
-  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.12);
+  background: #ffffff;
+  border-color: #3370ff;
+  box-shadow: 0 4px 16px rgba(51, 112, 255, 0.2);
 }
 
 .session-top,
@@ -906,11 +1259,12 @@ const handleLogout = () => {
 .session-user {
   font-size: 13px;
   font-weight: 600;
+  color: #1e293b;
 }
 
 .session-time {
   font-size: 11px;
-  color: var(--text-secondary);
+  color: #64748b;
 }
 
 .session-middle {
@@ -929,7 +1283,7 @@ const handleLogout = () => {
 .session-preview {
   flex: 1;
   font-size: 11px;
-  color: var(--text-secondary);
+  color: #64748b;
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
@@ -1020,28 +1374,64 @@ const handleLogout = () => {
   font-size: 11px;
   color: var(--text-secondary);
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.msg-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.msg-avatar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 
 .msg-bubble {
   max-width: 72%;
   padding: 10px 12px 8px;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(255, 255, 255, 0.04);
   box-shadow: var(--shadow-subtle);
   color: #0f172a;
-  text-shadow: 0 1px 2px rgba(255, 255, 255, 0.45);
 }
 
+/* 用户消息：白色卡片样式 */
+.from-user .msg-bubble {
+  background: #ffffff;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
+}
+
+/* 客服消息：淡蓝色背景 */
 .from-agent .msg-bubble {
   background: rgba(229, 239, 255, 0.08);
-  border-color: rgba(51, 112, 255, 0.04);
+  border: 1px solid rgba(51, 112, 255, 0.04);
 }
 
 .msg-text {
   font-size: 13px;
   line-height: 1.55;
   color: #0f172a;
+}
+.msg-image {
+  max-width: 220px;
+  border-radius: 8px;
+  display: block;
+}
+.file-placeholder {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* 用户消息文字颜色稍深 */
+.from-user .msg-text {
+  color: #1e293b;
 }
 
 .msg-time {

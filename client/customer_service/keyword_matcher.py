@@ -117,9 +117,10 @@ class KeywordMatcher:
                 best_score = score
                 best_topic = topic
         
-        # 如果匹配分数太低，统一提示联系客服 QQ（带一点人情味）
+        # 如果匹配分数太低，返回特殊标记，触发人工客服匹配
         if best_score < 0.1:
-            answer = "这个问题我这边暂时没有查到详细说明呢，建议您直接联系人工客服处理哈～ 联系方式：QQ：xxxxxxxxxxxxxxxxxxx"
+            # 使用特殊标记，前端会识别并显示"联系人工客服"按钮
+            answer = "NEED_HUMAN_SERVICE"
         else:
             answer = self.knowledge_base[best_topic]["answer"]
         
@@ -142,7 +143,7 @@ class KeywordMatcher:
             # 常见的问候语（中英文）
             greeting_keywords = ["你好", "在吗", "您好", "哈喽", "hello", "hi", "嗨"]
             if len(q_norm) <= 8 and any(g in q_norm for g in greeting_keywords):
-                return "你好呀～我是《声音序章》的智能小助手，有什么想了解的可以直接告诉我哈~"
+                return "你好呀～我是《云汐幻声》的智能小助手，有什么想了解的可以直接告诉我哈~"
 
         answer, score = self.match(question)
 

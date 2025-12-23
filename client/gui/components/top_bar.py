@@ -147,7 +147,7 @@ def create_announcement_layout(main_window: "MainWindow") -> QHBoxLayout:
     # 通过后端接口获取公告文本
     announcement_text = get_latest_announcement()
     if not announcement_text:
-        announcement_text = "欢迎使用《声音序章》软件！！！"
+        announcement_text = "欢迎使用《云汐幻声》软件！！！"
 
     # 公告标签使用自定义滚动组件（跑马灯效果）
     announcement_label = MarqueeLabel()

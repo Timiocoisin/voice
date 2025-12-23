@@ -15,7 +15,18 @@ import secrets
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
+# 尽早 monkey_patch，确保 socket、时间等模块被正确补丁
+try:
+    import eventlet
+
+    eventlet.monkey_patch()
+    _ASYNC_MODE = "eventlet"
+except Exception:
+    eventlet = None  # type: ignore
+    _ASYNC_MODE = "threading"
+
 from flask import Flask, jsonify, request
+from flask_socketio import SocketIO, emit
 
 from backend.config.config import email_config, SECRET_KEY  # noqa: F401
 from backend.database.database_manager import DatabaseManager
@@ -37,6 +48,12 @@ from backend.validation.verification_manager import VerificationManager
 logger = logging.getLogger(__name__)
 
 app = Flask(__name__)
+
+# 初始化 SocketIO，用于 WebSocket 实时通信
+# 默认使用 eventlet（如已安装并 monkey_patch），否则回退 threading，避免 werkzeug run_wsgi 的 write() before start_response
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode=_ASYNC_MODE)
+if _ASYNC_MODE != "eventlet":
+    logger.warning("SocketIO 未使用 eventlet，已回退 %s，实时能力受限，请安装 eventlet", _ASYNC_MODE)
 
 
 # 添加 CORS 支持
@@ -462,7 +479,11 @@ def get_user_profile_api() -> Any:
     if not user_id:
         return jsonify({"success": False, "message": "缺少用户ID"}), 400
 
-    user_row = db.get_user_by_id(user_id)
+    try:
+        user_row = db.get_user_by_id(user_id)
+    except ConnectionError as e:
+        logger.error("获取用户基础信息时数据库异常: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
     vip_row = db.get_user_vip_info(user_id)
     if not user_row:
         return jsonify({"success": False, "message": "用户不存在"}), 404
@@ -808,8 +829,13 @@ def customer_service_login_api() -> Any:
 
         user = _user_dict_with_avatar(user_row)
         token = generate_token(email)
+        
+        # 自动设置客服为在线状态
+        user_id = user_row.get("id")
+        if user_id:
+            db.update_agent_status(user_id, 'online')
 
-        logger.info("客服 %s 登录成功，ID: %s", user_row.get("username"), user_row.get("id"))
+        logger.info("客服 %s 登录成功，ID: %s", user_row.get("username"), user_id)
 
         return jsonify(
             {
@@ -861,12 +887,13 @@ def verify_customer_service_token_api() -> Any:
 @app.post("/api/customer_service/sessions")
 def get_customer_service_sessions_api() -> Any:
     """
-    获取客服的会话列表。
-    Request JSON: { user_id, token }
+    获取客服的会话列表（我的会话）。
+    Request JSON: { user_id, token, type }  # type: 'my' 或 'pending'
     """
     data = request.get_json(force=True) or {}
     user_id = int(data.get("user_id", 0) or 0)
     token = str(data.get("token", "")).strip()
+    session_type = str(data.get("type", "my")).strip()  # 'my' 或 'pending'
 
     if not user_id:
         return jsonify({"success": False, "message": "缺少用户ID"}), 400
@@ -879,7 +906,11 @@ def get_customer_service_sessions_api() -> Any:
         return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
 
     # 获取用户信息并验证角色
-    user_row = db.get_user_by_id(user_id)
+    try:
+        user_row = db.get_user_by_id(user_id)
+    except ConnectionError as e:
+        logger.error("获取客服会话列表时数据库异常: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
     if not user_row:
         return jsonify({"success": False, "message": "用户不存在"}), 404
 
@@ -892,26 +923,64 @@ def get_customer_service_sessions_api() -> Any:
     if token_email and user_row.get("email") != token_email:
         return jsonify({"success": False, "message": "Token 与用户不匹配"}), 403
 
-    # 获取会话列表
-    sessions = db.get_user_sessions(user_id, user_role)
+    # 根据类型获取会话列表
+    if session_type == 'pending':
+        # 待接入会话
+        sessions = db.get_pending_sessions()
+    else:
+        # 我的会话（已分配的）
+        sessions = db.get_agent_sessions(user_id, include_pending=False)
 
     # 格式化返回数据
     formatted_sessions = []
     for session in sessions:
+        # 安全获取 user_id（可能在不同的查询中字段名不同）
+        user_id = session.get('user_id') or session.get('userId')
+        if not user_id:
+            # 如果还是没有，跳过这条记录
+            logging.warning(f"会话 {session.get('session_id', 'unknown')} 缺少 user_id，跳过")
+            continue
+        
         # 获取用户 VIP 信息
-        vip_info = db.get_user_vip_info(session['user_id'])
+        vip_info = db.get_user_vip_info(user_id)
         is_vip = bool(vip_info and vip_info.get('is_vip', False)) if vip_info else False
 
+        # 计算会话时长
+        duration = "00:00"
+        if session.get('started_at'):
+            start_time = session['started_at']
+            if isinstance(start_time, str):
+                try:
+                    start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+                except:
+                    start_time = None
+            if isinstance(start_time, datetime):
+                diff = datetime.now() - start_time
+                hours = int(diff.total_seconds() // 3600)
+                minutes = int((diff.total_seconds() % 3600) // 60)
+                duration = f"{hours:02d}:{minutes:02d}"
+
+        # 获取用户头像
+        user_info = db.get_user_by_id(user_id)
+        avatar_base64 = None
+        if user_info and user_info.get('avatar'):
+            import base64
+            try:
+                avatar_base64 = f"data:image/png;base64,{base64.b64encode(user_info['avatar']).decode('utf-8')}"
+            except:
+                pass
+        
         formatted_sessions.append({
-            "id": session['session_id'],
-            "userName": session['username'],
-            "userId": session['user_id'],
+            "id": session.get('session_id', ''),
+            "userName": session.get('username', '未知用户'),
+            "userId": user_id,
             "isVip": is_vip,
-            "category": "待分类",  # 可以从消息中提取或单独存储
+            "category": "待分类",
             "lastMessage": session.get('last_message', '')[:50] if session.get('last_message') else '',
-            "lastTime": _format_time(session.get('last_time')),
-            "duration": "00:00",  # 需要计算会话时长
-            "unread": int(session.get('unread_count', 0) or 0)
+            "lastTime": _format_time(session.get('last_time') or session.get('created_at')),
+            "duration": duration,
+            "unread": int(session.get('unread_count', 0) or 0),
+            "avatar": avatar_base64
         })
 
     return jsonify({"success": True, "sessions": formatted_sessions})
@@ -940,8 +1009,12 @@ def get_chat_messages_api() -> Any:
     if not payload:
         return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
 
-    # 验证用户角色
-    user_row = db.get_user_by_id(user_id)
+    # 验证用户角色（捕获数据库连接异常）
+    try:
+        user_row = db.get_user_by_id(user_id)
+    except ConnectionError as e:
+        logger.error("获取客服用户信息失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
     if not user_row:
         return jsonify({"success": False, "message": "用户不存在"}), 404
 
@@ -955,43 +1028,54 @@ def get_chat_messages_api() -> Any:
         return jsonify({"success": False, "message": "Token 与用户不匹配"}), 403
 
     # 获取消息
-    messages = db.get_chat_messages(session_id, limit=200)  # 限制最多200条消息
+    try:
+        messages = db.get_chat_messages(session_id, limit=200)  # 限制最多200条消息
+    except ConnectionError as e:
+        logger.error("获取客服聊天消息时数据库异常: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
 
     # 格式化返回数据
     formatted_messages = []
     for msg in messages:
+        msg_user_id = msg['from_user_id']
+        # 获取发送者的用户信息（包括头像）
+        msg_user = db.get_user_by_id(msg_user_id)
+        avatar_base64 = None
+        if msg_user and msg_user.get('avatar'):
+            import base64
+            try:
+                avatar_base64 = f"data:image/png;base64,{base64.b64encode(msg_user['avatar']).decode('utf-8')}"
+            except:
+                pass
+        
         formatted_messages.append({
             "id": str(msg['id']),
-            "from": "agent" if msg['from_user_id'] == user_id else "user",
+            "from": "agent" if msg_user_id == user_id else "user",
             "text": msg['message'],
-            "time": _format_time(msg['created_at'])
+            "time": _format_time(msg['created_at']),
+            "userId": msg_user_id,
+            "avatar": avatar_base64,
+            "message_type": msg.get("message_type", "text"),
         })
 
     return jsonify({"success": True, "messages": formatted_messages})
 
 
-@app.post("/api/customer_service/send_message")
-def send_chat_message_api() -> Any:
+@app.post("/api/user/chat_messages")
+def get_user_chat_messages_api() -> Any:
     """
-    发送聊天消息。
-    Request JSON: { session_id, from_user_id, to_user_id, message, token }
+    获取用户的会话消息（用户端调用）。
+    Request JSON: { session_id, user_id, token }
     """
     data = request.get_json(force=True) or {}
     session_id = str(data.get("session_id", "")).strip()
-    from_user_id = int(data.get("from_user_id", 0) or 0)
-    to_user_id = data.get("to_user_id")  # 可选
-    message = str(data.get("message", "")).strip()
+    user_id = int(data.get("user_id", 0) or 0)
     token = str(data.get("token", "")).strip()
 
-    # 参数验证
     if not session_id:
         return jsonify({"success": False, "message": "缺少会话ID"}), 400
-    if not from_user_id:
-        return jsonify({"success": False, "message": "缺少发送者ID"}), 400
-    if not message:
-        return jsonify({"success": False, "message": "消息内容不能为空"}), 400
-    if len(message) > 5000:  # 限制消息长度
-        return jsonify({"success": False, "message": "消息内容过长，不能超过5000个字符"}), 400
+    if not user_id:
+        return jsonify({"success": False, "message": "缺少用户ID"}), 400
     if not token:
         return jsonify({"success": False, "message": "缺少 Token"}), 400
 
@@ -1000,11 +1084,168 @@ def send_chat_message_api() -> Any:
     if not payload:
         return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
 
-    # 验证用户角色
-    user_row = db.get_user_by_id(from_user_id)
+    # 验证用户
+    user_row = db.get_user_by_id(user_id)
     if not user_row:
         return jsonify({"success": False, "message": "用户不存在"}), 404
 
+    # 验证 token 与用户匹配
+    token_email = payload.get("email")
+    if token_email and user_row.get("email") != token_email:
+        return jsonify({"success": False, "message": "Token 与用户不匹配"}), 403
+
+    # 获取消息
+    try:
+        messages = db.get_chat_messages(session_id, limit=200)
+    except ConnectionError as e:
+        logger.error("获取用户聊天消息时数据库异常: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+
+    # 格式化返回数据
+    formatted_messages = []
+    for msg in messages:
+        msg_user_id = msg['from_user_id']
+        # 获取发送者的用户信息（包括头像）
+        msg_user = db.get_user_by_id(msg_user_id)
+        avatar_base64 = None
+        if msg_user and msg_user.get('avatar'):
+            try:
+                avatar_base64 = f"data:image/png;base64,{base64.b64encode(msg_user['avatar']).decode('utf-8')}"
+            except:
+                pass
+        
+        formatted_messages.append({
+            "id": str(msg['id']),
+            "from": "user" if msg_user_id == user_id else "agent",
+            "text": msg['message'],
+            "time": _format_time(msg['created_at']),
+            "message_type": msg.get("message_type", "text"),
+            "avatar": avatar_base64,
+        })
+
+    return jsonify({"success": True, "messages": formatted_messages})
+
+
+@app.post("/api/user/send_message")
+def send_user_message_api() -> Any:
+    """
+    发送聊天消息（用户端调用，HTTP接口）。
+    Request JSON: { session_id, user_id, message, token, message_type? }
+    """
+    data = request.get_json(force=True) or {}
+    session_id = str(data.get("session_id", "")).strip()
+    user_id = int(data.get("user_id", 0) or 0)
+    message = str(data.get("message", "")).strip()
+    token = str(data.get("token", "")).strip()
+    message_type = str(data.get("message_type", "text") or "text").strip()
+
+    if not session_id:
+        return jsonify({"success": False, "message": "缺少会话ID"}), 400
+    if not user_id:
+        return jsonify({"success": False, "message": "缺少用户ID"}), 400
+    if not message:
+        return jsonify({"success": False, "message": "消息内容不能为空"}), 400
+    if not token:
+        return jsonify({"success": False, "message": "缺少 Token"}), 400
+
+    # 验证 token
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    # 验证用户
+    try:
+        user_row = db.get_user_by_id(user_id)
+    except ConnectionError as e:
+        logger.error("发送消息时获取用户信息失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    if not user_row:
+        return jsonify({"success": False, "message": "用户不存在"}), 404
+
+    # 验证 token 与用户匹配
+    token_email = payload.get("email")
+    if token_email and user_row.get("email") != token_email:
+        return jsonify({"success": False, "message": "Token 与用户不匹配"}), 403
+
+    # 获取会话信息
+    try:
+        chat_session = db.get_chat_session_by_id(session_id)
+    except ConnectionError as e:
+        logger.error("发送消息时获取会话失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    if not chat_session:
+        return jsonify({"success": False, "message": "会话不存在"}), 404
+
+    # 决定接收方（用户发给客服）
+    to_user_id = chat_session.get("agent_id")
+    if not to_user_id:
+        return jsonify({"success": False, "message": "会话尚未匹配客服"}), 400
+
+    # 验证消息类型
+    if message_type not in ["text", "image", "file"]:
+        message_type = "text"
+
+    # 插入消息
+    try:
+        message_id = db.insert_chat_message(
+            session_id=session_id,
+            from_user_id=user_id,
+            to_user_id=to_user_id,
+            message=message,
+            message_type=message_type
+        )
+    except ConnectionError as e:
+        logger.error("发送消息写库失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+
+    if not message_id:
+        return jsonify({"success": False, "message": "写入消息失败"}), 500
+
+    return jsonify({
+        "success": True,
+        "message_id": message_id,
+        "time": _format_time(datetime.now())
+    })
+
+
+@app.post("/api/customer_service/send_message")
+def send_agent_message_api() -> Any:
+    """
+    发送聊天消息（客服端调用，HTTP接口）。
+    Request JSON: { session_id, from_user_id, to_user_id?, message, token, message_type? }
+    """
+    data = request.get_json(force=True) or {}
+    session_id = str(data.get("session_id", "")).strip()
+    from_user_id = int(data.get("from_user_id", 0) or 0)
+    to_user_id = data.get("to_user_id")
+    message = str(data.get("message", "")).strip()
+    token = str(data.get("token", "")).strip()
+    message_type = str(data.get("message_type", "text") or "text").strip()
+
+    if not session_id:
+        return jsonify({"success": False, "message": "缺少会话ID"}), 400
+    if not from_user_id:
+        return jsonify({"success": False, "message": "缺少发送者ID"}), 400
+    if not message:
+        return jsonify({"success": False, "message": "消息内容不能为空"}), 400
+    if not token:
+        return jsonify({"success": False, "message": "缺少 Token"}), 400
+
+    # 验证 token
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    # 验证用户
+    try:
+        user_row = db.get_user_by_id(from_user_id)
+    except ConnectionError as e:
+        logger.error("发送消息时获取用户信息失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    if not user_row:
+        return jsonify({"success": False, "message": "用户不存在"}), 404
+
+    # 验证用户角色
     user_role = user_row.get("role", "user")
     if user_role not in ['customer_service', 'admin']:
         return jsonify({"success": False, "message": "无权限发送消息"}), 403
@@ -1014,14 +1255,264 @@ def send_chat_message_api() -> Any:
     if token_email and user_row.get("email") != token_email:
         return jsonify({"success": False, "message": "Token 与用户不匹配"}), 403
 
-    # 插入消息
-    message_id = db.insert_chat_message(session_id, from_user_id, to_user_id, message)
-    if not message_id:
-        logger.error("插入聊天消息失败: session_id=%s, from_user_id=%s", session_id, from_user_id)
-        return jsonify({"success": False, "message": "发送失败，请稍后重试"}), 500
+    # 获取会话信息
+    try:
+        chat_session = db.get_chat_session_by_id(session_id)
+    except ConnectionError as e:
+        logger.error("发送消息时获取会话失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    if not chat_session:
+        return jsonify({"success": False, "message": "会话不存在"}), 404
 
-    logger.info("客服 %s 发送消息成功，session_id=%s, message_id=%s", user_row.get("username"), session_id, message_id)
-    return jsonify({"success": True, "message_id": message_id})
+    # 决定接收方（客服发给用户）
+    if not to_user_id:
+        to_user_id = chat_session.get("user_id")
+    if not to_user_id:
+        return jsonify({"success": False, "message": "会话尚未匹配用户"}), 400
+
+    # 验证消息类型
+    if message_type not in ["text", "image", "file"]:
+        message_type = "text"
+
+    # 插入消息
+    try:
+        message_id = db.insert_chat_message(
+            session_id=session_id,
+            from_user_id=from_user_id,
+            to_user_id=to_user_id,
+            message=message,
+            message_type=message_type
+        )
+    except ConnectionError as e:
+        logger.error("发送消息写库失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+
+    if not message_id:
+        return jsonify({"success": False, "message": "写入消息失败"}), 500
+
+    return jsonify({
+        "success": True,
+        "message_id": message_id,
+        "time": _format_time(datetime.now())
+    })
+
+
+### 已废弃的 WebSocket 发送消息接口，统一改为 HTTP 接口，保留占位防止误用。
+""" 已废弃：请使用 HTTP /api/user/send_message 或 /api/customer_service/send_message """
+@app.post("/api/customer_service/match_agent")
+def match_agent_api() -> Any:
+    """
+    匹配在线客服（用户端调用）。
+    Request JSON: { user_id, session_id, token }
+    """
+    data = request.get_json(force=True) or {}
+    user_id = int(data.get("user_id", 0) or 0)
+    session_id = str(data.get("session_id", "")).strip()
+    token = str(data.get("token", "")).strip()
+
+    if not user_id:
+        return jsonify({"success": False, "message": "缺少用户ID"}), 400
+    if not session_id:
+        return jsonify({"success": False, "message": "缺少会话ID"}), 400
+    if not token:
+        return jsonify({"success": False, "message": "缺少 Token"}), 400
+
+    # 验证 token
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    # 验证用户
+    user_row = db.get_user_by_id(user_id)
+    if not user_row:
+        return jsonify({"success": False, "message": "用户不存在"}), 404
+
+    # 获取在线客服列表
+    online_agents = db.get_online_agents()
+    if not online_agents:
+        # 创建待接入会话
+        db.create_pending_session(session_id, user_id)
+        return jsonify({
+            "success": False,
+            "message": "暂无在线客服，您的请求已加入等待队列",
+            "matched": False,
+            "session_id": session_id
+        })
+
+    # 简单负载均衡：选择当前会话最少的客服
+    best_agent = None
+    min_sessions = float('inf')
+    for agent in online_agents:
+        agent_sessions = db.get_agent_sessions(agent['id'], include_pending=False)
+        session_count = len(agent_sessions)
+        if session_count < min_sessions:
+            min_sessions = session_count
+            best_agent = agent
+
+    if best_agent:
+        # 创建待接入会话（待客服接入）
+        db.create_pending_session(session_id, user_id)
+        return jsonify({
+            "success": True,
+            "matched": True,
+            "agent_id": best_agent['id'],
+            "agent_name": best_agent['username'],
+            "session_id": session_id,
+            "message": "已为您匹配到在线客服"
+        })
+    else:
+        db.create_pending_session(session_id, user_id)
+        return jsonify({
+            "success": False,
+            "message": "暂无在线客服，您的请求已加入等待队列",
+            "matched": False,
+            "session_id": session_id
+        })
+
+
+@app.post("/api/customer_service/pending_sessions")
+def get_pending_sessions_api() -> Any:
+    """
+    获取待接入会话列表（客服端调用）。
+    Request JSON: { user_id, token }
+    """
+    data = request.get_json(force=True) or {}
+    user_id = int(data.get("user_id", 0) or 0)
+    token = str(data.get("token", "")).strip()
+
+    if not user_id:
+        return jsonify({"success": False, "message": "缺少用户ID"}), 400
+    if not token:
+        return jsonify({"success": False, "message": "缺少 Token"}), 400
+
+    # 验证 token 和角色
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    user_row = db.get_user_by_id(user_id)
+    if not user_row:
+        return jsonify({"success": False, "message": "用户不存在"}), 404
+
+    user_role = user_row.get("role", "user")
+    if user_role not in ['customer_service', 'admin']:
+        return jsonify({"success": False, "message": "无权限访问"}), 403
+
+    # 获取待接入会话列表
+    pending_sessions = db.get_pending_sessions()
+
+    # 格式化返回数据
+    formatted_sessions = []
+    for session in pending_sessions:
+        vip_info = db.get_user_vip_info(session['user_id'])
+        is_vip = bool(vip_info and vip_info.get('is_vip', False)) if vip_info else False
+
+        formatted_sessions.append({
+            "id": session['session_id'],
+            "userName": session['username'],
+            "userId": session['user_id'],
+            "isVip": is_vip,
+            "category": "待分类",
+            "lastMessage": session.get('last_message', '')[:50] if session.get('last_message') else '',
+            "lastTime": _format_time(session.get('created_at')),
+            "duration": "00:00",
+            "unread": 0
+        })
+
+    return jsonify({"success": True, "sessions": formatted_sessions})
+
+
+@app.post("/api/customer_service/accept_session")
+def accept_session_api() -> Any:
+    """
+    客服接入会话（从待接入移到我的会话）。
+    Request JSON: { user_id, session_id, token }
+    """
+    data = request.get_json(force=True) or {}
+    user_id = int(data.get("user_id", 0) or 0)
+    session_id = str(data.get("session_id", "")).strip()
+    token = str(data.get("token", "")).strip()
+
+    if not user_id:
+        return jsonify({"success": False, "message": "缺少用户ID"}), 400
+    if not session_id:
+        return jsonify({"success": False, "message": "缺少会话ID"}), 400
+    if not token:
+        return jsonify({"success": False, "message": "缺少 Token"}), 400
+
+    # 验证 token 和角色
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    user_row = db.get_user_by_id(user_id)
+    if not user_row:
+        return jsonify({"success": False, "message": "用户不存在"}), 404
+
+    user_role = user_row.get("role", "user")
+    if user_role not in ['customer_service', 'admin']:
+        return jsonify({"success": False, "message": "无权限访问"}), 403
+
+    # 将会话分配给客服
+    success = db.assign_session_to_agent(session_id, user_id)
+    if not success:
+        return jsonify({"success": False, "message": "接入失败，会话可能已被其他客服接入"}), 400
+
+    # 发送系统消息通知用户
+    session_info = db.get_pending_sessions()
+    target_session = next((s for s in session_info if s['session_id'] == session_id), None)
+    if target_session:
+        db.insert_chat_message(
+            session_id,
+            user_id,  # 客服ID
+            target_session['user_id'],  # 用户ID
+            "您好，我是客服，有什么可以帮您的吗？"
+        )
+
+    return jsonify({"success": True, "message": "接入成功"})
+
+
+@app.post("/api/customer_service/update_status")
+def update_agent_status_api() -> Any:
+    """
+    更新客服在线状态。
+    Request JSON: { user_id, status, token }
+    """
+    data = request.get_json(force=True) or {}
+    user_id = int(data.get("user_id", 0) or 0)
+    status = str(data.get("status", "")).strip()
+    token = str(data.get("token", "")).strip()
+
+    if not user_id:
+        return jsonify({"success": False, "message": "缺少用户ID"}), 400
+    if status not in ['online', 'offline', 'away', 'busy']:
+        return jsonify({"success": False, "message": "无效的状态"}), 400
+    if not token:
+        return jsonify({"success": False, "message": "缺少 Token"}), 400
+
+    # 验证 token 和角色
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    try:
+        user_row = db.get_user_by_id(user_id)
+    except ConnectionError as e:
+        logger.error("更新客服在线状态时数据库异常: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    if not user_row:
+        return jsonify({"success": False, "message": "用户不存在"}), 404
+
+    user_role = user_row.get("role", "user")
+    if user_role not in ['customer_service', 'admin']:
+        return jsonify({"success": False, "message": "无权限访问"}), 403
+
+    # 更新状态
+    success = db.update_agent_status(user_id, status)
+    if not success:
+        return jsonify({"success": False, "message": "更新状态失败"}), 500
+
+    return jsonify({"success": True, "message": "状态更新成功"})
 
 
 def _format_time(dt) -> str:
@@ -1030,7 +1521,6 @@ def _format_time(dt) -> str:
         return "刚刚"
     if isinstance(dt, str):
         try:
-            from datetime import datetime
             dt = datetime.fromisoformat(dt.replace('Z', '+00:00'))
         except:
             return "刚刚"
@@ -1048,8 +1538,110 @@ def _format_time(dt) -> str:
     return "刚刚"
 
 
+@socketio.on("send_message")
+def handle_send_message(data):
+    """
+    WebSocket 发送消息：
+    data: {
+      session_id, from_user_id, to_user_id?, message, role: 'user' | 'agent', token
+    }
+    返回给回调：{success, message_id?, time?, message?}
+    """
+    try:
+        session_id = str(data.get("session_id", "")).strip()
+        from_user_id = data.get("from_user_id")
+        to_user_id = data.get("to_user_id")
+        message = str(data.get("message", "")).strip()
+        role = str(data.get("role", "user")).strip()
+        token = str(data.get("token", "")).strip()
+
+        if not session_id or not from_user_id or not message or not token:
+            return {"success": False, "message": "参数缺失"}
+
+        # 校验并解析 Token，确保与发送者匹配
+        payload = verify_token(token)
+        if not payload:
+            return {"success": False, "message": "Token 无效或已过期"}
+
+        sender = db.get_user_by_id(from_user_id)
+        if not sender:
+            return {"success": False, "message": "发送者不存在"}
+
+        token_email = payload.get("email")
+        if token_email and sender.get("email") != token_email:
+            return {"success": False, "message": "Token 与用户不匹配"}
+
+        try:
+            chat_session = db.get_chat_session_by_id(session_id)
+        except ConnectionError as e:
+            logger.error("WebSocket 发送消息时获取会话失败（数据库异常）：%s", e, exc_info=True)
+            return {"success": False, "message": "数据库连接错误，请稍后重试"}
+        if not chat_session:
+            return {"success": False, "message": "会话不存在"}
+
+        # 决定接收方
+        if role == "user":
+            to_user_id = chat_session.get("agent_id")
+        else:
+            to_user_id = to_user_id or chat_session.get("user_id")
+
+        message_type = str(data.get("message_type", "text") or "text").strip()
+        if message_type not in ["text", "image", "file"]:
+            message_type = "text"
+
+        try:
+            message_id = db.insert_chat_message(
+                session_id=session_id,
+                from_user_id=from_user_id,
+                to_user_id=to_user_id,
+                message=message,
+                message_type=message_type
+            )
+        except ConnectionError as e:
+            logger.error("WebSocket 发送消息写库失败（数据库异常）：%s", e, exc_info=True)
+            return {"success": False, "message": "数据库连接错误，请稍后重试"}
+
+        if not message_id:
+            return {"success": False, "message": "写入消息失败"}
+
+        # 获取发送者头像
+        sender_info = db.get_user_by_id(from_user_id)
+        avatar_base64 = None
+        if sender_info and sender_info.get("avatar"):
+            try:
+                avatar_base64 = f"data:image/png;base64,{base64.b64encode(sender_info['avatar']).decode('utf-8')}"
+            except Exception:
+                pass
+
+        payload = {
+            "id": str(message_id),
+            "session_id": session_id,
+            "from": "agent" if role == "agent" else "user",
+            "from_user_id": from_user_id,
+            "to_user_id": to_user_id,
+            "text": message,
+            "time": _format_time(datetime.now()),
+            "avatar": avatar_base64,
+            "message_type": message_type,
+        }
+
+        # 广播给所有连接的客户端（默认 namespace），用户与客服两端都会收到
+        socketio.emit("new_message", payload, namespace="/")
+        return {"success": True, "message_id": message_id, "time": payload["time"]}
+    except Exception as e:
+        logger.error("WebSocket 发送消息失败: %s", e, exc_info=True)
+        return {"success": False, "message": "服务器错误"}
+
+
 if __name__ == "__main__":
-    # 开发阶段默认启用 debug，部署到服务器时请关闭 debug，并用 WSGI/反向代理托管
-    app.run(host="0.0.0.0", port=8000, debug=True)
+    # 请使用本入口启动，避免 flask run/reloader 触发 werkzeug 的 write() before start_response
+    # 如已安装 eventlet，_ASYNC_MODE=eventlet；否则回退 threading
+    socketio.run(
+        app,
+        host="0.0.0.0",
+        port=8000,
+        debug=False,
+        use_reloader=False,
+    )
 
 

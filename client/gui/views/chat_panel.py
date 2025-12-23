@@ -124,7 +124,7 @@ class ChatPanel:
         header_layout.setContentsMargins(20, 14, 20, 14)
         header_layout.setSpacing(10)
 
-        title_label = QLabel("声音序章")
+        title_label = QLabel("云汐幻声")
         title_label.setStyleSheet("""
             QLabel {
                 color: #ffffff;
@@ -137,6 +137,18 @@ class ChatPanel:
             title_label,
             alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft
         )
+
+        # 模式指示：仅文字（取消呼吸灯）
+        mode_label = QLabel("智能机器人模式")
+        mode_label.setObjectName("modeIndicator")
+        mode_label.setStyleSheet("""
+            QLabel#modeIndicator {
+                color: #e5e7eb;
+                font-size: 13px;
+            }
+        """)
+        self.main_window.chat_mode_label = mode_label
+        header_layout.addWidget(mode_label, alignment=Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
         header_layout.addStretch()
 
         # 最小化按钮

@@ -11,7 +11,58 @@ from backend.logging_manager import setup_logging  # noqa: F401
 class DatabaseManager:
     def __init__(self):
         self.connection = None
+        self.tables_initialized = False  # 首次成功连接后才创建表，重连不再执行
         self.connect()
+
+    def _open_conn(self):
+        """为单次操作创建独立连接，避免多线程共享同一连接导致协议错误。"""
+        return pymysql.connect(
+            host="localhost",
+            user="root",
+            password="123456",
+            database="voice",
+        )
+    
+    def _ensure_connection(self):
+        """确保数据库连接有效，如果无效则重新连接"""
+        try:
+            # 检查连接是否存在且有效
+            if self.connection is None:
+                self.connect()
+                return
+            
+            # 尝试ping连接以检查是否有效
+            try:
+                self.connection.ping()
+            except (pymysql.Error, AttributeError):
+                # ping失败，连接已断开，需要重新连接
+                raise
+        except Exception:
+            # 连接无效或重连过程中出错，重新连接
+            logging.warning("数据库连接已断开，正在重新连接...")
+            try:
+                if self.connection:
+                    self.connection.close()
+            except Exception:
+                pass
+            self.connection = None
+            try:
+                self.connect()
+            except Exception as e:
+                logging.error(f"重新连接数据库失败: {e}")
+                # 保持 self.connection 为 None，由上层处理 ConnectionError
+    
+    def _get_cursor(self, cursor_type=None):
+        """获取数据库游标，自动确保连接有效"""
+        self._ensure_connection()
+        # 使用局部变量持有连接引用，避免在多线程/并发场景下 self.connection 被其他地方置为 None 导致 AttributeError
+        conn = self.connection
+        if conn is None:
+            logging.error("获取数据库游标失败：数据库连接尚未建立或创建失败")
+            raise ConnectionError("数据库连接未建立，无法获取游标")
+        if cursor_type:
+            return conn.cursor(cursor_type)
+        return conn.cursor()
     
     def connect(self):
         """
@@ -29,8 +80,14 @@ class DatabaseManager:
                 database=db_name,
             )
             logging.info("数据库连接成功")
-            self.ensure_tables_exist()
-        except pymysql.Error as e:
+            # 仅在首次连接时初始化表结构，重连不再重复执行，避免旧连接被关闭导致“read of closed file”
+            if not self.tables_initialized:
+                try:
+                    self.ensure_tables_exist()
+                    self.tables_initialized = True
+                except Exception as te:
+                    logging.error(f"初始化数据表结构失败（忽略，仅记录日志）: {te}")
+        except Exception as e:
             msg = str(e)
             logging.error(f"连接数据库失败: {e}")
 
@@ -62,8 +119,9 @@ class DatabaseManager:
                     )
                     logging.info("重新连接到新创建的数据库成功")
                     self.ensure_tables_exist()
+                    self.tables_initialized = True
                     return
-                except pymysql.Error as ce:
+                except Exception as ce:
                     logging.error(f"自动创建数据库 {db_name} 失败: {ce}")
                     self.connection = None
                     raise ConnectionError(f"无法创建数据库 {db_name}：{ce}")
@@ -81,6 +139,8 @@ class DatabaseManager:
         self.create_announcement_table()
         self.create_chat_messages_table()
         self.create_password_reset_tokens_table()
+        self.create_chat_sessions_table()
+        self.create_agent_status_table()
 
     def create_user_table(self):
         """创建用户表（如果不存在）。
@@ -211,7 +271,7 @@ class DatabaseManager:
             logging.error(f"创建公告表失败: {e}")
 
     def create_chat_messages_table(self):
-        """创建聊天消息表（如果不存在）"""
+        """创建聊天消息表（如果不存在），并确保 message 列为 MEDIUMTEXT 以容纳图片 base64。"""
         try:
             cursor = self.connection.cursor()
             create_table_query = """
@@ -220,7 +280,7 @@ class DatabaseManager:
                 session_id VARCHAR(255) NOT NULL,
                 from_user_id INT NOT NULL,
                 to_user_id INT,
-                message TEXT NOT NULL,
+                message MEDIUMTEXT NOT NULL,
                 message_type ENUM('text', 'image', 'file') DEFAULT 'text',
                 is_read BOOLEAN DEFAULT FALSE,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -232,8 +292,11 @@ class DatabaseManager:
             """
             cursor.execute(create_table_query)
             self.connection.commit()
+            # 升级已有表的 message 列为 MEDIUMTEXT（幂等）
+            cursor.execute("ALTER TABLE chat_messages MODIFY COLUMN message MEDIUMTEXT NOT NULL")
+            self.connection.commit()
         except pymysql.Error as e:
-            logging.error(f"创建聊天消息表失败: {e}")
+            logging.error(f"创建/升级聊天消息表失败: {e}")
 
     def create_password_reset_tokens_table(self):
         """创建密码重置token表（如果不存在）"""
@@ -322,26 +385,47 @@ class DatabaseManager:
             return False
 
     def insert_chat_message(self, session_id: str, from_user_id: int, to_user_id: Optional[int], message: str, message_type: str = 'text') -> Optional[int]:
-        """插入聊天消息"""
+        """插入聊天消息（单次独立连接，避免多线程共享导致协议错误）"""
+        conn = None
+        cursor = None
         try:
-            cursor = self.connection.cursor()
+            conn = self._open_conn()
+            cursor = conn.cursor()
             insert_query = """
             INSERT INTO chat_messages (session_id, from_user_id, to_user_id, message, message_type)
             VALUES (%s, %s, %s, %s, %s)
             """
             cursor.execute(insert_query, (session_id, from_user_id, to_user_id, message, message_type))
             message_id = cursor.lastrowid
-            self.connection.commit()
+            conn.commit()
             return message_id
         except pymysql.Error as e:
             logging.error(f"插入聊天消息失败: {e}")
-            self.connection.rollback()
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
             return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def get_chat_messages(self, session_id: str, limit: int = 100) -> list:
-        """获取会话的聊天消息"""
+        """获取会话的聊天消息（独立连接）"""
+        conn = None
+        cursor = None
         try:
-            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
             query = """
             SELECT id, from_user_id, to_user_id, message, message_type, is_read, created_at
             FROM chat_messages
@@ -350,20 +434,30 @@ class DatabaseManager:
             LIMIT %s
             """
             cursor.execute(query, (session_id, limit))
-            return cursor.fetchall()
+            result = cursor.fetchall()
+            return result
         except pymysql.Error as e:
             logging.error(f"获取聊天消息失败: {e}")
             return []
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def get_user_sessions(self, user_id: int, role: str) -> list:
-        """获取用户的会话列表
-        
-        Args:
-            user_id: 用户ID
-            role: 用户角色，'user' 返回用户发起的会话，'customer_service' 返回分配给客服的会话
-        """
+        """获取用户的会话列表（独立连接）"""
+        conn = None
+        cursor = None
         try:
-            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
             if role == 'customer_service':
                 # 客服：获取所有分配给该客服的会话，或所有用户发起的会话（待分配）
                 query = """
@@ -415,10 +509,22 @@ class DatabaseManager:
                 ORDER BY last_time DESC
                 """
                 cursor.execute(query, (user_id, user_id))
-            return cursor.fetchall()
+            result = cursor.fetchall()
+            return result
         except pymysql.Error as e:
             logging.error(f"获取用户会话列表失败: {e}")
             return []
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def insert_user_info(self, username: str, email: str, password: str, avatar_data: Optional[bytes] = None, role: str = 'user') -> bool:
         """插入用户信息到数据库，头像可选，默认为默认头像。
@@ -461,31 +567,92 @@ class DatabaseManager:
             return False
 
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
-        """根据邮箱查询用户信息。
-
-        Returns:
-            包含 id、username、password、avatar、role 等字段的字典，查询失败或未找到返回 None。
-        """
+        """根据邮箱查询用户信息（独立连接）。"""
+        conn = None
+        cursor = None
         try:
-            # PyMySQL 的 Connection.cursor() 不支持 cursorclass 关键字参数，需直接传入游标类
-            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
             query = "SELECT id, username, email, password, avatar, role FROM users WHERE email = %s"
             cursor.execute(query, (email,))
-            return cursor.fetchone()  # 返回包含用户头像和角色的结果
+            result = cursor.fetchone()
+            return result  # 返回包含用户头像和角色的结果
         except pymysql.Error as e:
             logging.error(f"查询用户信息失败: {e}")
             return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
-        """根据用户 ID 查询用户基础信息（含头像和角色）。"""
+        """根据用户 ID 查询用户基础信息（含头像和角色，独立连接，两次尝试）。"""
+        query = "SELECT id, username, email, avatar, role FROM users WHERE id = %s"
+
+        for attempt in range(2):
+            conn = None
+            cursor = None
+            try:
+                conn = self._open_conn()
+                cursor = conn.cursor(pymysql.cursors.DictCursor)
+                cursor.execute(query, (user_id,))
+                result = cursor.fetchone()
+                return result
+            except Exception as e:
+                logging.error(f"第{attempt+1}次根据用户ID查询用户信息失败: {e}")
+                # 第二次仍失败则抛出 ConnectionError
+                if attempt == 1:
+                    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+            finally:
+                if cursor:
+                    try:
+                        cursor.close()
+                    except Exception:
+                        pass
+                if conn:
+                    try:
+                        conn.close()
+                    except Exception:
+                        pass
+        return None
+
+    def get_chat_session_by_id(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """根据 session_id 获取单条会话记录（独立连接）"""
+        conn = None
+        cursor = None
         try:
-            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
-            query = "SELECT id, username, email, avatar, role FROM users WHERE id = %s"
-            cursor.execute(query, (user_id,))
-            return cursor.fetchone()
-        except pymysql.Error as e:
-            logging.error(f"根据用户ID查询用户信息失败: {e}")
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT id, session_id, user_id, agent_id, status, created_at, started_at, closed_at
+            FROM chat_sessions
+            WHERE session_id = %s
+            LIMIT 1
+            """
+            cursor.execute(query, (session_id,))
+            result = cursor.fetchone()
+            return result
+        except Exception as e:
+            logging.error(f"根据 session_id 获取会话失败: {e}")
             return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def insert_user_vip_info(self, user_id: int) -> bool:
         """插入用户 VIP 信息到数据库，默认非会员，钻石数量为 0"""
@@ -506,15 +673,30 @@ class DatabaseManager:
             return False
 
     def get_user_vip_info(self, user_id: int) -> Optional[Dict[str, Any]]:
-        """根据用户 ID 查询用户 VIP 信息。"""
+        """根据用户 ID 查询用户 VIP 信息（独立连接）"""
+        conn = None
+        cursor = None
         try:
-            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
             query = "SELECT is_vip, vip_expiry_date, diamonds FROM user_vip WHERE user_id = %s"
             cursor.execute(query, (user_id,))
-            return cursor.fetchone()
+            result = cursor.fetchone()
+            return result
         except pymysql.Error as e:
             logging.info(f"查询用户 VIP 信息失败: {e}")
             return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def read_default_avatar(self) -> Optional[bytes]:
         """读取默认头像文件并返回二进制数据，从本地文件加载"""
@@ -543,10 +725,11 @@ class DatabaseManager:
     def get_latest_announcement(self):
         """获取最新的公告内容"""
         try:
-            cursor = self.connection.cursor()
+            cursor = self._get_cursor()
             query = "SELECT content FROM announcements ORDER BY id DESC LIMIT 1"
             cursor.execute(query)
             result = cursor.fetchone()
+            cursor.close()
             if result:
                 return result[0]
             return None
@@ -558,7 +741,7 @@ class DatabaseManager:
     def update_user_avatar(self, user_id: int, avatar_data: bytes) -> bool:
         """更新用户头像"""
         try:
-            cursor = self.connection.cursor()
+            cursor = self._get_cursor()
             update_query = """
             UPDATE users
             SET avatar = %s
@@ -566,6 +749,7 @@ class DatabaseManager:
             """
             cursor.execute(update_query, (avatar_data, user_id))
             self.connection.commit()
+            cursor.close()
             logging.info(f"用户 {user_id} 的头像已更新")
             return True
         except pymysql.Error as e:
@@ -602,6 +786,289 @@ class DatabaseManager:
             logging.error(f"更新用户 VIP 信息失败: {e}")
             self.connection.rollback()
             return False
+
+    def create_chat_sessions_table(self):
+        """创建聊天会话表（如果不存在）"""
+        try:
+            cursor = self.connection.cursor()
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS chat_sessions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                session_id VARCHAR(255) NOT NULL UNIQUE,
+                user_id INT NOT NULL,
+                agent_id INT NULL,
+                status ENUM('pending', 'active', 'closed') DEFAULT 'pending',
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                started_at TIMESTAMP NULL,
+                closed_at TIMESTAMP NULL,
+                INDEX idx_session (session_id),
+                INDEX idx_user (user_id),
+                INDEX idx_agent (agent_id),
+                INDEX idx_status (status),
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                FOREIGN KEY (agent_id) REFERENCES users(id)
+            )
+            """
+            cursor.execute(create_table_query)
+            self.connection.commit()
+        except pymysql.Error as e:
+            logging.error(f"创建聊天会话表失败: {e}")
+
+    def create_agent_status_table(self):
+        """创建客服在线状态表（如果不存在）"""
+        try:
+            cursor = self.connection.cursor()
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS agent_status (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                agent_id INT NOT NULL UNIQUE,
+                status ENUM('online', 'offline', 'away', 'busy') DEFAULT 'offline',
+                last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (agent_id) REFERENCES users(id),
+                INDEX idx_status (status),
+                INDEX idx_heartbeat (last_heartbeat)
+            )
+            """
+            cursor.execute(create_table_query)
+            self.connection.commit()
+        except pymysql.Error as e:
+            logging.error(f"创建客服在线状态表失败: {e}")
+
+    def get_online_agents(self) -> list:
+        """获取所有在线的客服列表（独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT u.id, u.username, u.email, as_table.status, as_table.last_heartbeat
+            FROM users u
+            JOIN agent_status as_table ON u.id = as_table.agent_id
+            WHERE u.role = 'customer_service'
+            AND as_table.status IN ('online', 'away')
+            AND as_table.last_heartbeat > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
+            ORDER BY as_table.last_heartbeat DESC
+            """
+            cursor.execute(query)
+            result = cursor.fetchall()
+            return result
+        except Exception as e:
+            logging.error(f"获取在线客服列表失败: {e}")
+            return []
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def create_pending_session(self, session_id: str, user_id: int) -> bool:
+        """创建待接入会话（独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            insert_query = """
+            INSERT INTO chat_sessions (session_id, user_id, status)
+            VALUES (%s, %s, 'pending')
+            ON DUPLICATE KEY UPDATE status = 'pending'
+            """
+            cursor.execute(insert_query, (session_id, user_id))
+            conn.commit()
+            return True
+        except pymysql.Error as e:
+            logging.error(f"创建待接入会话失败: {e}")
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def assign_session_to_agent(self, session_id: str, agent_id: int) -> bool:
+        """将会话分配给客服（独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            update_query = """
+            UPDATE chat_sessions
+            SET agent_id = %s, status = 'active', started_at = NOW()
+            WHERE session_id = %s AND status = 'pending'
+            """
+            cursor.execute(update_query, (agent_id, session_id))
+            if cursor.rowcount == 0:
+                return False
+            conn.commit()
+            return True
+        except pymysql.Error as e:
+            logging.error(f"分配会话给客服失败: {e}")
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def get_pending_sessions(self) -> list:
+        """获取所有待接入的会话列表（独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT cs.session_id, cs.user_id, u.username, u.email, cs.created_at,
+                   (SELECT message FROM chat_messages cm 
+                    WHERE cm.session_id = cs.session_id 
+                    ORDER BY cm.created_at DESC LIMIT 1) as last_message
+            FROM chat_sessions cs
+            JOIN users u ON cs.user_id = u.id
+            WHERE cs.status = 'pending'
+            ORDER BY cs.created_at ASC
+            """
+            cursor.execute(query)
+            result = cursor.fetchall()
+            return result
+        except Exception as e:
+            logging.error(f"获取待接入会话列表失败: {e}")
+            return []
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def get_agent_sessions(self, agent_id: int, include_pending: bool = False) -> list:
+        """获取客服的会话列表（我的会话，独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            if include_pending:
+                # 包含待接入
+                query = """
+                SELECT cs.session_id, cs.user_id, u.username, u.email, cs.status,
+                       cs.started_at, cs.created_at,
+                       (SELECT COUNT(*) FROM chat_messages cm2 
+                        WHERE cm2.session_id = cs.session_id 
+                        AND cm2.to_user_id = %s 
+                        AND cm2.is_read = FALSE) as unread_count,
+                       (SELECT message FROM chat_messages cm3 
+                        WHERE cm3.session_id = cs.session_id 
+                        ORDER BY cm3.created_at DESC LIMIT 1) as last_message
+                FROM chat_sessions cs
+                JOIN users u ON cs.user_id = u.id
+                WHERE cs.agent_id = %s OR (cs.agent_id IS NULL AND cs.status = 'pending')
+                ORDER BY cs.created_at DESC
+                """
+                cursor.execute(query, (agent_id, agent_id))
+            else:
+                # 只包含已分配的会话
+                query = """
+                SELECT cs.session_id, cs.user_id, u.username, u.email, cs.status,
+                       cs.started_at, cs.created_at,
+                       (SELECT COUNT(*) FROM chat_messages cm2 
+                        WHERE cm2.session_id = cs.session_id 
+                        AND cm2.to_user_id = %s 
+                        AND cm2.is_read = FALSE) as unread_count,
+                       (SELECT message FROM chat_messages cm3 
+                        WHERE cm3.session_id = cs.session_id 
+                        ORDER BY cm3.created_at DESC LIMIT 1) as last_message
+                FROM chat_sessions cs
+                JOIN users u ON cs.user_id = u.id
+                WHERE cs.agent_id = %s AND cs.status = 'active'
+                ORDER BY cs.started_at DESC
+                """
+                cursor.execute(query, (agent_id, agent_id))
+            result = cursor.fetchall()
+            return result
+        except pymysql.Error as e:
+            logging.error(f"获取客服会话列表失败: {e}")
+            return []
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def update_agent_status(self, agent_id: int, status: str) -> bool:
+        """更新客服在线状态（独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            insert_query = """
+            INSERT INTO agent_status (agent_id, status)
+            VALUES (%s, %s)
+            ON DUPLICATE KEY UPDATE status = %s, last_heartbeat = NOW()
+            """
+            cursor.execute(insert_query, (agent_id, status, status))
+            conn.commit()
+            return True
+        except pymysql.Error as e:
+            logging.error(f"更新客服状态失败: {e}")
+            try:
+                if conn:
+                    conn.rollback()
+            except Exception:
+                pass
+            return False
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
 
     def close(self):
         """关闭数据库连接"""

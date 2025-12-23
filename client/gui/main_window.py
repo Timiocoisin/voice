@@ -228,3 +228,26 @@ class MainWindow(QMainWindow):
 
     def _avatar_bytes_to_data_url(self, data: bytes, size: int = 32, mime: str = "image/png") -> str:
         return avatar_bytes_to_data_url(data, size, mime)
+
+    # --- 窗口拖动（支持按住顶部区域拖动整个客户端窗口） ---
+    def mousePressEvent(self, event):
+        """按住窗口顶部区域时，记录起始位置，准备拖动"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            # 仅在标题栏区域内允许拖动，避免误拖动内容区域
+            if event.position().y() <= self.draggable_height:
+                self.dragging = True
+                self.offset = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+        super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """拖动时移动窗口位置"""
+        if self.dragging and event.buttons() & Qt.MouseButton.LeftButton:
+            new_pos = event.globalPosition().toPoint() - self.offset
+            self.move(new_pos)
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """松开鼠标时结束拖动"""
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.dragging = False
+        super().mouseReleaseEvent(event)

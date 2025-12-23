@@ -58,9 +58,39 @@ export const customerServiceApi = {
   },
 
   // 获取会话列表
-  getSessions: async (userId: number, token: string) => {
+  getSessions: async (userId: number, token: string, type: 'my' | 'pending' = 'my') => {
     const response = await api.post('/api/customer_service/sessions', {
       user_id: userId,
+      token: token,
+      type: type,
+    });
+    return response.data;
+  },
+
+  // 获取待接入会话列表
+  getPendingSessions: async (userId: number, token: string) => {
+    const response = await api.post('/api/customer_service/pending_sessions', {
+      user_id: userId,
+      token: token,
+    });
+    return response.data;
+  },
+
+  // 接入会话（从待接入移到我的会话）
+  acceptSession: async (userId: number, sessionId: string, token: string) => {
+    const response = await api.post('/api/customer_service/accept_session', {
+      user_id: userId,
+      session_id: sessionId,
+      token: token,
+    });
+    return response.data;
+  },
+
+  // 更新客服状态
+  updateStatus: async (userId: number, status: string, token: string) => {
+    const response = await api.post('/api/customer_service/update_status', {
+      user_id: userId,
+      status: status,
       token: token,
     });
     return response.data;

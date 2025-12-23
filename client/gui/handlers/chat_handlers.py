@@ -1,5 +1,6 @@
 import os
 import random
+import base64
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Tuple, Optional
 
@@ -10,7 +11,7 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QPoint, QTimer, QRectF
 from PyQt6.QtGui import (
-    QPixmap, QCursor, QPainter, QPainterPath, QColor
+    QPixmap, QCursor, QPainter, QPainterPath, QColor, QImage
 )
 
 from client.resources import get_default_avatar
@@ -41,23 +42,41 @@ def open_customer_service_chat(main_window: "MainWindow", event):
     # 清除未读消息计数
     clear_unread_count(main_window)
 
-    # 只初始化一次布局切换
-    if getattr(main_window, "_chat_panel_added", False):
+    # 检查聊天面板是否已经在布局中
+    chat_panel_in_layout = main_window.main_content_layout.indexOf(main_window.chat_panel) != -1
+    
+    # 如果聊天面板已经在布局中，直接显示即可
+    if chat_panel_in_layout:
         main_window.chat_panel.setVisible(True)
+        # 确保中间和右侧是隐藏的
+        if main_window.merged_section2:
+            main_window.merged_section2.hide()
+        if main_window.right_column_widget:
+            main_window.right_column_widget.hide()
         return
 
+    # 如果聊天面板不在布局中，需要重新添加到布局
     # 从主布局移除中间和右侧（占原来的 3+1 比例），用一个聊天面板等效占比替换
     if main_window.merged_section2_layout:
-        main_window.main_content_layout.removeItem(main_window.merged_section2_layout)
+        # 尝试移除，如果不存在会失败但不会报错
+        try:
+            main_window.main_content_layout.removeItem(main_window.merged_section2_layout)
+        except:
+            pass
         if main_window.merged_section2:
             main_window.merged_section2.hide()
     if main_window.right_column_widget:
-        main_window.main_content_layout.removeWidget(main_window.right_column_widget)
+        # 尝试移除，如果不存在会失败但不会报错
+        try:
+            main_window.main_content_layout.removeWidget(main_window.right_column_widget)
+        except:
+            pass
         main_window.right_column_widget.hide()
 
     # 聊天面板占据原中间+右侧的总宽度（保持左侧宽度不变）
     main_window.main_content_layout.addWidget(main_window.chat_panel, 4)
     main_window.chat_panel.setVisible(True)
+    main_window._chat_minimized = False
     main_window._chat_panel_added = True
 
 
@@ -94,39 +113,110 @@ def minimize_chat_panel(main_window: "MainWindow"):
     if hasattr(main_window, "chat_panel") and main_window.chat_panel:
         main_window.chat_panel.setVisible(False)
         main_window._chat_minimized = True
+        
+        # 恢复原来的布局（左2中1右2）
+        if getattr(main_window, "_chat_panel_added", False):
+            # 从布局中移除聊天面板
+            main_window.main_content_layout.removeWidget(main_window.chat_panel)
+            
+            # 检查并移除可能重复的布局项
+            if main_window.merged_section2_layout:
+                # 先尝试移除，如果不存在会失败但不会报错
+                try:
+                    main_window.main_content_layout.removeItem(main_window.merged_section2_layout)
+                except:
+                    pass
+            if main_window.right_column_widget:
+                try:
+                    main_window.main_content_layout.removeWidget(main_window.right_column_widget)
+                except:
+                    pass
+            
+            # 恢复左侧列（如果不在布局中）
+            if main_window.left_column_widget and main_window.main_content_layout.indexOf(main_window.left_column_widget) == -1:
+                main_window.main_content_layout.addWidget(main_window.left_column_widget, 1)
+            
+            # 恢复中间部分（merged_section2_layout）
+            if main_window.merged_section2_layout:
+                main_window.main_content_layout.addLayout(main_window.merged_section2_layout, 3)
+                if main_window.merged_section2:
+                    main_window.merged_section2.show()
+            
+            # 恢复右侧列
+            if main_window.right_column_widget:
+                main_window.main_content_layout.addWidget(main_window.right_column_widget, 1)
+                main_window.right_column_widget.show()
+            
+            # 注意：这里不重置 _chat_panel_added 标志，以便后续可以重新显示聊天面板
 
 
 def close_chat_panel(main_window: "MainWindow"):
     """关闭聊天面板（结束聊天服务，清空聊天记录）"""
     if hasattr(main_window, "chat_panel") and main_window.chat_panel:
         main_window.chat_panel.setVisible(False)
-        # 清空聊天记录
+        
+        # 停止消息轮询
+        if hasattr(main_window, "_message_poll_timer") and main_window._message_poll_timer:
+            try:
+                main_window._message_poll_timer.stop()
+                main_window._message_poll_timer.deleteLater()
+            except RuntimeError:
+                # QTimer 已被删除，忽略错误
+                pass
+            finally:
+                main_window._message_poll_timer = None
+        
+        # 清空聊天记录（仅清除UI，不清除数据库）
         if hasattr(main_window, "chat_layout"):
             while main_window.chat_layout.count():
                 item = main_window.chat_layout.takeAt(0)
                 widget = item.widget()
                 if widget:
                     widget.deleteLater()
+        
+        # 清除已显示消息ID记录
+        if hasattr(main_window, "_displayed_message_ids"):
+            main_window._displayed_message_ids.clear()
+        
         # 重置状态
         main_window._chat_minimized = False
+        main_window._human_service_connected = False
+        main_window._matched_agent_id = None
+        if hasattr(main_window, "_chat_session_id"):
+            main_window._chat_session_id = None
         clear_unread_count(main_window)
         
         # 恢复原来的布局
         if getattr(main_window, "_chat_panel_added", False):
-            main_window.main_content_layout.removeWidget(main_window.chat_panel)
+            # 从布局中移除聊天面板
+            try:
+                main_window.main_content_layout.removeWidget(main_window.chat_panel)
+            except:
+                pass
+            
+            # 检查并移除可能重复的布局项
             if main_window.merged_section2_layout:
-                main_window.main_content_layout.removeItem(main_window.merged_section2_layout)
+                try:
+                    main_window.main_content_layout.removeItem(main_window.merged_section2_layout)
+                except:
+                    pass
             if main_window.right_column_widget:
-                main_window.main_content_layout.removeWidget(main_window.right_column_widget)
+                try:
+                    main_window.main_content_layout.removeWidget(main_window.right_column_widget)
+                except:
+                    pass
 
+            # 恢复左侧列（如果不在布局中）
             if main_window.left_column_widget and main_window.main_content_layout.indexOf(main_window.left_column_widget) == -1:
                 main_window.main_content_layout.addWidget(main_window.left_column_widget, 1)
 
+            # 恢复中间部分（merged_section2_layout）
             if main_window.merged_section2_layout:
                 main_window.main_content_layout.addLayout(main_window.merged_section2_layout, 3)
                 if main_window.merged_section2:
                     main_window.merged_section2.show()
 
+            # 恢复右侧列
             if main_window.right_column_widget:
                 main_window.main_content_layout.addWidget(main_window.right_column_widget, 1)
                 main_window.right_column_widget.show()
@@ -135,7 +225,7 @@ def close_chat_panel(main_window: "MainWindow"):
 
 
 def handle_chat_send(main_window: "MainWindow"):
-    """发送消息并使用关键词匹配生成客服回复"""
+    """发送消息，如果已连接人工客服则发送到后端，否则使用关键词匹配生成回复"""
     # 首先检查是否正在发送中，防止重复点击
     if hasattr(main_window, 'chat_send_button') and not main_window.chat_send_button.isEnabled():
         return
@@ -156,28 +246,101 @@ def handle_chat_send(main_window: "MainWindow"):
         main_window.chat_send_button.setText("发送中...")
         main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.ArrowCursor))
     
-    append_chat_message(main_window, text, from_self=True)
-    main_window.chat_input.clear()
-    
-    # 使用关键词匹配生成回复
-    reply = main_window.keyword_matcher.generate_reply(text, add_greeting=True)
-    
-    # 模拟客服回复延迟
-    delay = random.randint(500, 1500)
-    
-    def send_reply_and_enable():
-        append_support_message(main_window, reply)
-        # 恢复按钮和输入框状态
-        main_window.chat_input.setEnabled(True)
-        if hasattr(main_window, 'chat_send_button'):
-            main_window.chat_send_button.setEnabled(True)
-            if original_text:
-                main_window.chat_send_button.setText(original_text)
-            main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        # 延迟聚焦，确保 UI 更新完成后再聚焦
-        QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
-    
-    QTimer.singleShot(delay, send_reply_and_enable)
+    # 如果已连接人工客服，强制走人工通道（禁用关键词机器人）
+    if hasattr(main_window, "_human_service_connected") and main_window._human_service_connected:
+        from client.login.token_storage import read_token
+        from client.api_client import send_chat_message
+
+        token = read_token()
+        session_id = getattr(main_window, "_chat_session_id", None)
+
+        if token and session_id and main_window.user_id:
+            # 先乐观展示自己的消息
+            append_chat_message(main_window, text, from_self=True)
+            main_window.chat_input.clear()
+
+            # 兜底定时器，防止HTTP请求失败时界面一直禁用
+            def fallback_enable():
+                if not main_window.chat_input.isEnabled():
+                    main_window.chat_input.setEnabled(True)
+                if hasattr(main_window, 'chat_send_button'):
+                    main_window.chat_send_button.setEnabled(True)
+                    if original_text:
+                        main_window.chat_send_button.setText(original_text)
+                    main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                main_window.chat_input.setFocus()
+
+            def send_via_http():
+                try:
+                    resp = send_chat_message(session_id, main_window.user_id, text, token)
+                    return resp
+                except Exception:
+                    return None
+
+            def handle_response(resp):
+                fallback_enable()
+                
+                if not resp or not resp.get("success"):
+                    append_chat_message(
+                        main_window,
+                        "消息发送失败，请稍后重试。",
+                        from_self=False,
+                        is_html=False,
+                        streaming=False
+                    )
+                    return
+                
+                message_id = str(resp.get("message_id", ""))
+                if message_id:
+                    if not hasattr(main_window, "_displayed_message_ids"):
+                        main_window._displayed_message_ids = set()
+                    main_window._displayed_message_ids.add(message_id)
+
+            # 使用QTimer.singleShot在后台执行HTTP请求，避免阻塞UI
+            def do_send():
+                resp = send_via_http()
+                QTimer.singleShot(0, lambda: handle_response(resp))
+            
+            QTimer.singleShot(0, do_send)
+            # 启动 3 秒兜底，避免请求超时导致按钮一直禁用
+            QTimer.singleShot(3000, fallback_enable)
+        else:
+            # 已进入人工客服但通道异常，提示并恢复输入，不再走关键词机器人
+            main_window.chat_input.setEnabled(True)
+            if hasattr(main_window, 'chat_send_button'):
+                main_window.chat_send_button.setEnabled(True)
+                if original_text:
+                    main_window.chat_send_button.setText(original_text)
+                main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            append_chat_message(
+                main_window,
+                "当前客服通道未就绪，请稍后重试或关闭对话框重新进入。",
+                from_self=False,
+                is_html=False,
+                streaming=False
+            )
+            QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+    else:
+        # 未连接人工客服，使用关键词匹配生成回复
+        append_chat_message(main_window, text, from_self=True)
+        main_window.chat_input.clear()
+
+        reply = main_window.keyword_matcher.generate_reply(text, add_greeting=True)
+        
+        delay = random.randint(500, 1500)
+        
+        def send_reply_and_enable():
+            append_support_message(main_window, reply)
+            # 恢复按钮和输入框状态
+            main_window.chat_input.setEnabled(True)
+            if hasattr(main_window, 'chat_send_button'):
+                main_window.chat_send_button.setEnabled(True)
+                if original_text:
+                    main_window.chat_send_button.setText(original_text)
+                main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+        
+        QTimer.singleShot(delay, send_reply_and_enable)
 
 
 def append_chat_message(
@@ -185,7 +348,8 @@ def append_chat_message(
     content: str,
     from_self: bool = True,
     is_html: bool = False,
-    streaming: bool = False
+    streaming: bool = False,
+    avatar_base64: Optional[str] = None
 ):
     """按左右气泡形式追加一条消息，使用真实圆角控件"""
     if not hasattr(main_window, "chat_layout"):
@@ -230,14 +394,38 @@ def append_chat_message(
         )
         avatar_label.setPixmap(pm)
     else:
-        default_bytes = get_default_avatar()
-        if default_bytes:
-            pm = QPixmap()
-            if pm.loadFromData(default_bytes):
-                avatar_label.setPixmap(
-                    pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
-                              Qt.TransformationMode.SmoothTransformation)
-                )
+        pm = None
+        # 优先使用服务器下发的 avatar_base64
+        if avatar_base64:
+            try:
+                b64 = avatar_base64
+                if b64.startswith("data:image"):
+                    b64 = b64.split(",", 1)[1]
+                pm = QPixmap()
+                if pm.loadFromData(base64.b64decode(b64)):
+                    pm = pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
+                                   Qt.TransformationMode.SmoothTransformation)
+            except Exception:
+                pm = None
+        if pm is None:
+            default_bytes = get_default_avatar()
+            if default_bytes:
+                pm = QPixmap()
+                if pm.loadFromData(default_bytes):
+                    pm = pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
+                                   Qt.TransformationMode.SmoothTransformation)
+
+        if pm:
+            cropped = QPixmap(32, 32)
+            cropped.fill(Qt.GlobalColor.transparent)
+            p = QPainter(cropped)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            clip_path = QPainterPath()
+            clip_path.addEllipse(0, 0, 32, 32)
+            p.setClipPath(clip_path)
+            p.drawPixmap(0, 0, pm)
+            p.end()
+            avatar_label.setPixmap(cropped)
 
     if from_self:
         bubble_label = ChatBubble(
@@ -310,11 +498,406 @@ def start_streaming_text(main_window: "MainWindow", bubble: ChatBubble, full_tex
 
 def append_support_message(main_window: "MainWindow", content: str, is_html: bool = False):
     """供后续真实客服或机器人使用的接口"""
+    # 检测是否需要人工客服
+    if content == "NEED_HUMAN_SERVICE":
+        append_human_service_request(main_window)
+        return
+    
     streaming = not is_html
     append_chat_message(main_window, content, from_self=False, is_html=is_html, streaming=streaming)
     # 如果聊天面板隐藏，增加未读消息计数
     if hasattr(main_window, "chat_panel") and not main_window.chat_panel.isVisible():
         add_unread_count(main_window)
+
+
+def append_human_service_request(main_window: "MainWindow"):
+    """显示需要人工客服的消息和按钮"""
+    if not hasattr(main_window, "chat_layout"):
+        return
+    
+    # 显示提示消息
+    message_text = "这个问题我这边暂时没有查到详细说明呢，建议您直接联系人工客服处理哈～"
+    append_chat_message(main_window, message_text, from_self=False, is_html=False, streaming=False)
+    
+    # 创建包含按钮的消息组件
+    message_widget = QWidget()
+    v_layout = QVBoxLayout(message_widget)
+    v_layout.setContentsMargins(4, 8, 4, 8)
+    v_layout.setSpacing(8)
+    
+    # 按钮容器
+    button_container = QWidget()
+    button_layout = QHBoxLayout(button_container)
+    button_layout.setContentsMargins(0, 0, 0, 0)
+    button_layout.setSpacing(0)
+    
+    # 创建"联系人工客服"按钮
+    connect_btn = QPushButton("📞 联系人工客服")
+    connect_btn.setFixedHeight(40)
+    connect_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+    connect_btn.setStyleSheet("""
+        QPushButton {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #7c3aed, stop:1 #6d28d9);
+            color: #ffffff;
+            border: none;
+            border-radius: 20px;
+            font-family: "Microsoft YaHei", "SimHei", "Arial";
+            font-size: 14px;
+            font-weight: 600;
+            padding: 0 24px;
+        }
+        QPushButton:hover {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #8b5cf6, stop:1 #7c3aed);
+        }
+        QPushButton:pressed {
+            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                stop:0 #6d28d9, stop:1 #5b21b6);
+        }
+    """)
+    
+    # 连接按钮点击事件
+    connect_btn.clicked.connect(lambda: request_human_service(main_window))
+    
+    button_layout.addStretch()
+    button_layout.addWidget(connect_btn)
+    button_layout.addStretch()
+    
+    v_layout.addWidget(button_container)
+    
+    # 添加消息到聊天布局
+    main_window.chat_layout.addWidget(message_widget)
+    
+    # 滚动到底部
+    if hasattr(main_window, "chat_scroll_area"):
+        bar = main_window.chat_scroll_area.verticalScrollBar()
+        bar.setValue(bar.maximum())
+
+
+def set_chat_mode_indicator(main_window: "MainWindow", human: bool):
+    """更新顶部模式指示（呼吸灯 + 文案）"""
+    label = getattr(main_window, "chat_mode_label", None)
+    if human:
+        if label:
+            label.setText("人工客服模式")
+            label.setStyleSheet("""
+                QLabel#modeIndicator {
+                    color: #d1fae5;
+                    font-size: 13px;
+                }
+            """)
+    else:
+        if label:
+            label.setText("智能机器人模式")
+            label.setStyleSheet("""
+                QLabel#modeIndicator {
+                    color: #e5e7eb;
+                    font-size: 13px;
+                }
+            """)
+
+
+def request_human_service(main_window: "MainWindow"):
+    """请求人工客服匹配"""
+    if not main_window.user_id:
+        show_message(
+            main_window,
+            "请先登录后再联系人工客服。",
+            "未登录",
+            variant="warning"
+        )
+        return
+    
+    # 检查是否已经在匹配中
+    if getattr(main_window, "_matching_human_service", False):
+        show_message(
+            main_window,
+            "正在匹配中，请稍候...",
+            "匹配中",
+            variant="info"
+        )
+        return
+    
+    # 显示匹配中的消息
+    append_matching_message(main_window)
+    
+    # 设置匹配状态
+    main_window._matching_human_service = True
+    
+    # 模拟匹配过程（实际应该调用后端API）
+    # 这里使用定时器模拟匹配延迟
+    QTimer.singleShot(2000, lambda: match_human_service(main_window))
+
+
+def append_matching_message(main_window: "MainWindow"):
+    """显示正在匹配的消息"""
+    if not hasattr(main_window, "chat_layout"):
+        return
+    
+    message_widget = QWidget()
+    v_layout = QVBoxLayout(message_widget)
+    v_layout.setContentsMargins(4, 0, 4, 0)
+    v_layout.setSpacing(2)
+    
+    # 匹配中的提示
+    matching_text = "正在为您匹配在线客服，请稍候..."
+    bubble_label = ChatBubble(
+        matching_text,
+        background=QColor("#fef3c7"),
+        text_color=QColor("#92400e"),
+        border_color=QColor("#fcd34d"),
+        max_width=420,
+        align_right=False,
+        rich_text=False,
+    )
+    
+    # 添加加载动画效果
+    loading_label = QLabel("⏳")
+    loading_label.setStyleSheet("""
+        QLabel {
+            font-size: 16px;
+            padding: 4px;
+        }
+    """)
+    
+    row = QHBoxLayout()
+    row.setContentsMargins(0, 0, 0, 0)
+    row.setSpacing(6)
+    
+    # 头像
+    avatar_label = QLabel()
+    avatar_label.setFixedSize(32, 32)
+    default_bytes = get_default_avatar()
+    if default_bytes:
+        pm = QPixmap()
+        if pm.loadFromData(default_bytes):
+            avatar_label.setPixmap(
+                pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
+                          Qt.TransformationMode.SmoothTransformation)
+            )
+    avatar_label.setStyleSheet("border-radius: 16px;")
+    
+    row.addWidget(avatar_label)
+    row.addWidget(bubble_label)
+    row.addStretch()
+    
+    v_layout.addLayout(row)
+    
+    # 添加加载指示器
+    loading_row = QHBoxLayout()
+    loading_row.setContentsMargins(40, 4, 0, 4)
+    loading_row.addWidget(loading_label)
+    loading_row.addStretch()
+    v_layout.addLayout(loading_row)
+    
+    main_window.chat_layout.addWidget(message_widget)
+    
+    # 滚动到底部
+    if hasattr(main_window, "chat_scroll_area"):
+        bar = main_window.chat_scroll_area.verticalScrollBar()
+        bar.setValue(bar.maximum())
+    
+    # 保存消息组件引用，以便后续更新
+    if not hasattr(main_window, "_matching_message_widget"):
+        main_window._matching_message_widget = []
+    main_window._matching_message_widget.append(message_widget)
+
+
+def match_human_service(main_window: "MainWindow"):
+    """匹配人工客服（调用后端API）"""
+    from client.api_client import match_human_service as api_match_human_service
+    from client.login.token_storage import read_token
+    
+    # 获取session_id（如果不存在则生成）
+    if not hasattr(main_window, "_chat_session_id") or not main_window._chat_session_id:
+        import uuid
+        main_window._chat_session_id = f"chat_{main_window.user_id}_{uuid.uuid4().hex[:8]}"
+    
+    session_id = main_window._chat_session_id
+    
+    # 获取token
+    token = read_token()
+    if not token:
+        append_chat_message(
+            main_window,
+            "请先登录后再联系人工客服。",
+            from_self=False,
+            is_html=False,
+            streaming=False
+        )
+        main_window._matching_human_service = False
+        return
+    
+    try:
+        # 调用后端API匹配客服
+        response = api_match_human_service(main_window.user_id, session_id, token)
+        
+        # 移除匹配中的消息
+        if hasattr(main_window, "_matching_message_widget") and main_window._matching_message_widget:
+            widget = main_window._matching_message_widget.pop(0)
+            if widget:
+                widget.deleteLater()
+        
+        if response.get("success") and response.get("matched"):
+            # 匹配成功
+            success_message = "✅ 已为您匹配到在线客服，客服正在接入，请稍候..."
+            append_chat_message(main_window, success_message, from_self=False, is_html=False, streaming=False)
+            
+            # 设置已连接状态
+            main_window._human_service_connected = True
+            main_window._matched_agent_id = response.get("agent_id")
+            
+            # 启动轮询检查客服消息
+            start_polling_agent_messages(main_window, session_id, token)
+        else:
+            # 匹配失败，加入等待队列
+            wait_message = response.get("message", "暂无在线客服，您的请求已加入等待队列，客服接入后会主动联系您。")
+            append_chat_message(
+                main_window,
+                wait_message,
+                from_self=False,
+                is_html=False,
+                streaming=False
+            )
+    except Exception as e:
+        # API调用失败
+        if hasattr(main_window, "_matching_message_widget") and main_window._matching_message_widget:
+            widget = main_window._matching_message_widget.pop(0)
+            if widget:
+                widget.deleteLater()
+        
+        append_chat_message(
+            main_window,
+            "匹配客服时发生错误，请稍后重试。",
+            from_self=False,
+            is_html=False,
+            streaming=False
+        )
+    
+    # 重置匹配状态
+    main_window._matching_human_service = False
+
+
+def start_polling_agent_messages(main_window: "MainWindow", session_id: str, token: str):
+    """启动HTTP轮询，定时获取客服消息"""
+    # 记录已显示的消息ID，避免重复显示
+    if not hasattr(main_window, "_displayed_message_ids"):
+        main_window._displayed_message_ids = set()
+    # 进入人工客服通道，提前标记，避免文件/图片误走机器人
+    main_window._human_service_connected = True
+    set_chat_mode_indicator(main_window, human=True)
+
+    # 停止之前的轮询定时器（如果存在）
+    try:
+        if hasattr(main_window, "_agent_poll_timer") and main_window._agent_poll_timer:
+            main_window._agent_poll_timer.stop()
+            main_window._agent_poll_timer.deleteLater()
+    except Exception:
+        pass
+
+    def poll_http_messages():
+        """轮询HTTP接口获取新消息"""
+        try:
+            from client.api_client import get_chat_messages
+            resp = get_chat_messages(session_id, main_window.user_id, token)
+            if not resp.get("success"):
+                return
+            
+            for msg in resp.get("messages", []):
+                msg_id = str(msg.get("id", "") or "")
+                if msg_id and msg_id in main_window._displayed_message_ids:
+                    continue
+                if msg_id:
+                    main_window._displayed_message_ids.add(msg_id)
+                
+                msg_from = msg.get("from", "user")
+                msg_text = msg.get("text", "")
+                msg_type = msg.get("message_type", "text")
+                
+                # 只处理来自客服的消息（不是自己发的）
+                if msg_from == "user":
+                    continue
+
+                def append_main():
+                    # 标记已连接人工客服
+                    main_window._human_service_connected = True
+                    set_chat_mode_indicator(main_window, human=True)
+
+                    # 如果是欢迎/接入提示语，额外给一条"已连接客服"提示
+                    if "您好，我是客服" in msg_text or "已连接" in msg_text:
+                        append_chat_message(
+                            main_window,
+                            "✅ 已连接客服，可以开始对话了！",
+                            from_self=False,
+                            is_html=False,
+                            streaming=False
+                        )
+
+                    # 获取头像信息
+                    avatar_base64 = msg.get("avatar")
+
+                    # 按消息类型展示
+                    if msg_type == "image":
+                        pixmap = None
+                        try:
+                            if isinstance(msg_text, str) and msg_text.startswith("data:image"):
+                                b64_part = msg_text.split(",", 1)[1] if "," in msg_text else ""
+                                raw = base64.b64decode(b64_part)
+                                image = QImage.fromData(raw)
+                                if not image.isNull():
+                                    pixmap = QPixmap.fromImage(image)
+                                    if pixmap.width() > 360:
+                                        pixmap = pixmap.scaledToWidth(
+                                            360, Qt.TransformationMode.SmoothTransformation
+                                        )
+                        except Exception:
+                            pixmap = None
+
+                        if pixmap:
+                            append_image_message(main_window, pixmap, from_self=False)
+                        else:
+                            append_chat_message(
+                                main_window,
+                                "[图片] 加载失败",
+                                from_self=False,
+                                is_html=False,
+                                streaming=False,
+                                avatar_base64=avatar_base64
+                            )
+                    elif msg_type == "file":
+                        placeholder = msg_text or "[文件]"
+                        append_chat_message(
+                            main_window,
+                            placeholder,
+                            from_self=False,
+                            is_html=False,
+                            streaming=False,
+                            avatar_base64=avatar_base64
+                        )
+                    else:
+                        append_chat_message(
+                            main_window,
+                            msg_text,
+                            from_self=False,
+                            is_html=False,
+                            streaming=False,
+                            avatar_base64=avatar_base64
+                        )
+                
+                QTimer.singleShot(0, append_main)
+        except Exception:
+            # 避免轮询异常影响其他功能
+            pass
+
+    # 立即执行一次轮询，获取历史消息
+    poll_http_messages()
+    
+    # 启动定时轮询（每1秒轮询一次）
+    poll_timer = QTimer(main_window)
+    poll_timer.timeout.connect(poll_http_messages)
+    poll_timer.start(1000)  # 1秒一次
+    main_window._agent_poll_timer = poll_timer
 
 
 def show_scrollbar_handle(scroll_area: QScrollArea):
@@ -755,23 +1338,81 @@ def send_image(main_window: "MainWindow"):
     
     scaled = pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
     append_image_message(main_window, scaled, from_self=True)
-    
-    reply = main_window.keyword_matcher.generate_reply("图片", add_greeting=True)
-    delay = random.randint(500, 1500)
-    
-    def send_reply_and_enable():
-        append_support_message(main_window, reply)
-        # 恢复按钮和输入框状态
-        main_window.chat_input.setEnabled(True)
-        if hasattr(main_window, 'chat_send_button'):
-            main_window.chat_send_button.setEnabled(True)
-            if original_text:
-                main_window.chat_send_button.setText(original_text)
-            main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        # 延迟聚焦，确保 UI 更新完成后再聚焦
-        QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
-    
-    QTimer.singleShot(delay, send_reply_and_enable)
+
+    # 如果已连接人工客服，走HTTP接口发送图片
+    if getattr(main_window, "_human_service_connected", False) and getattr(main_window, "_chat_session_id", None):
+        from client.login.token_storage import read_token
+        from client.api_client import send_chat_message
+        
+        token = read_token()
+        session_id = getattr(main_window, "_chat_session_id", None)
+
+        # 将图片转为 data URL 发送给后端（后端 message_type=image）
+        try:
+            with open(file_path, "rb") as f:
+                b64 = base64.b64encode(f.read()).decode("utf-8")
+            data_url = f"data:image/png;base64,{b64}"
+        except Exception:
+            data_url = "[图片发送失败]"
+
+        def restore():
+            main_window.chat_input.setEnabled(True)
+            if hasattr(main_window, 'chat_send_button'):
+                main_window.chat_send_button.setEnabled(True)
+                if original_text:
+                    main_window.chat_send_button.setText(original_text)
+                main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+
+        # 使用QThread在后台线程执行HTTP请求，避免阻塞UI
+        from PyQt6.QtCore import QThread, pyqtSignal
+        
+        class SendImageThread(QThread):
+            finished = pyqtSignal(object)  # 发送完成信号，参数是响应结果
+            
+            def __init__(self, session_id, user_id, data_url, token):
+                super().__init__()
+                self.session_id = session_id
+                self.user_id = user_id
+                self.data_url = data_url
+                self.token = token
+                
+            def run(self):
+                try:
+                    resp = send_chat_message(self.session_id, self.user_id, self.data_url, self.token, message_type="image")
+                    self.finished.emit(resp)
+                except Exception as e:
+                    self.finished.emit(None)
+        
+        def handle_response(resp):
+            if not resp or not resp.get("success"):
+                append_chat_message(main_window, "图片发送失败，请稍后重试。", from_self=False)
+            restore()
+        
+        thread = SendImageThread(session_id, main_window.user_id, data_url, token)
+        thread.setParent(main_window)  # 设置父对象，确保生命周期管理
+        thread.finished.connect(handle_response)
+        thread.finished.connect(thread.deleteLater)  # 完成后自动删除
+        thread.start()
+        QTimer.singleShot(3000, restore)  # 3秒兜底
+    else:
+        # 未进入人工客服，仍使用机器人回复
+        reply = main_window.keyword_matcher.generate_reply("图片", add_greeting=True)
+        delay = random.randint(500, 1500)
+
+        def send_reply_and_enable():
+            append_support_message(main_window, reply)
+            # 恢复按钮和输入框状态
+            main_window.chat_input.setEnabled(True)
+            if hasattr(main_window, 'chat_send_button'):
+                main_window.chat_send_button.setEnabled(True)
+                if original_text:
+                    main_window.chat_send_button.setText(original_text)
+                main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+            # 延迟聚焦，确保 UI 更新完成后再聚焦
+            QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+
+        QTimer.singleShot(delay, send_reply_and_enable)
 
 
 def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: bool = True):
@@ -874,7 +1515,56 @@ def _handle_file_upload_result(main_window: "MainWindow", success: bool, filenam
             size_mb = size / (1024 * 1024)
             size_str = f"{size_mb:.1f} MB"
         append_file_message(main_window, filename, size_str)
-        
+
+        # 如已有人工客服会话，发送占位到客服，不触发机器人
+        if getattr(main_window, "_human_service_connected", False) and getattr(main_window, "_chat_session_id", None):
+            from client.login.token_storage import read_token
+            from client.api_client import send_chat_message
+            
+            token = read_token()
+            session_id = getattr(main_window, "_chat_session_id", None)
+            placeholder = f"[文件] {filename} ({size_str})"
+
+            def restore():
+                main_window.chat_input.setEnabled(True)
+                if hasattr(main_window, 'chat_send_button'):
+                    main_window.chat_send_button.setEnabled(True)
+                QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+
+            # 使用QThread在后台线程执行HTTP请求，避免阻塞UI
+            from PyQt6.QtCore import QThread, pyqtSignal
+            
+            class SendFileThread(QThread):
+                finished = pyqtSignal(object)  # 发送完成信号，参数是响应结果
+                
+                def __init__(self, session_id, user_id, placeholder, token):
+                    super().__init__()
+                    self.session_id = session_id
+                    self.user_id = user_id
+                    self.placeholder = placeholder
+                    self.token = token
+                    
+                def run(self):
+                    try:
+                        resp = send_chat_message(self.session_id, self.user_id, self.placeholder, self.token, message_type="file")
+                        self.finished.emit(resp)
+                    except Exception as e:
+                        self.finished.emit(None)
+
+            def handle_response(resp):
+                if not resp or not resp.get("success"):
+                    append_chat_message(main_window, "文件发送提示失败，请稍后重试。", from_self=False)
+                restore()
+
+            thread = SendFileThread(session_id, main_window.user_id, placeholder, token)
+            thread.setParent(main_window)  # 设置父对象，确保生命周期管理
+            thread.finished.connect(handle_response)
+            thread.finished.connect(thread.deleteLater)  # 完成后自动删除
+            thread.start()
+            QTimer.singleShot(3000, restore)  # 3秒兜底
+            return
+
+        # 无人工客服时仍使用机器人
         reply = main_window.keyword_matcher.generate_reply("文件", add_greeting=True)
         delay = random.randint(500, 1500)
         
@@ -974,22 +1664,74 @@ def send_file(main_window: "MainWindow"):
         size_str = f"{size_kb:.1f} KB"
         append_file_message(main_window, filename, size_str)
 
-        reply = main_window.keyword_matcher.generate_reply("文件", add_greeting=True)
-        delay = random.randint(500, 1500)
-        
-        def send_reply_and_enable():
-            append_support_message(main_window, reply)
-            # 恢复按钮和输入框状态
-            main_window.chat_input.setEnabled(True)
-            if hasattr(main_window, 'chat_send_button'):
-                main_window.chat_send_button.setEnabled(True)
-                if original_text:
-                    main_window.chat_send_button.setText(original_text)
-                main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            # 延迟聚焦，确保 UI 更新完成后再聚焦
-            QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
-        
-        QTimer.singleShot(delay, send_reply_and_enable)
+        # 如果已进入人工客服，发送占位文本给客服，不触发机器人
+        if getattr(main_window, "_human_service_connected", False) and getattr(main_window, "_chat_session_id", None):
+            from client.login.token_storage import read_token
+            from client.api_client import send_chat_message
+            
+            token = read_token()
+            session_id = getattr(main_window, "_chat_session_id", None)
+
+            placeholder = f"[文件] {filename} ({size_str})"
+
+            def restore():
+                main_window.chat_input.setEnabled(True)
+                if hasattr(main_window, 'chat_send_button'):
+                    main_window.chat_send_button.setEnabled(True)
+                    if original_text:
+                        main_window.chat_send_button.setText(original_text)
+                    main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+
+            # 使用QThread在后台线程执行HTTP请求，避免阻塞UI
+            from PyQt6.QtCore import QThread, pyqtSignal
+            
+            class SendFileThread(QThread):
+                finished = pyqtSignal(object)  # 发送完成信号，参数是响应结果
+                
+                def __init__(self, session_id, user_id, placeholder, token):
+                    super().__init__()
+                    self.session_id = session_id
+                    self.user_id = user_id
+                    self.placeholder = placeholder
+                    self.token = token
+                    
+                def run(self):
+                    try:
+                        resp = send_chat_message(self.session_id, self.user_id, self.placeholder, self.token, message_type="file")
+                        self.finished.emit(resp)
+                    except Exception as e:
+                        self.finished.emit(None)
+
+            def handle_response(resp):
+                if not resp or not resp.get("success"):
+                    append_chat_message(main_window, "文件发送提示失败，请稍后重试。", from_self=False)
+                restore()
+
+            thread = SendFileThread(session_id, main_window.user_id, placeholder, token)
+            thread.setParent(main_window)  # 设置父对象，确保生命周期管理
+            thread.finished.connect(handle_response)
+            thread.finished.connect(thread.deleteLater)  # 完成后自动删除
+            thread.start()
+            QTimer.singleShot(3000, restore)  # 3秒兜底
+        else:
+            # 未进入人工客服，使用机器人回复
+            reply = main_window.keyword_matcher.generate_reply("文件", add_greeting=True)
+            delay = random.randint(500, 1500)
+            
+            def send_reply_and_enable():
+                append_support_message(main_window, reply)
+                # 恢复按钮和输入框状态
+                main_window.chat_input.setEnabled(True)
+                if hasattr(main_window, 'chat_send_button'):
+                    main_window.chat_send_button.setEnabled(True)
+                    if original_text:
+                        main_window.chat_send_button.setText(original_text)
+                    main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                # 延迟聚焦，确保 UI 更新完成后再聚焦
+                QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+            
+            QTimer.singleShot(delay, send_reply_and_enable)
 
 
 def append_file_message(main_window: "MainWindow", filename: str, size_str: str, from_self: bool = True):

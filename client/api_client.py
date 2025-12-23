@@ -152,3 +152,27 @@ def change_password(token: str, old_password: str, new_password: str) -> Dict[st
         {"token": token, "old_password": old_password, "new_password": new_password},
     )
 
+
+def match_human_service(user_id: int, session_id: str, token: str) -> Dict[str, Any]:
+    """匹配人工客服"""
+    return _post(
+        "/api/customer_service/match_agent",
+        {"user_id": user_id, "session_id": session_id, "token": token},
+    )
+
+
+def get_chat_messages(session_id: str, user_id: int, token: str) -> Dict[str, Any]:
+    """获取会话消息（用户端调用）"""
+    return _post(
+        "/api/user/chat_messages",
+        {"session_id": session_id, "user_id": user_id, "token": token},
+    )
+
+
+def send_chat_message(session_id: str, user_id: int, message: str, token: str, message_type: str = "text") -> Dict[str, Any]:
+    """发送聊天消息（用户端调用）"""
+    return _post(
+        "/api/user/send_message",
+        {"session_id": session_id, "user_id": user_id, "message": message, "token": token, "message_type": message_type},
+    )
+

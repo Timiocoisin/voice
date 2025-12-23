@@ -73,7 +73,7 @@ def _create_chat_header(main_window: "MainWindow") -> QWidget:
     header_layout.setContentsMargins(20, 14, 20, 14)
     header_layout.setSpacing(10)
 
-    title_label = QLabel("声音序章")
+    title_label = QLabel("云汐幻声")
     title_label.setStyleSheet("""
         QLabel {
             color: #ffffff;
