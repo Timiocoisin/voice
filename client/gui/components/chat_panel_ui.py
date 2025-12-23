@@ -27,7 +27,7 @@ def create_chat_panel_ui(main_window: "MainWindow", parent=None):
     container.setObjectName("chatContainer")
     container.setStyleSheet("""
         #chatContainer {
-            background-color: #ffffff;
+            background-color: rgba(255, 255, 255, 0.85);
             border-radius: 16px;
             border: 1px solid rgba(226, 232, 240, 200);
         }

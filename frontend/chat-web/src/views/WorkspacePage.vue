@@ -1110,6 +1110,8 @@ const stopMessagePolling = () => {
   grid-template-columns: 280px minmax(0, 1fr) 280px;
   background: rgba(255, 255, 255, 0.01);
   backdrop-filter: blur(20px);
+  overflow: hidden; /* 防止整个页面滚动 */
+  min-height: 0; /* 允许flex子元素缩小 */
 }
 
 .sidebar {
@@ -1118,6 +1120,8 @@ const stopMessagePolling = () => {
   border-right: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
+  overflow: hidden; /* 防止侧边栏本身滚动 */
+  min-height: 0; /* 允许flex子元素缩小 */
 }
 
 .sidebar.detail {
@@ -1125,6 +1129,8 @@ const stopMessagePolling = () => {
   border-left: 1px solid rgba(255, 255, 255, 0.25);
   background: rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(20px);
+  overflow: hidden; /* 防止侧边栏本身滚动 */
+  min-height: 0; /* 允许flex子元素缩小 */
 }
 
 .sidebar-header {
@@ -1219,7 +1225,40 @@ const stopMessagePolling = () => {
   margin: 0;
   padding: 10px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
+  min-height: 0; /* 允许flex子元素缩小，使overflow生效 */
+  /* 无感滚动条样式 - Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent; /* 默认透明 */
+}
+
+/* 鼠标悬停时显示滚动条 */
+.session-list:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* WebKit浏览器（Chrome/Safari/Edge）滚动条样式 */
+.session-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.session-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.session-list::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.session-list:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.session-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .session-item {
@@ -1317,6 +1356,8 @@ const stopMessagePolling = () => {
   border-inline: 1px solid rgba(255, 255, 255, 0.2);
   background: rgba(255, 255, 255, 0.006);
   backdrop-filter: blur(24px);
+  overflow: hidden; /* 防止聊天主区域本身滚动 */
+  min-height: 0; /* 允许flex子元素缩小 */
 }
 
 .chat-header {
@@ -1345,11 +1386,44 @@ const stopMessagePolling = () => {
   flex: 1;
   padding: 16px 20px 12px;
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 12px;
   background: rgba(255, 255, 255, 0.0035);
   backdrop-filter: blur(22px);
+  min-height: 0; /* 允许flex子元素缩小，使overflow生效 */
+  /* 无感滚动条样式 - Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent; /* 默认透明 */
+}
+
+/* 鼠标悬停时显示滚动条 */
+.chat-messages:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* WebKit浏览器（Chrome/Safari/Edge）滚动条样式 */
+.chat-messages::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-messages::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-messages::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.chat-messages:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.chat-messages::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .msg-row {
@@ -1464,6 +1538,40 @@ const stopMessagePolling = () => {
   color: #0f172a;
   outline: none;
   transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+  overflow-y: auto;
+  /* 无感滚动条样式 - Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent; /* 默认透明 */
+}
+
+/* 鼠标悬停或聚焦时显示滚动条 */
+.chat-input:hover,
+.chat-input:focus {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* WebKit浏览器（Chrome/Safari/Edge）滚动条样式 */
+.chat-input::-webkit-scrollbar {
+  width: 4px;
+}
+
+.chat-input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-input::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.chat-input:hover::-webkit-scrollbar-thumb,
+.chat-input:focus::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.chat-input::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .chat-input::placeholder {
@@ -1577,10 +1685,43 @@ const stopMessagePolling = () => {
   margin: 0;
   padding: 8px 12px 14px;
   overflow-y: auto;
+  overflow-x: hidden;
   flex: 1;
   display: flex;
   flex-direction: column;
   gap: 10px;
+  min-height: 0; /* 允许flex子元素缩小，使overflow生效 */
+  /* 无感滚动条样式 - Firefox */
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent; /* 默认透明 */
+}
+
+/* 鼠标悬停时显示滚动条 */
+.quick-reply-list:hover {
+  scrollbar-color: rgba(0, 0, 0, 0.15) transparent;
+}
+
+/* WebKit浏览器（Chrome/Safari/Edge）滚动条样式 */
+.quick-reply-list::-webkit-scrollbar {
+  width: 4px;
+}
+
+.quick-reply-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.quick-reply-list::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.quick-reply-list:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.15);
+}
+
+.quick-reply-list::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.25);
 }
 
 .quick-reply-item {

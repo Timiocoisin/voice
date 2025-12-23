@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING, List, Tuple, Optional
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QVBoxLayout, QHBoxLayout, QLabel,
     QScrollArea, QPushButton, QMenu, QWidgetAction, QGridLayout,
-    QDialog, QFileDialog, QGraphicsDropShadowEffect
+    QDialog, QFileDialog, QGraphicsDropShadowEffect, QGraphicsOpacityEffect
 )
 from PyQt6.QtCore import Qt, QPoint, QTimer, QRectF
 from PyQt6.QtGui import (
@@ -42,17 +42,28 @@ def open_customer_service_chat(main_window: "MainWindow", event):
     # 清除未读消息计数
     clear_unread_count(main_window)
 
+    # 如果之前是关闭状态（非最小化），确保彻底清空旧记录
+    if getattr(main_window, "_chat_closed", False):
+        clear_all_chat_messages(main_window)
+        clear_unread_count(main_window)
+        main_window._chat_closed = False
+
     # 检查聊天面板是否已经在布局中
     chat_panel_in_layout = main_window.main_content_layout.indexOf(main_window.chat_panel) != -1
     
     # 如果聊天面板已经在布局中，直接显示即可
     if chat_panel_in_layout:
         main_window.chat_panel.setVisible(True)
+        main_window._chat_minimized = False
         # 确保中间和右侧是隐藏的
         if main_window.merged_section2:
             main_window.merged_section2.hide()
         if main_window.right_column_widget:
             main_window.right_column_widget.hide()
+        # 清除未读消息计数（因为已经打开聊天面板）
+        clear_unread_count(main_window)
+        # 延迟滚动到底部，确保UI完全渲染后再滚动
+        QTimer.singleShot(100, lambda: scroll_to_bottom(main_window))
         return
 
     # 如果聊天面板不在布局中，需要重新添加到布局
@@ -78,6 +89,23 @@ def open_customer_service_chat(main_window: "MainWindow", event):
     main_window.chat_panel.setVisible(True)
     main_window._chat_minimized = False
     main_window._chat_panel_added = True
+    
+    # 检查是否是第一次打开聊天面板（聊天记录为空），如果是则显示欢迎消息
+    if hasattr(main_window, "chat_layout"):
+        # 检查聊天布局中是否已有消息
+        has_messages = main_window.chat_layout.count() > 0
+        if not has_messages:
+            # 延迟一小段时间，等UI渲染完成后再显示欢迎消息
+            QTimer.singleShot(200, lambda: _show_welcome_message(main_window))
+        else:
+            # 如果有消息，滚动到底部
+            QTimer.singleShot(100, lambda: scroll_to_bottom(main_window))
+
+
+def _show_welcome_message(main_window: "MainWindow"):
+    """显示欢迎消息（首次进入聊天区域时）"""
+    welcome_message = "欢迎来到云汐幻声，请问有什么可以帮到你的嘛？"
+    append_support_message(main_window, welcome_message)
 
 
 def clear_unread_count(main_window: "MainWindow"):
@@ -155,7 +183,7 @@ def close_chat_panel(main_window: "MainWindow"):
     if hasattr(main_window, "chat_panel") and main_window.chat_panel:
         main_window.chat_panel.setVisible(False)
         
-        # 停止消息轮询
+        # 停止消息轮询（机器人消息轮询）
         if hasattr(main_window, "_message_poll_timer") and main_window._message_poll_timer:
             try:
                 main_window._message_poll_timer.stop()
@@ -165,6 +193,16 @@ def close_chat_panel(main_window: "MainWindow"):
                 pass
             finally:
                 main_window._message_poll_timer = None
+
+        # 停止人工客服消息轮询
+        if hasattr(main_window, "_agent_poll_timer") and main_window._agent_poll_timer:
+            try:
+                main_window._agent_poll_timer.stop()
+                main_window._agent_poll_timer.deleteLater()
+            except RuntimeError:
+                pass
+            finally:
+                main_window._agent_poll_timer = None
         
         # 清空聊天记录（仅清除UI，不清除数据库）
         if hasattr(main_window, "chat_layout"):
@@ -180,6 +218,7 @@ def close_chat_panel(main_window: "MainWindow"):
         
         # 重置状态
         main_window._chat_minimized = False
+        main_window._chat_closed = True
         main_window._human_service_connected = False
         main_window._matched_agent_id = None
         if hasattr(main_window, "_chat_session_id"):
@@ -343,6 +382,95 @@ def handle_chat_send(main_window: "MainWindow"):
         QTimer.singleShot(delay, send_reply_and_enable)
 
 
+def scroll_to_bottom(main_window: "MainWindow"):
+    """滚动聊天区域到底部，确保最新消息可见"""
+    if not hasattr(main_window, "chat_scroll_area"):
+        return
+    
+    def do_scroll():
+        if not hasattr(main_window, "chat_scroll_area"):
+            return
+        bar = main_window.chat_scroll_area.verticalScrollBar()
+        if bar:
+            max_value = bar.maximum()
+            bar.setValue(max_value)
+    
+    # 立即尝试滚动一次
+    do_scroll()
+    # 使用多个延迟确保在不同时机都能滚动到底部（UI更新、布局调整等）
+    QTimer.singleShot(10, do_scroll)
+    QTimer.singleShot(50, do_scroll)
+    QTimer.singleShot(100, do_scroll)
+
+
+def clear_all_chat_messages(main_window: "MainWindow"):
+    """清除聊天区域的所有消息"""
+    if not hasattr(main_window, "chat_layout"):
+        return
+    
+    # 清空聊天记录（仅清除UI，不清除数据库）
+    while main_window.chat_layout.count():
+        item = main_window.chat_layout.takeAt(0)
+        widget = item.widget()
+        if widget:
+            widget.deleteLater()
+    
+    # 清除已显示消息ID记录
+    if hasattr(main_window, "_displayed_message_ids"):
+        main_window._displayed_message_ids.clear()
+
+
+def add_connected_separator(main_window: "MainWindow"):
+    """在聊天区域顶部添加已连接客服的分隔线提示"""
+    if not hasattr(main_window, "chat_layout"):
+        return
+    
+    separator_widget = QWidget()
+    separator_layout = QVBoxLayout(separator_widget)
+    separator_layout.setContentsMargins(0, 12, 0, 12)
+    separator_layout.setSpacing(0)
+    
+    # 创建分隔线和文字
+    separator_container = QWidget()
+    separator_container_layout = QHBoxLayout(separator_container)
+    separator_container_layout.setContentsMargins(0, 0, 0, 0)
+    separator_container_layout.setSpacing(8)
+    
+    # 左侧线条
+    left_line = QLabel()
+    left_line.setFixedHeight(1)
+    left_line.setStyleSheet("background-color: #d1d5db;")
+    left_line.setSizePolicy(left_line.sizePolicy().horizontalPolicy(), left_line.sizePolicy().verticalPolicy())
+    
+    # 中间文字
+    text_label = QLabel("已连接客服，可以开始对话")
+    text_label.setStyleSheet("""
+        QLabel {
+            color: #9ca3af;
+            font-size: 11px;
+            font-family: "Microsoft YaHei", "SimHei", "Arial", sans-serif;
+            padding: 0 8px;
+            background-color: transparent;
+        }
+    """)
+    text_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+    
+    # 右侧线条
+    right_line = QLabel()
+    right_line.setFixedHeight(1)
+    right_line.setStyleSheet("background-color: #d1d5db;")
+    right_line.setSizePolicy(right_line.sizePolicy().horizontalPolicy(), right_line.sizePolicy().verticalPolicy())
+    
+    separator_container_layout.addWidget(left_line, stretch=1)
+    separator_container_layout.addWidget(text_label, stretch=0)
+    separator_container_layout.addWidget(right_line, stretch=1)
+    
+    separator_layout.addWidget(separator_container)
+    
+    # 插入到布局顶部（索引0）
+    main_window.chat_layout.insertWidget(0, separator_widget)
+
+
 def append_chat_message(
     main_window: "MainWindow",
     content: str,
@@ -462,15 +590,21 @@ def append_chat_message(
     if streaming and not from_self and not is_html and isinstance(bubble_label, ChatBubble):
         start_streaming_text(main_window, bubble_label, content)
 
+    # 如果是客服消息且聊天面板隐藏/最小化，增加未读消息计数
+    if not from_self:
+        if (hasattr(main_window, "chat_panel") and not main_window.chat_panel.isVisible()) or \
+           getattr(main_window, "_chat_minimized", False):
+            add_unread_count(main_window)
+
     # 滚动到底部
-    if hasattr(main_window, "chat_scroll_area"):
-        bar = main_window.chat_scroll_area.verticalScrollBar()
-        bar.setValue(bar.maximum())
+    scroll_to_bottom(main_window)
 
 
-def start_streaming_text(main_window: "MainWindow", bubble: ChatBubble, full_text: str, interval_ms: int = 30):
+def start_streaming_text(main_window: "MainWindow", bubble: ChatBubble, full_text: str, interval_ms: int = 30, on_finished=None):
     """让气泡中的文本以打字机形式逐字出现"""
     if not full_text:
+        if on_finished:
+            on_finished()
         return
 
     bubble.label.setText("")
@@ -483,14 +617,17 @@ def start_streaming_text(main_window: "MainWindow", bubble: ChatBubble, full_tex
         if i >= len(full_text):
             timer.stop()
             timer.deleteLater()
+            if on_finished:
+                on_finished()
             return
         i += 1
         state["i"] = i
-        bubble.label.setText(full_text[:i])
+        # 使用 ChatBubble 的格式化方法来处理换行
+        partial_text = full_text[:i]
+        formatted_text = bubble._format_text_with_line_breaks(partial_text)
+        bubble.label.setText(formatted_text)
 
-        if hasattr(main_window, "chat_scroll_area"):
-            bar = main_window.chat_scroll_area.verticalScrollBar()
-            bar.setValue(bar.maximum())
+        scroll_to_bottom(main_window)
 
     timer.timeout.connect(on_timeout)
     timer.start()
@@ -515,64 +652,132 @@ def append_human_service_request(main_window: "MainWindow"):
     if not hasattr(main_window, "chat_layout"):
         return
     
-    # 显示提示消息
+    # 显示提示消息（使用打字机效果）
     message_text = "这个问题我这边暂时没有查到详细说明呢，建议您直接联系人工客服处理哈～"
-    append_chat_message(main_window, message_text, from_self=False, is_html=False, streaming=False)
     
-    # 创建包含按钮的消息组件
+    # 先添加消息气泡（使用streaming=True实现打字机效果）
     message_widget = QWidget()
     v_layout = QVBoxLayout(message_widget)
-    v_layout.setContentsMargins(4, 8, 4, 8)
-    v_layout.setSpacing(8)
+    v_layout.setContentsMargins(4, 0, 4, 0)
+    v_layout.setSpacing(2)
     
-    # 按钮容器
-    button_container = QWidget()
-    button_layout = QHBoxLayout(button_container)
-    button_layout.setContentsMargins(0, 0, 0, 0)
-    button_layout.setSpacing(0)
+    # 气泡 + 头像 行
+    row = QHBoxLayout()
+    row.setContentsMargins(0, 0, 0, 0)
+    row.setSpacing(6)
     
-    # 创建"联系人工客服"按钮
-    connect_btn = QPushButton("📞 联系人工客服")
-    connect_btn.setFixedHeight(40)
-    connect_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-    connect_btn.setStyleSheet("""
-        QPushButton {
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #7c3aed, stop:1 #6d28d9);
-            color: #ffffff;
-            border: none;
-            border-radius: 20px;
-            font-family: "Microsoft YaHei", "SimHei", "Arial";
-            font-size: 14px;
-            font-weight: 600;
-            padding: 0 24px;
-        }
-        QPushButton:hover {
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #8b5cf6, stop:1 #7c3aed);
-        }
-        QPushButton:pressed {
-            background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
-                stop:0 #6d28d9, stop:1 #5b21b6);
-        }
-    """)
+    # 头像
+    avatar_label = QLabel()
+    avatar_label.setFixedSize(32, 32)
+    default_bytes = get_default_avatar()
+    if default_bytes:
+        pm = QPixmap()
+        if pm.loadFromData(default_bytes):
+            pm = pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
+                           Qt.TransformationMode.SmoothTransformation)
+            cropped = QPixmap(32, 32)
+            cropped.fill(Qt.GlobalColor.transparent)
+            p = QPainter(cropped)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            clip_path = QPainterPath()
+            clip_path.addEllipse(0, 0, 32, 32)
+            p.setClipPath(clip_path)
+            p.drawPixmap(0, 0, pm)
+            p.end()
+            avatar_label.setPixmap(cropped)
+    avatar_label.setStyleSheet("border-radius: 16px;")
     
-    # 连接按钮点击事件
-    connect_btn.clicked.connect(lambda: request_human_service(main_window))
+    bubble_label = ChatBubble(
+        message_text,
+        background=QColor("#ffffff"),
+        text_color=QColor("#111827"),
+        border_color=QColor("#e5e7eb"),
+        max_width=420,
+        align_right=False,
+        rich_text=False,
+    )
+    row.addWidget(avatar_label)
+    row.addWidget(bubble_label)
+    row.addStretch()
     
-    button_layout.addStretch()
-    button_layout.addWidget(connect_btn)
-    button_layout.addStretch()
-    
-    v_layout.addWidget(button_container)
-    
-    # 添加消息到聊天布局
+    v_layout.addLayout(row)
     main_window.chat_layout.addWidget(message_widget)
     
+    # 延迟显示按钮（等文字显示完成后再显示按钮，更有层次感）
+    def show_button():
+        # 创建包含按钮的消息组件
+        button_widget = QWidget()
+        button_v_layout = QVBoxLayout(button_widget)
+        button_v_layout.setContentsMargins(4, 12, 4, 8)
+        button_v_layout.setSpacing(0)
+        
+        # 按钮容器
+        button_container = QWidget()
+        button_layout = QHBoxLayout(button_container)
+        button_layout.setContentsMargins(0, 0, 0, 0)
+        button_layout.setSpacing(0)
+        
+        # 创建"联系人工客服"按钮（更美观的版本）
+        connect_btn = QPushButton("💬 联系人工客服")
+        connect_btn.setFixedHeight(52)
+        connect_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        
+        # 使用更现代、更美观的样式（带阴影效果和更柔和的渐变色）
+        connect_btn.setStyleSheet("""
+            QPushButton {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #6366f1, stop:0.5 #8b5cf6, stop:1 #a855f7);
+                color: #ffffff;
+                border: none;
+                border-radius: 26px;
+                font-family: "Microsoft YaHei", "SimHei", "Arial", sans-serif;
+                font-size: 15px;
+                font-weight: 600;
+                padding: 0 40px;
+                min-width: 220px;
+            }
+            QPushButton:hover {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #7c3aed, stop:0.5 #9333ea, stop:1 #a855f7);
+            }
+            QPushButton:pressed {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                    stop:0 #4f46e5, stop:0.5 #7c3aed, stop:1 #9333ea);
+            }
+        """)
+        
+        # 添加阴影效果（通过GraphicsDropShadowEffect）
+        shadow = QGraphicsDropShadowEffect(connect_btn)
+        shadow.setBlurRadius(12)
+        shadow.setOffset(0, 4)
+        shadow.setColor(QColor(99, 102, 241, 120))  # 半透明紫色阴影
+        connect_btn.setGraphicsEffect(shadow)
+        
+        # 连接按钮点击事件
+        connect_btn.clicked.connect(lambda: request_human_service(main_window))
+        
+        button_layout.addStretch()
+        button_layout.addWidget(connect_btn)
+        button_layout.addStretch()
+        
+        button_v_layout.addWidget(button_container)
+        
+        # 添加消息到聊天布局
+        main_window.chat_layout.addWidget(button_widget)
+        
+        # 滚动到底部
+        scroll_to_bottom(main_window)
+    
+    # 启动打字机效果，完成后显示按钮
+    # 计算文字显示完成的时间（每个字符约30ms延迟，interval_ms=30）
+    def on_streaming_finished():
+        # 延迟200ms再显示按钮，让用户看到完整的文字
+        QTimer.singleShot(200, show_button)
+    
+    start_streaming_text(main_window, bubble_label, message_text, interval_ms=30, on_finished=on_streaming_finished)
+    
     # 滚动到底部
-    if hasattr(main_window, "chat_scroll_area"):
-        bar = main_window.chat_scroll_area.verticalScrollBar()
-        bar.setValue(bar.maximum())
+    scroll_to_bottom(main_window)
 
 
 def set_chat_mode_indicator(main_window: "MainWindow", human: bool):
@@ -631,35 +836,14 @@ def request_human_service(main_window: "MainWindow"):
 
 
 def append_matching_message(main_window: "MainWindow"):
-    """显示正在匹配的消息"""
+    """显示正在匹配的消息（简化版）"""
     if not hasattr(main_window, "chat_layout"):
         return
     
     message_widget = QWidget()
     v_layout = QVBoxLayout(message_widget)
     v_layout.setContentsMargins(4, 0, 4, 0)
-    v_layout.setSpacing(2)
-    
-    # 匹配中的提示
-    matching_text = "正在为您匹配在线客服，请稍候..."
-    bubble_label = ChatBubble(
-        matching_text,
-        background=QColor("#fef3c7"),
-        text_color=QColor("#92400e"),
-        border_color=QColor("#fcd34d"),
-        max_width=420,
-        align_right=False,
-        rich_text=False,
-    )
-    
-    # 添加加载动画效果
-    loading_label = QLabel("⏳")
-    loading_label.setStyleSheet("""
-        QLabel {
-            font-size: 16px;
-            padding: 4px;
-        }
-    """)
+    v_layout.setSpacing(0)
     
     row = QHBoxLayout()
     row.setContentsMargins(0, 0, 0, 0)
@@ -672,11 +856,31 @@ def append_matching_message(main_window: "MainWindow"):
     if default_bytes:
         pm = QPixmap()
         if pm.loadFromData(default_bytes):
-            avatar_label.setPixmap(
-                pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
-                          Qt.TransformationMode.SmoothTransformation)
-            )
+            pm = pm.scaled(32, 32, Qt.AspectRatioMode.KeepAspectRatio,
+                           Qt.TransformationMode.SmoothTransformation)
+            cropped = QPixmap(32, 32)
+            cropped.fill(Qt.GlobalColor.transparent)
+            p = QPainter(cropped)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            clip_path = QPainterPath()
+            clip_path.addEllipse(0, 0, 32, 32)
+            p.setClipPath(clip_path)
+            p.drawPixmap(0, 0, pm)
+            p.end()
+            avatar_label.setPixmap(cropped)
     avatar_label.setStyleSheet("border-radius: 16px;")
+    
+    # 简化的匹配消息 - 更短更简洁
+    matching_text = "🔍 正在匹配客服"
+    bubble_label = ChatBubble(
+        matching_text,
+        background=QColor("#eff6ff"),  # 非常浅的蓝色背景
+        text_color=QColor("#1e40af"),  # 深蓝色文字
+        border_color=QColor("#93c5fd"),  # 浅蓝色边框
+        max_width=280,  # 减小最大宽度，让气泡更短
+        align_right=False,
+        rich_text=False,
+    )
     
     row.addWidget(avatar_label)
     row.addWidget(bubble_label)
@@ -684,19 +888,10 @@ def append_matching_message(main_window: "MainWindow"):
     
     v_layout.addLayout(row)
     
-    # 添加加载指示器
-    loading_row = QHBoxLayout()
-    loading_row.setContentsMargins(40, 4, 0, 4)
-    loading_row.addWidget(loading_label)
-    loading_row.addStretch()
-    v_layout.addLayout(loading_row)
-    
     main_window.chat_layout.addWidget(message_widget)
     
     # 滚动到底部
-    if hasattr(main_window, "chat_scroll_area"):
-        bar = main_window.chat_scroll_area.verticalScrollBar()
-        bar.setValue(bar.maximum())
+    scroll_to_bottom(main_window)
     
     # 保存消息组件引用，以便后续更新
     if not hasattr(main_window, "_matching_message_widget"):
@@ -740,9 +935,11 @@ def match_human_service(main_window: "MainWindow"):
                 widget.deleteLater()
         
         if response.get("success") and response.get("matched"):
-            # 匹配成功
-            success_message = "✅ 已为您匹配到在线客服，客服正在接入，请稍候..."
-            append_chat_message(main_window, success_message, from_self=False, is_html=False, streaming=False)
+            # 匹配成功 - 清除所有对话
+            clear_all_chat_messages(main_window)
+            
+            # 添加已连接客服的分隔线提示
+            add_connected_separator(main_window)
             
             # 设置已连接状态
             main_window._human_service_connected = True
@@ -1446,6 +1643,12 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
     row.setSpacing(6)
 
     img_label = QLabel()
+    
+    # 如果是客服消息且聊天面板隐藏/最小化，增加未读消息计数
+    if not from_self:
+        if (hasattr(main_window, "chat_panel") and not main_window.chat_panel.isVisible()) or \
+           getattr(main_window, "_chat_minimized", False):
+            add_unread_count(main_window)
     img_label.setFixedSize(pixmap.width(), pixmap.height())
     rounded_pix = QPixmap(pixmap.size())
     rounded_pix.fill(Qt.GlobalColor.transparent)
@@ -1499,9 +1702,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
     v_layout.addLayout(row)
     main_window.chat_layout.addWidget(message_widget)
 
-    if hasattr(main_window, "chat_scroll_area"):
-        bar = main_window.chat_scroll_area.verticalScrollBar()
-        bar.setValue(bar.maximum())
+    scroll_to_bottom(main_window)
 
 
 def _handle_file_upload_result(main_window: "MainWindow", success: bool, filename: str, size: int, error: str = ""):
@@ -1877,6 +2078,4 @@ def append_file_message(main_window: "MainWindow", filename: str, size_str: str,
     v_layout.addLayout(row)
     main_window.chat_layout.addWidget(message_widget)
 
-    if hasattr(main_window, "chat_scroll_area"):
-        bar = main_window.chat_scroll_area.verticalScrollBar()
-        bar.setValue(bar.maximum())
+    scroll_to_bottom(main_window)

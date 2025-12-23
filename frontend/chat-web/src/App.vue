@@ -52,12 +52,13 @@ body {
 }
 
 .app-shell {
-  min-height: 100vh;
+  height: 100vh; /* 改为固定高度，防止页面滚动 */
   display: flex;
   align-items: stretch;
   justify-content: center;
   padding: 16px 24px;
   box-sizing: border-box;
+  overflow: hidden; /* 防止整个应用滚动 */
 }
 
 button {
