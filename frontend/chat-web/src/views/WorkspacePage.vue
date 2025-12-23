@@ -6,9 +6,33 @@
         <span class="brand-name">变声器客服工作台</span>
       </div>
       <div class="header-actions">
-        <span class="agent-name">客服：小音</span>
-        <span class="status-dot online"></span>
-        <span class="status-text">在线</span>
+        <span class="agent-name">客服：{{ currentUser?.username || '未登录' }}</span>
+        <div class="status-container" @click.stop="toggleStatusMenu">
+          <div class="status-indicator">
+            <span 
+              class="status-dot breathing" 
+              :class="currentStatus.type"
+              :style="getStatusStyle(currentStatus)"
+            ></span>
+            <span class="status-text">{{ currentStatus.label }}</span>
+            <svg class="status-arrow" :class="{ open: showStatusMenu }" width="12" height="12" viewBox="0 0 12 12" fill="none">
+              <path d="M3 4.5L6 7.5L9 4.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </div>
+          <div v-if="showStatusMenu" class="status-menu">
+            <div
+              v-for="status in statusOptions"
+              :key="status.type"
+              class="status-menu-item"
+              :class="{ active: currentStatus.type === status.type }"
+              @click.stop="changeStatus(status)"
+            >
+              <span class="status-menu-dot" :class="status.type"></span>
+              <span>{{ status.label }}</span>
+            </div>
+          </div>
+        </div>
+        <button class="logout-btn" @click="handleLogout">退出</button>
       </div>
     </header>
 
@@ -150,7 +174,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from 'vue';
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { useRouter } from 'vue-router';
+import { customerServiceApi } from '@/api/client';
+
+const router = useRouter();
 
 interface Session {
   id: string;
@@ -178,43 +206,101 @@ interface QuickReply {
   content: string;
 }
 
-const sessions = ref<Session[]>([
-  {
-    id: 's1',
-    userName: '用户-1234',
-    isVip: true,
-    category: '没有声音',
-    lastMessage: '游戏里没有声音怎么办？',
-    lastTime: '刚刚',
-    duration: '03:25',
-    unread: 2
-  },
-  {
-    id: 's2',
-    userName: '用户-5678',
-    isVip: false,
-    category: '安装失败',
-    lastMessage: '提示我驱动安装失败',
-    lastTime: '5 分钟前',
-    duration: '12:10',
-    unread: 0
-  }
-]);
+const currentUser = ref<any>(null);
+const token = ref<string>('');
+const sessions = ref<Session[]>([]);
+const messages = ref<ChatMessage[]>([]);
+const loading = ref(false);
 
-const messages = ref<ChatMessage[]>([
+// 状态管理
+type StatusType = 'online' | 'offline' | 'away' | 'busy';
+
+interface StatusOption {
+  type: StatusType;
+  label: string;
+  color: string;
+  shadowColor: string;
+  animationDuration: string;
+}
+
+const statusOptions: StatusOption[] = [
   {
-    id: 'm1',
-    from: 'user',
-    text: '客服你好，我这边游戏里完全没有声音。',
-    time: '10:01'
+    type: 'online',
+    label: '在线',
+    color: '#27c346',
+    shadowColor: 'rgba(39, 195, 70, 0.4)',
+    animationDuration: '2s'
   },
   {
-    id: 'm2',
-    from: 'agent',
-    text: '您好，请问在系统里播放音乐时有声音吗？',
-    time: '10:02'
+    type: 'offline',
+    label: '离线',
+    color: '#9ca3af',
+    shadowColor: 'rgba(156, 163, 175, 0.3)',
+    animationDuration: '3s'
+  },
+  {
+    type: 'away',
+    label: '有事',
+    color: '#f59e0b',
+    shadowColor: 'rgba(245, 158, 11, 0.4)',
+    animationDuration: '2.5s'
+  },
+  {
+    type: 'busy',
+    label: '繁忙',
+    color: '#ef4444',
+    shadowColor: 'rgba(239, 68, 68, 0.4)',
+    animationDuration: '1.5s'
   }
-]);
+];
+
+const currentStatus = ref<StatusOption>(statusOptions[0]);
+const showStatusMenu = ref(false);
+
+// 从 localStorage 加载保存的状态
+const loadSavedStatus = () => {
+  const saved = localStorage.getItem('agent_status');
+  if (saved) {
+    const status = statusOptions.find(s => s.type === saved);
+    if (status) {
+      currentStatus.value = status;
+    }
+  }
+};
+
+// 保存状态到 localStorage
+const saveStatus = (status: StatusType) => {
+  localStorage.setItem('agent_status', status);
+};
+
+// 切换状态菜单
+const toggleStatusMenu = () => {
+  showStatusMenu.value = !showStatusMenu.value;
+};
+
+// 切换状态
+const changeStatus = (status: StatusOption) => {
+  currentStatus.value = status;
+  saveStatus(status.type);
+  showStatusMenu.value = false;
+};
+
+// 获取状态样式
+const getStatusStyle = (status: StatusOption) => {
+  return {
+    '--status-color': status.color,
+    '--status-shadow': status.shadowColor,
+    '--animation-duration': status.animationDuration
+  } as any;
+};
+
+// 点击外部关闭菜单
+const handleClickOutside = (event: MouseEvent) => {
+  const target = event.target as HTMLElement;
+  if (!target.closest('.status-container')) {
+    showStatusMenu.value = false;
+  }
+};
 
 const quickReplies = ref<QuickReply[]>([
   {
@@ -235,7 +321,7 @@ const quickReplies = ref<QuickReply[]>([
   }
 ]);
 
-const activeSessionId = ref<string>('s1');
+const activeSessionId = ref<string>('');
 const inputText = ref('');
 const messagesRef = ref<HTMLDivElement | null>(null);
 
@@ -243,8 +329,134 @@ const activeSession = computed(() =>
   sessions.value.find((s) => s.id === activeSessionId.value)
 );
 
-const selectSession = (id: string) => {
+// 检查登录状态并验证 token
+onMounted(async () => {
+  const storedUser = localStorage.getItem('user');
+  const storedToken = localStorage.getItem('token');
+  
+  if (!storedUser || !storedToken) {
+    router.push('/login');
+    return;
+  }
+
+  try {
+    currentUser.value = JSON.parse(storedUser);
+    token.value = storedToken;
+
+    // 加载保存的状态
+    loadSavedStatus();
+
+    // 添加点击外部关闭菜单的事件监听
+    document.addEventListener('click', handleClickOutside);
+
+    // 验证 token 是否有效
+    try {
+      const verifyResponse = await customerServiceApi.verifyToken(token.value);
+      if (!verifyResponse.success) {
+        // Token 无效，清除并跳转登录
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        router.push('/login');
+        return;
+      }
+      // 更新用户信息（以防后端有更新）
+      if (verifyResponse.user) {
+        currentUser.value = verifyResponse.user;
+        localStorage.setItem('user', JSON.stringify(verifyResponse.user));
+      }
+    } catch (error) {
+      console.error('Token 验证失败:', error);
+      // Token 验证失败，清除并跳转登录
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      router.push('/login');
+      return;
+    }
+
+    loadSessions();
+  } catch (error) {
+    console.error('解析用户信息失败:', error);
+    // 清除无效数据
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    router.push('/login');
+  }
+});
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside);
+});
+
+// 加载会话列表
+const loadSessions = async () => {
+  if (!currentUser.value || !token.value) return;
+
+  loading.value = true;
+  try {
+    const response = await customerServiceApi.getSessions(currentUser.value.id, token.value);
+    if (response.success) {
+      sessions.value = response.sessions.map((s: any) => ({
+        id: s.id,
+        userName: s.userName,
+        isVip: s.isVip,
+        category: s.category || '待分类',
+        lastMessage: s.lastMessage || '',
+        lastTime: s.lastTime || '刚刚',
+        duration: s.duration || '00:00',
+        unread: s.unread || 0
+      }));
+
+      // 自动选择第一个会话
+      if (sessions.value.length > 0 && !activeSessionId.value) {
+        selectSession(sessions.value[0].id);
+      }
+    }
+  } catch (error) {
+    console.error('加载会话列表失败:', error);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 选择会话
+const selectSession = async (id: string) => {
   activeSessionId.value = id;
+  await loadMessages(id);
+};
+
+// 加载消息
+const loadMessages = async (sessionId: string) => {
+  if (!currentUser.value || !token.value) return;
+
+  try {
+    const response = await customerServiceApi.getMessages(sessionId, currentUser.value.id, token.value);
+    if (response.success) {
+      messages.value = (response.messages || []).map((m: any) => ({
+        id: m.id,
+        from: m.from || 'user',
+        text: m.text || '',
+        time: m.time || '刚刚'
+      }));
+      scrollToBottom();
+    } else {
+      console.error('加载消息失败:', response.message);
+      // 如果是 token 失效，跳转到登录页
+      if (response.message?.includes('Token') || response.message?.includes('无效')) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        router.push('/login');
+      }
+    }
+  } catch (error: any) {
+    console.error('加载消息失败:', error);
+    // 如果是 401 或 403，跳转到登录页
+    if (error.response?.status === 401 || error.response?.status === 403) {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      router.push('/login');
+    }
+  }
 };
 
 const scrollToBottom = () => {
@@ -260,22 +472,55 @@ watch(
   () => scrollToBottom()
 );
 
-onMounted(() => {
-  scrollToBottom();
-});
-
-const handleSend = () => {
+// 发送消息
+const handleSend = async () => {
   const text = inputText.value.trim();
-  if (!text) return;
+  if (!text || !activeSessionId.value || !currentUser.value || !token.value) return;
 
-  messages.value.push({
-    id: `m-${Date.now()}`,
-    from: 'agent',
-    text,
-    time: '现在'
-  });
+  // 检查消息长度
+  if (text.length > 5000) {
+    alert('消息内容过长，不能超过5000个字符');
+    return;
+  }
 
-  inputText.value = '';
+  const tempMessageId = `m-${Date.now()}`;
+  try {
+    // 先添加到本地消息列表（乐观更新）
+    const tempMessage = {
+      id: tempMessageId,
+      from: 'agent' as const,
+      text,
+      time: '现在'
+    };
+    messages.value.push(tempMessage);
+    const originalText = inputText.value;
+    inputText.value = '';
+    scrollToBottom();
+
+    // 发送到后端
+    const response = await customerServiceApi.sendMessage({
+      session_id: activeSessionId.value,
+      from_user_id: currentUser.value.id,
+      message: text,
+      token: token.value
+    });
+
+    if (!response.success) {
+      throw new Error(response.message || '发送失败');
+    }
+
+    // 重新加载消息以确保同步（使用真实的消息ID）
+    await loadMessages(activeSessionId.value);
+  } catch (error: any) {
+    console.error('发送消息失败:', error);
+    // 移除临时消息
+    messages.value = messages.value.filter(m => m.id !== tempMessageId);
+    // 恢复输入框内容
+    inputText.value = text;
+    // 显示错误提示
+    const errorMsg = error.response?.data?.message || error.message || '发送失败，请稍后重试';
+    alert(errorMsg);
+  }
 };
 
 const appendQuickReply = (content: string) => {
@@ -285,6 +530,12 @@ const appendQuickReply = (content: string) => {
   } else {
     inputText.value = `${inputText.value}\n${content}`;
   }
+};
+
+const handleLogout = () => {
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  router.push('/login');
 };
 </script>
 
@@ -301,6 +552,7 @@ const appendQuickReply = (content: string) => {
   box-shadow: 0 22px 48px rgba(15, 23, 42, 0.18);
   border: 1px solid rgba(255, 255, 255, 0.38);
   overflow: hidden;
+  position: relative;
 }
 
 .workspace-header {
@@ -312,6 +564,9 @@ const appendQuickReply = (content: string) => {
   border-bottom: 1px solid rgba(255, 255, 255, 0.25);
   background: linear-gradient(90deg, rgba(255, 255, 255, 0.16), rgba(255, 255, 255, 0.08));
   backdrop-filter: blur(18px);
+  position: relative;
+  z-index: 100;
+  overflow: visible;
 }
 
 .brand {
@@ -351,12 +606,192 @@ const appendQuickReply = (content: string) => {
   color: var(--text-primary);
 }
 
+.status-container {
+  position: relative;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  z-index: 1000;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.status-indicator:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .status-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  position: relative;
+  flex-shrink: 0;
+}
+
+.status-dot.breathing {
+  background: var(--status-color, #27c346);
+  animation: breathe var(--animation-duration, 2s) ease-in-out infinite;
+}
+
+.status-dot.breathing::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--status-color, #27c346);
+  opacity: 0.6;
+  animation: pulse var(--animation-duration, 2s) ease-in-out infinite;
+}
+
+.status-dot.breathing::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background: var(--status-color, #27c346);
+  opacity: 0.3;
+  animation: pulse2 var(--animation-duration, 2s) ease-in-out infinite;
+}
+
+/* 呼吸灯动画 */
+@keyframes breathe {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes pulse {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.6;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.8);
+    opacity: 0.2;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.2);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse2 {
+  0% {
+    transform: translate(-50%, -50%) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(2);
+    opacity: 0.1;
+  }
+  100% {
+    transform: translate(-50%, -50%) scale(2.5);
+    opacity: 0;
+  }
+}
+
+.status-arrow {
+  width: 12px;
+  height: 12px;
+  color: var(--text-secondary);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.status-arrow.open {
+  transform: rotate(180deg);
+}
+
+.status-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  min-width: 120px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 12px;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, 0.15);
+  padding: 6px;
+  z-index: 9999;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.status-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.status-menu-item:hover {
+  background: rgba(51, 112, 255, 0.1);
+}
+
+.status-menu-item.active {
+  background: rgba(51, 112, 255, 0.15);
+  color: var(--accent);
+  font-weight: 500;
+}
+
+.status-menu-dot {
   width: 8px;
   height: 8px;
-  border-radius: 999px;
-  background: var(--success);
-  box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.25);
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.status-menu-dot.online {
+  background: #27c346;
+}
+
+.status-menu-dot.offline {
+  background: #9ca3af;
+}
+
+.status-menu-dot.away {
+  background: #f59e0b;
+}
+
+.status-menu-dot.busy {
+  background: #ef4444;
 }
 
 .workspace-body {
@@ -728,6 +1163,23 @@ const appendQuickReply = (content: string) => {
 
 .value.success {
   color: #4ade80;
+}
+
+.logout-btn {
+  margin-left: 12px;
+  padding: 6px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.logout-btn:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.5);
 }
 
 .quick-reply-list {
