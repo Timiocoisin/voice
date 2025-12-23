@@ -7,7 +7,7 @@ from PyQt6.QtCore import QSize, QBuffer, QByteArray, QIODevice
 from PyQt6.QtGui import QPixmap, QIcon
 from PyQt6.QtCore import Qt
 
-from backend.resources import load_icon_data, load_icon_path
+from client.resources import load_icon_data, load_icon_path
 
 
 def create_svg_widget(main_window, icon_id, width, height, style):

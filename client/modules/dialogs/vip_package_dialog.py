@@ -12,7 +12,7 @@ from client.api_client import (
     get_vip_info as api_get_vip_info,
     purchase_membership as api_purchase_membership,
 )
-from backend.config import texts as text_cfg
+from client.config import texts as text_cfg
 from gui.custom_message_box import CustomMessageBox
 from gui.base_dialog import BaseDialog
 from gui.styles.membership_styles import (

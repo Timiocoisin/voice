@@ -29,7 +29,7 @@ from PyQt6.QtWidgets import QShortcut
 from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtCore import QByteArray, QBuffer, QIODevice
 
-from backend.resources import get_default_avatar, load_icon_path
+from client.resources import get_default_avatar, load_icon_path
 from gui.components.chat_bubble import ChatBubble
 from gui.config import FAQ_CONTAINER_WIDTH, CHAT_INPUT_HEIGHT
 

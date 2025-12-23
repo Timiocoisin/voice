@@ -6,12 +6,11 @@ from PyQt6.QtCore import Qt, QEvent, QByteArray, QPropertyAnimation, QRect, QEas
 from PyQt6.QtGui import QCursor, QPainter, QColor, QPixmap, QImage, QPainterPath, QKeyEvent
 from gui.clickable_label import ClickableLabel
 from modules.agreement_dialog import AgreementDialog
-from backend.validation.validator import validate_email, validate_password
-from backend.timer.timer_manager import TimerManager
-from backend.config.config import email_config
+from client.validation.validator import validate_email, validate_password
+from client.timer.timer_manager import TimerManager
 from gui.custom_message_box import CustomMessageBox
-from backend.config import texts as text_cfg
-from backend.resources import load_icon_data
+from client.config import texts as text_cfg
+from client.resources import load_icon_data
 from gui.styles.login_styles import (
     LOGIN_CARD_STYLE,
     PRIMARY_BUTTON_STYLE,
@@ -23,11 +22,11 @@ from client.api_client import (
     login_user as api_login_user,
     check_token as api_check_token,
 )
-from backend.login.token_utils import verify_token
-from backend.login.token_storage import save_token, read_token
-from backend.login.login_status_manager import save_login_status
+from client.login.token_utils import verify_token
+from client.login.token_storage import save_token, read_token
+from client.login.login_status_manager import save_login_status
 import logging
-from backend.logging_manager import setup_logging  # noqa: F401
+from client.logging_manager import setup_logging  # noqa: F401
 
 
 class LoginDialog(QDialog):

@@ -10,7 +10,7 @@ from PyQt6.QtWidgets import (
     QGraphicsDropShadowEffect,
 )
 
-from backend.resources import load_icon_data
+from client.resources import load_icon_data
 
 
 class ChatBubble(QWidget):

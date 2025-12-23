@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QLabel, QScrollArea, QPushButton, QTextEdit
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QKeySequence, QShortcut, QKeyEvent
-from backend.resources import get_default_avatar
+from client.resources import get_default_avatar
 from gui.window_utils import set_icon_button
 from gui.handlers import chat_handlers
 

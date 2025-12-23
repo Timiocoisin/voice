@@ -13,7 +13,7 @@ from PyQt6.QtGui import (
     QPixmap, QCursor, QPainter, QPainterPath, QColor
 )
 
-from backend.resources import get_default_avatar
+from client.resources import get_default_avatar
 from gui.components.chat_bubble import ChatBubble
 from gui.handlers import dialog_handlers
 from gui.handlers.message_utils import show_message

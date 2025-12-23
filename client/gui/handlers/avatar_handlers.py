@@ -5,8 +5,8 @@ from PyQt6.QtWidgets import QFileDialog, QDialog
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap, QPainter, QColor, QPainterPath
 
-from backend.resources import get_default_avatar
-from backend.config import texts as text_cfg
+from client.resources import get_default_avatar
+from client.config import texts as text_cfg
 from gui.avatar_crop_dialog import AvatarCropDialog
 from gui.handlers.dialog_handlers import exec_centered_dialog
 from gui.handlers.message_utils import show_message
@@ -94,7 +94,7 @@ def update_user_avatar_display(main_window: "MainWindow", avatar_data) -> None:
     
     # 对于较大的头像（>100KB），使用异步加载
     if len(avatar_bytes) > 100 * 1024:
-        from backend.utils.image_load_thread import ImageLoadThread
+        from client.utils.image_load_thread import ImageLoadThread
         
         def on_image_loaded(pixmap: QPixmap, loaded_bytes: bytes):
             _process_and_set_avatar(main_window, pixmap, loaded_bytes)

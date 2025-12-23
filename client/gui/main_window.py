@@ -9,7 +9,7 @@ from PyQt6.QtWidgets import (
 from PyQt6.QtCore import Qt, QPoint, QTimer
 from PyQt6.QtGui import QPixmap
 from modules.login_dialog import LoginDialog
-from backend.customer_service.keyword_matcher import get_matcher
+from client.customer_service.keyword_matcher import get_matcher
 from gui.components.chat_bubble import ChatBubble
 from gui.components.chat_panel import create_chat_panel
 from gui.components.ui_layout import create_main_layout

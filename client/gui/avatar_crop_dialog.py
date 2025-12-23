@@ -5,7 +5,7 @@ from PyQt6.QtCore import Qt, QPoint, QRect, QRectF, QSize, QByteArray, QBuffer, 
 from PyQt6.QtGui import (QPixmap, QPainter, QPainterPath, QBrush, QColor, QPen, 
                         QMouseEvent, QWheelEvent, QImage, QCursor, QKeyEvent)
 import logging
-from backend.logging_manager import setup_logging  # noqa: F401
+from client.logging_manager import setup_logging  # noqa: F401
 
 
 class CropArea(QWidget):

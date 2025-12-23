@@ -4,8 +4,8 @@ from PyQt6.QtWidgets import QApplication, QGraphicsDropShadowEffect
 from PyQt6.QtCore import Qt, QPoint, QRect, QPropertyAnimation, QTimer
 from PyQt6.QtGui import QCursor, QColor
 
-from backend.login.token_storage import clear_token
-from backend.login.login_status_manager import clear_login_status
+from client.login.token_storage import clear_token
+from client.login.login_status_manager import clear_login_status
 from gui.handlers import dialog_handlers, avatar_handlers
 from gui.components.chat_bubble import LogoutPopup
 

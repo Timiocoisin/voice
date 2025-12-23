@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QPushButton
 from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QCursor, QPixmap
 
-from backend.resources import load_icon_data
+from client.resources import load_icon_data
 from gui.base_dialog import BaseDialog
 from gui.styles.membership_styles import (
     PAYMENT_CARD_CONTAINER, TITLE_STYLE, PAYMENT_AMOUNT_STYLE,

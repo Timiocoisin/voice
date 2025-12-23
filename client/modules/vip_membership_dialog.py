@@ -8,12 +8,12 @@ from PyQt6.QtWidgets import (
 )
 from PyQt6.QtCore import Qt, QPoint, QByteArray
 from PyQt6.QtGui import QPainter, QColor, QCursor, QPixmap
-from backend.resources import load_icon_data, get_default_avatar
-from backend.config import texts as text_cfg
+from client.resources import load_icon_data, get_default_avatar
+from client.config import texts as text_cfg
 from gui.custom_message_box import CustomMessageBox
 from gui.base_dialog import BaseDialog
 import logging
-from backend.logging_manager import setup_logging  # noqa: F401
+from client.logging_manager import setup_logging  # noqa: F401
 from client.api_client import (
     get_vip_info as api_get_vip_info,
     purchase_membership as api_purchase_membership,

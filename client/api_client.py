@@ -31,7 +31,7 @@ def _post(path: str, data: Dict[str, Any], *, timeout: float = 5.0) -> Dict[str,
 
 
 def health_check() -> bool:
-    """检查后端服务是否可用。"""
+    """检查后端服务是否可用"""
     try:
         data = _get("/api/health", timeout=3.0)
         return bool(data.get("status") == "ok")
@@ -40,30 +40,12 @@ def health_check() -> bool:
 
 
 def send_verification_code(email: str, mode: str) -> Dict[str, Any]:
-    """
-    发送邮箱验证码。
-
-    预期后端接口：POST /api/send_verification_code
-    Request: { "email": str, "mode": "login" | "register" }
-    Response: { "success": bool, "message"?: str }
-    """
+    """发送验证码"""
     return _post("/api/send_verification_code", {"email": email, "mode": mode})
 
 
 def register_user(email: str, password: str, username: str, code: str) -> Dict[str, Any]:
-    """
-    用户注册。
-
-    预期后端接口：POST /api/register
-    Request: { email, password, username, code }
-    Response: {
-        success: bool,
-        message: str,
-        token?: str,
-        user?: { id, username, avatar_base64? },
-        vip?: { is_vip: bool, vip_expiry_date?: str, diamonds: int }
-    }
-    """
+    """用户注册"""
     return _post(
         "/api/register",
         {
@@ -76,11 +58,7 @@ def register_user(email: str, password: str, username: str, code: str) -> Dict[s
 
 
 def login_user(email: str, password: str, code: str) -> Dict[str, Any]:
-    """
-    用户登录。
-
-    预期后端接口：POST /api/login
-    """
+    """用户登录"""
     return _post(
         "/api/login",
         {
@@ -92,22 +70,12 @@ def login_user(email: str, password: str, code: str) -> Dict[str, Any]:
 
 
 def check_token(token: str) -> Dict[str, Any]:
-    """
-    校验本地保存的 token。
-
-    预期后端接口：POST /api/check_token
-    Response: { success: bool, user?: {...}, vip?: {...}, token?: str }
-    """
+    """校验 token 并获取用户信息"""
     return _post("/api/check_token", {"token": token})
 
 
 def get_latest_announcement() -> Optional[str]:
-    """
-    获取最新公告文本。
-
-    预期后端接口：GET /api/announcement/latest
-    Response: { success: bool, content?: str }
-    """
+    """获取最新公告"""
     try:
         data = _get("/api/announcement/latest")
     except Exception:
@@ -118,16 +86,7 @@ def get_latest_announcement() -> Optional[str]:
 
 
 def get_user_profile(user_id: int) -> Optional[Dict[str, Any]]:
-    """
-    获取用户基础信息 + VIP / 钻石信息。
-
-    预期后端接口：POST /api/user/profile
-    Response: {
-        success: bool,
-        user: { id, username, avatar_base64?: str },
-        vip: { is_vip: bool, vip_expiry_date?: str, diamonds: int }
-    }
-    """
+    """获取用户信息（包含头像）"""
     data = _post("/api/user/profile", {"user_id": user_id})
     if not data.get("success"):
         return None
@@ -144,12 +103,7 @@ def get_user_profile(user_id: int) -> Optional[Dict[str, Any]]:
 
 
 def update_avatar(user_id: int, avatar_bytes: bytes) -> Dict[str, Any]:
-    """
-    更新用户头像。
-
-    预期后端接口：POST /api/user/avatar
-    Request: { user_id, avatar_base64 }
-    """
+    """更新用户头像"""
     avatar_b64 = base64.b64encode(avatar_bytes).decode("ascii")
     return _post(
         "/api/user/avatar",
@@ -158,12 +112,7 @@ def update_avatar(user_id: int, avatar_bytes: bytes) -> Dict[str, Any]:
 
 
 def get_vip_info(user_id: int) -> Optional[Dict[str, Any]]:
-    """
-    获取用户 VIP 信息。
-
-    预期后端接口：POST /api/vip/info
-    Response: { success: bool, vip: {...} }
-    """
+    """获取 VIP 信息"""
     data = _post("/api/vip/info", {"user_id": user_id})
     if not data.get("success"):
         return None
@@ -171,13 +120,7 @@ def get_vip_info(user_id: int) -> Optional[Dict[str, Any]]:
 
 
 def purchase_membership(user_id: int, card_info: Dict[str, Any]) -> Dict[str, Any]:
-    """
-    购买会员套餐。
-
-    预期后端接口：POST /api/vip/purchase
-    Request: { user_id, card: {...} }
-    Response: { success: bool, message: str, vip?: {...} }
-    """
+    """购买会员套餐"""
     return _post(
         "/api/vip/purchase",
         {"user_id": user_id, "card": card_info},
@@ -185,15 +128,9 @@ def purchase_membership(user_id: int, card_info: Dict[str, Any]) -> Dict[str, An
 
 
 def get_diamond_balance(user_id: int) -> Optional[int]:
-    """
-    获取钻石余额。
-
-    预期后端接口：POST /api/diamond/balance
-    Response: { success: bool, diamonds: int }
-    """
+    """获取钻石余额"""
     data = _post("/api/diamond/balance", {"user_id": user_id})
     if not data.get("success"):
         return None
     return int(data.get("diamonds", 0))
-
 

@@ -4,11 +4,11 @@ from typing import Optional, TYPE_CHECKING
 from PyQt6.QtWidgets import QDialog, QWidget, QVBoxLayout, QLabel
 from PyQt6.QtCore import QPoint, QRect, QTimer, Qt
 
-from backend.login.login_status_manager import check_login_status, save_login_status
-from backend.login.token_storage import read_token
-from backend.login.token_utils import verify_token
+from client.login.login_status_manager import check_login_status, save_login_status
+from client.login.token_storage import read_token
+from client.login.token_utils import verify_token
 from client.api_client import check_token as api_check_token
-from backend.config import texts as text_cfg
+from client.config import texts as text_cfg
 from gui.custom_message_box import CustomMessageBox
 from modules.login_dialog import LoginDialog
 from modules.vip_membership_dialog import VipPackageDialog, DiamondPackageDialog
