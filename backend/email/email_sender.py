@@ -277,6 +277,187 @@ class EmailSender:
         finally:
             self.close()
 
+    def send_password_reset_email(self, recipient_email: str, reset_token: str, reset_url: str, expires_in_minutes: int = 30):
+        """发送密码重置邮件
+        :param recipient_email: 接收方邮箱
+        :param reset_token: 重置token
+        :param reset_url: 重置密码的URL（包含token）
+        :param expires_in_minutes: 有效期（分钟）
+        """
+        if not self.connect():
+            return False
+
+        current_year = datetime.now().year
+        expire_time = datetime.now() + timedelta(minutes=expires_in_minutes)
+        expire_str = expire_time.strftime("%Y年%m月%d日 %H:%M:%S")
+
+        subject = "【语音转换系统】密码重置"
+        content = f"""
+            <!DOCTYPE html>
+            <html lang="zh-CN">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>{subject}</title>
+                <style>
+                    * {{
+                        margin: 0;
+                        padding: 0;
+                        box-sizing: border-box;
+                        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+                    }}
+                    body {{
+                        background-color: #f9fafb;
+                        line-height: 1.5;
+                        color: #374151;
+                    }}
+                    .container {{
+                        max-width: 640px;
+                        margin: 0 auto;
+                        padding: 16px;
+                    }}
+                    .email-container {{
+                        background-color: #ffffff;
+                        border-radius: 10px;
+                        box-shadow: 0 3px 15px rgba(0, 0, 0, 0.07);
+                        overflow: hidden;
+                        border-top: 3px solid #165DFF;
+                    }}
+                    .header {{
+                        padding: 18px 24px;
+                        background-color: #f8fafc;
+                        display: flex;
+                        align-items: center;
+                        border-bottom: 1px solid #e2e8f0;
+                    }}
+                    .logo {{
+                        color: #165DFF;
+                        font-size: 20px;
+                        font-weight: 600;
+                        letter-spacing: -0.3px;
+                    }}
+                    .email-content {{
+                        padding: 24px;
+                    }}
+                    .greeting {{
+                        margin-bottom: 12px;
+                    }}
+                    .greeting p {{
+                        font-size: 16px;
+                        font-weight: 500;
+                    }}
+                    .message {{
+                        margin-bottom: 20px;
+                        font-size: 15px;
+                        color: #4b5563;
+                    }}
+                    .reset-button {{
+                        display: inline-block;
+                        margin: 20px 0;
+                        padding: 14px 28px;
+                        background: linear-gradient(135deg, #165DFF, #4080FF);
+                        color: #ffffff;
+                        text-decoration: none;
+                        border-radius: 8px;
+                        font-weight: 600;
+                        font-size: 15px;
+                        text-align: center;
+                        box-shadow: 0 4px 12px rgba(22, 93, 255, 0.3);
+                    }}
+                    .reset-link {{
+                        margin: 20px 0;
+                        padding: 16px;
+                        background-color: #f0f7ff;
+                        border-radius: 8px;
+                        border: 1px solid #cce6ff;
+                        word-break: break-all;
+                        font-size: 13px;
+                        color: #1e40af;
+                    }}
+                    .expiry {{
+                        color: #64748B;
+                        font-size: 13px;
+                        margin-top: 16px;
+                        padding-top: 16px;
+                        border-top: 1px dashed #BFDBFE;
+                    }}
+                    .security-note {{
+                        background-color: #fff5f5;
+                        border-radius: 6px;
+                        padding: 12px 16px;
+                        margin-top: 16px;
+                        font-size: 13px;
+                        color: #7f1d1d;
+                        border-left: 3px solid #ef4444;
+                    }}
+                    .footer {{
+                        padding: 16px 24px;
+                        text-align: center;
+                        color: #9ca3af;
+                        font-size: 12px;
+                        background-color: #f9fafb;
+                        border-top: 1px solid #e5e7eb;
+                        margin-top: 10px;
+                    }}
+                </style>
+            </head>
+            <body>
+                <div class="container">
+                    <div class="email-container">
+                        <div class="header">
+                            <div class="logo">语音转换系统</div>
+                        </div>
+                        <div class="email-content">
+                            <div class="greeting">
+                                <p>尊敬的用户：</p>
+                            </div>
+                            <div class="message">
+                                <p>您请求重置密码，请点击下面的按钮或链接来重置您的密码：</p>
+                            </div>
+                            <div style="text-align: center;">
+                                <a href="{reset_url}" class="reset-button">重置密码</a>
+                            </div>
+                            <div class="reset-link">
+                                <strong>如果按钮无法点击，请复制以下链接到浏览器打开：</strong><br>
+                                {reset_url}
+                            </div>
+                            <div class="expiry">
+                                <strong>⚠️ 重要提示：</strong>此链接将在 {expire_str} 过期（{expires_in_minutes}分钟内有效）
+                            </div>
+                            <div class="security-note">
+                                <p><strong>安全提示：</strong></p>
+                                <p>• 如非本人操作，请忽略此邮件</p>
+                                <p>• 请勿将重置链接分享给他人</p>
+                                <p>• 如果您没有请求重置密码，请立即联系客服</p>
+                            </div>
+                        </div>
+                        <div class="footer">
+                            <p>此为系统邮件，请勿直接回复</p>
+                            <p>© {current_year} 语音转换系统 版权所有</p>
+                        </div>
+                    </div>
+                </div>
+            </body>
+            </html>
+        """
+
+        try:
+            msg = MIMEText(content, 'html', 'utf-8')
+            sender_name = Header(self.config['sender_name'], 'utf-8').encode()
+            sender_email = self.config['sender_email']
+            msg['From'] = f"{sender_name} <{sender_email}>"
+            msg['To'] = recipient_email
+            msg['Subject'] = Header(subject, 'utf-8')
+
+            self.server.sendmail(sender_email, recipient_email, msg.as_string())
+            logging.info(f"密码重置邮件已成功发送至 {recipient_email}")
+            return True
+        except Exception as e:
+            logging.error(f"密码重置邮件发送失败: {e}")
+            return False
+        finally:
+            self.close()
+
 def generate_verification_code(length=6):
     """生成指定长度的验证码"""
     import string

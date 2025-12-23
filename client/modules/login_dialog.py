@@ -529,7 +529,7 @@ class LoginDialog(QDialog):
         QTimer.singleShot(
             0,
             lambda: self._move_underline_to_label(
-                self.user_login_label if self.current_mode == "login" else self.user_register_label
+            self.user_login_label if self.current_mode == "login" else self.user_register_label
             ),
         )
         
@@ -885,8 +885,16 @@ class LoginDialog(QDialog):
         is_vip = bool(vip_info.get("is_vip", False))
         diamonds = vip_info.get("diamonds", 0)
 
-        # 头像目前走后端统一维护，这里先传 None
-        self.update_user_info(None, username, is_vip, diamonds, user_id)
+        # 通过用户资料接口获取最新头像（包括默认头像）
+        from client.api_client import get_user_profile
+        profile = get_user_profile(user_id) or {}
+        p_user = profile.get("user") or {}
+        p_vip = profile.get("vip") or vip_info
+        avatar_bytes = p_user.get("avatar_bytes")
+        is_vip = bool(p_vip.get("is_vip", False))
+        diamonds = p_vip.get("diamonds", 0)
+
+        self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
 
         # 隐藏蒙版
         if self.parent():
@@ -941,7 +949,16 @@ class LoginDialog(QDialog):
         is_vip = bool(vip_info.get("is_vip", False))
         diamonds = vip_info.get("diamonds", 0)
 
-        self.update_user_info(None, username, is_vip, diamonds, user_id)
+        # 通过用户资料接口获取最新头像，确保使用用户上传的头像
+        from client.api_client import get_user_profile
+        profile = get_user_profile(user_id) or {}
+        p_user = profile.get("user") or {}
+        p_vip = profile.get("vip") or vip_info
+        avatar_bytes = p_user.get("avatar_bytes")
+        is_vip = bool(p_vip.get("is_vip", False))
+        diamonds = p_vip.get("diamonds", 0)
+
+        self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
 
         # 隐藏蒙版
         if self.parent():
@@ -987,10 +1004,16 @@ class LoginDialog(QDialog):
             if new_token:
                 save_token(new_token)
 
-            is_vip = bool(vip_info.get("is_vip", False))
-            diamonds = vip_info.get("diamonds", 0)
+            # 通过用户资料接口获取最新头像，确保使用用户上传的头像
+            from client.api_client import get_user_profile
+            profile = get_user_profile(user_id) or {}
+            p_user = profile.get("user") or {}
+            p_vip = profile.get("vip") or vip_info
+            avatar_bytes = p_user.get("avatar_bytes")
+            is_vip = bool(p_vip.get("is_vip", False))
+            diamonds = p_vip.get("diamonds", 0)
 
-            self.update_user_info(None, username, is_vip, diamonds, user_id)
+            self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
 
             if self.parent():
                 self.parent().mask_widget.setVisible(False)

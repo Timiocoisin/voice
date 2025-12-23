@@ -1,11 +1,11 @@
 <template>
-  <div class="login-page">
-    <div class="login-card">
-      <div class="login-logo">VC</div>
-      <h1 class="login-title">变声器客服工作台</h1>
-      <p class="login-subtitle">为变声器用户提供专业、快速的在线支持</p>
+  <div class="forgot-password-page">
+    <div class="forgot-password-card">
+      <div class="forgot-password-logo">VC</div>
+      <h1 class="forgot-password-title">忘记密码</h1>
+      <p class="forgot-password-subtitle">请输入您的邮箱，我们将发送密码重置链接</p>
 
-      <form class="login-form" @submit.prevent="handleLogin">
+      <form class="forgot-password-form" @submit.prevent="handleForgotPassword">
         <label class="form-label">
           邮箱
           <input
@@ -13,102 +13,69 @@
             type="email"
             class="form-input"
             :class="{ 'input-error': fieldErrors.email }"
-            placeholder="请输入邮箱"
+            placeholder="请输入注册邮箱"
             @input="clearFieldError('email')"
             @blur="fieldErrors.email = !emailValidation.valid ? emailValidation.message : ''"
           />
           <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
         </label>
 
-        <label class="form-label">
-          密码
-          <input
-            v-model="form.password"
-            type="password"
-            class="form-input"
-            :class="{ 'input-error': fieldErrors.password }"
-            placeholder="请输入密码"
-            @input="clearFieldError('password')"
-            @blur="fieldErrors.password = !passwordValidation.valid ? passwordValidation.message : ''"
-            @keyup.enter="handleLogin"
-          />
-          <span v-if="fieldErrors.password" class="field-error">{{ fieldErrors.password }}</span>
-        </label>
-
         <button class="primary-button" type="submit" :disabled="loading">
-          {{ loading ? '登录中...' : '进入工作台' }}
+          {{ loading ? '发送中...' : '发送重置链接' }}
         </button>
       </form>
 
       <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
-      <div class="switch-tip">
-        <span>
-          还没有账号？
-          <router-link to="/register" class="link">去注册</router-link>
-        </span>
-        <router-link to="/forgot-password" class="link">忘记密码？</router-link>
-      </div>
+      <p v-if="successMessage" class="success-message">{{ successMessage }}</p>
+      <p class="switch-tip">
+        想起密码了？
+        <router-link to="/login" class="link">返回登录</router-link>
+      </p>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { reactive, ref, computed, onMounted } from 'vue';
+import { reactive, ref, computed } from 'vue';
 import { useRouter } from 'vue-router';
 import { customerServiceApi } from '@/api/client';
-import { validateEmail, validatePassword } from '@/utils/validation';
+import { validateEmail } from '@/utils/validation';
 
 const router = useRouter();
 
 const form = reactive({
-  email: '',
-  password: ''
+  email: ''
 });
 
 const loading = ref(false);
 const errorMessage = ref('');
+const successMessage = ref('');
 const fieldErrors = reactive({
-  email: '',
-  password: ''
+  email: ''
 });
 
 // 实时验证
 const emailValidation = computed(() => validateEmail(form.email));
-const passwordValidation = computed(() => validatePassword(form.password));
-
-// 检查是否已登录
-onMounted(() => {
-  const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
-  if (token && user) {
-    // 已登录，跳转到工作台
-    router.push('/workspace');
-  }
-});
 
 // 监听输入变化，清除错误
 const clearFieldError = (field: keyof typeof fieldErrors) => {
   fieldErrors[field] = '';
   errorMessage.value = '';
+  successMessage.value = '';
 };
 
-const handleLogin = async () => {
+const handleForgotPassword = async () => {
   // 清除之前的错误
   errorMessage.value = '';
+  successMessage.value = '';
   Object.keys(fieldErrors).forEach(key => {
     fieldErrors[key as keyof typeof fieldErrors] = '';
   });
 
-  // 验证所有字段
+  // 验证邮箱
   const emailValid = validateEmail(form.email);
-  const passwordValid = validatePassword(form.password);
-
   if (!emailValid.valid) {
     fieldErrors.email = emailValid.message;
-    return;
-  }
-  if (!passwordValid.valid) {
-    fieldErrors.password = passwordValid.message;
     return;
   }
 
@@ -118,50 +85,22 @@ const handleLogin = async () => {
   }
 
   loading.value = true;
-  errorMessage.value = '';
 
   try {
-    const response = await customerServiceApi.login({
-      email: form.email.trim().toLowerCase(),
-      password: form.password,
-    });
+    const response = await customerServiceApi.forgotPassword(form.email.trim().toLowerCase());
 
     if (response.success) {
-      // 保存 token 和用户信息
-      if (response.token) {
-        localStorage.setItem('token', response.token);
-      }
-      if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
-      }
-      // 跳转到工作台
-      router.push('/workspace');
+      successMessage.value = response.message || '重置链接已发送到您的邮箱，请查收';
+      // 3秒后跳转到登录页
+      setTimeout(() => {
+        router.push('/login');
+      }, 3000);
     } else {
-      errorMessage.value = response.message || '登录失败，请稍后重试';
+      errorMessage.value = response.message || '发送失败，请稍后重试';
     }
   } catch (error: any) {
-    const status = error.response?.status;
-    let errorMsg = '登录失败，请稍后重试';
-    
-    if (status === 401 || status === 403) {
-      errorMsg = error.response?.data?.message || '邮箱或密码错误，或账号无权限';
-    } else if (status === 400) {
-      errorMsg = error.response?.data?.message || '请求参数错误';
-    } else if (!error.response) {
-      errorMsg = '网络连接失败，请检查网络后重试';
-    } else {
-      errorMsg = error.response?.data?.message || error.message || '登录失败，请稍后重试';
-    }
-    
-    errorMessage.value = errorMsg;
-    
-    // 如果返回了剩余尝试次数，显示更详细的提示
-    if (error.response?.data?.remaining_attempts !== undefined) {
-      const remaining = error.response.data.remaining_attempts;
-      if (remaining > 0) {
-        errorMessage.value = `${errorMsg}（还可尝试 ${remaining} 次）`;
-      }
-    }
+    const msg = error.response?.data?.message;
+    errorMessage.value = msg || '发送失败，请稍后重试';
   } finally {
     loading.value = false;
   }
@@ -169,7 +108,7 @@ const handleLogin = async () => {
 </script>
 
 <style scoped>
-.login-page {
+.forgot-password-page {
   flex: 1;
   min-height: 100vh;
   display: flex;
@@ -181,12 +120,11 @@ const handleLogin = async () => {
     radial-gradient(circle at 50% 100%, rgba(255, 255, 255, 0.15), transparent 40%);
 }
 
-.login-card {
+.forgot-password-card {
   width: 460px;
   padding: 40px 36px 32px;
   border-radius: 22px;
   backdrop-filter: blur(26px);
-  /* 更接近纯玻璃：约 50% 透明度 */
   background: rgba(255, 255, 255, 0.5);
   box-shadow: 0 24px 56px rgba(15, 23, 42, 0.22);
   border: 1px solid rgba(255, 255, 255, 0.7);
@@ -194,7 +132,7 @@ const handleLogin = async () => {
   overflow: hidden;
 }
 
-.login-card::before {
+.forgot-password-card::before {
   content: '';
   position: absolute;
   inset: -30% 40% auto auto;
@@ -206,7 +144,7 @@ const handleLogin = async () => {
   pointer-events: none;
 }
 
-.login-card::after {
+.forgot-password-card::after {
   content: '';
   position: absolute;
   inset: auto auto -28% -10%;
@@ -218,7 +156,7 @@ const handleLogin = async () => {
   pointer-events: none;
 }
 
-.login-logo {
+.forgot-password-logo {
   width: 50px;
   height: 50px;
   border-radius: 14px;
@@ -235,7 +173,7 @@ const handleLogin = async () => {
   z-index: 1;
 }
 
-.login-title {
+.forgot-password-title {
   margin: 0;
   font-size: 22px;
   font-weight: 800;
@@ -244,7 +182,7 @@ const handleLogin = async () => {
   z-index: 1;
 }
 
-.login-subtitle {
+.forgot-password-subtitle {
   margin: 10px 0 26px;
   font-size: 13px;
   color: var(--text-secondary);
@@ -252,7 +190,7 @@ const handleLogin = async () => {
   z-index: 1;
 }
 
-.login-form {
+.forgot-password-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
@@ -320,24 +258,12 @@ const handleLogin = async () => {
   filter: brightness(1.02);
 }
 
-.login-tip {
-  margin-top: 14px;
-  font-size: 11px;
-  color: var(--text-secondary);
-  position: relative;
-  z-index: 1;
-}
-
 .switch-tip {
   margin: 8px 0 0;
   font-size: 12px;
   color: #6f7680;
   position: relative;
   z-index: 1;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
 }
 
 .link {
@@ -360,6 +286,16 @@ const handleLogin = async () => {
   border-radius: 8px;
 }
 
+.success-message {
+  margin-top: 12px;
+  font-size: 12px;
+  color: #10b981;
+  text-align: center;
+  padding: 8px;
+  background: rgba(16, 185, 129, 0.1);
+  border-radius: 8px;
+}
+
 .field-error {
   display: block;
   margin-top: 4px;
@@ -377,18 +313,19 @@ const handleLogin = async () => {
 }
 
 @media (max-width: 960px) {
-  .login-page {
+  .forgot-password-page {
     padding: 32px 16px;
   }
-  .login-card {
+  .forgot-password-card {
     width: 100%;
     max-width: 420px;
   }
 }
 
 @media (max-width: 600px) {
-  .login-card {
+  .forgot-password-card {
     padding-inline: 22px;
   }
 }
 </style>
+

@@ -134,3 +134,21 @@ def get_diamond_balance(user_id: int) -> Optional[int]:
         return None
     return int(data.get("diamonds", 0))
 
+
+def forgot_password(email: str) -> Dict[str, Any]:
+    """忘记密码：请求发送重置邮件"""
+    return _post("/api/forgot_password", {"email": email})
+
+
+def reset_password(token: str, new_password: str) -> Dict[str, Any]:
+    """重置密码：使用token重置密码"""
+    return _post("/api/reset_password", {"token": token, "new_password": new_password})
+
+
+def change_password(token: str, old_password: str, new_password: str) -> Dict[str, Any]:
+    """修改密码：已登录用户修改密码"""
+    return _post(
+        "/api/user/change_password",
+        {"token": token, "old_password": old_password, "new_password": new_password},
+    )
+

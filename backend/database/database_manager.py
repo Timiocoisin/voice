@@ -2,6 +2,7 @@ import pymysql
 import pymysql.cursors
 import bcrypt
 from typing import Optional, Dict, Any
+from datetime import datetime
 import logging
 from backend.resources import get_default_avatar
 from backend.logging_manager import setup_logging  # noqa: F401
@@ -75,8 +76,11 @@ class DatabaseManager:
         """确保所有表存在"""
         self.create_user_table()
         self._ensure_user_avatar_column()
+        self._ensure_user_role_column()
         self.create_user_vip_table()
         self.create_announcement_table()
+        self.create_chat_messages_table()
+        self.create_password_reset_tokens_table()
 
     def create_user_table(self):
         """创建用户表（如果不存在）。
@@ -93,6 +97,7 @@ class DatabaseManager:
                 email VARCHAR(255) NOT NULL UNIQUE,
                 password VARCHAR(255) NOT NULL,
                 avatar LONGBLOB,
+                role ENUM('user', 'admin', 'customer_service') DEFAULT 'user',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
             )
@@ -127,6 +132,31 @@ class DatabaseManager:
         except pymysql.Error as e:
             # 如果列已存在或其他错误，这里仅记录日志，不阻止服务启动
             logging.error(f"确保 users.avatar 列存在时出错: {e}")
+
+    def _ensure_user_role_column(self) -> None:
+        """
+        确保 users 表中存在 role 列。
+
+        用于区分用户类型：user（普通用户）、admin（管理员）、customer_service（客服）
+        """
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SHOW COLUMNS FROM users LIKE 'role'")
+            result = cursor.fetchone()
+            if result:
+                return  # 已存在 role 列
+
+            logging.info("检测到 users 表缺少 role 列，正在自动添加该列...")
+            alter_sql = """
+            ALTER TABLE users
+            ADD COLUMN role ENUM('user', 'admin', 'customer_service') DEFAULT 'user' AFTER avatar
+            """
+            cursor.execute(alter_sql)
+            self.connection.commit()
+            logging.info("users 表 role 列添加完成")
+        except pymysql.Error as e:
+            # 如果列已存在或其他错误，这里仅记录日志，不阻止服务启动
+            logging.error(f"确保 users.role 列存在时出错: {e}")
 
     def create_user_vip_table(self):
         """创建用户 VIP 信息表（如果不存在）"""
@@ -180,7 +210,217 @@ class DatabaseManager:
         except pymysql.Error as e:
             logging.error(f"创建公告表失败: {e}")
 
-    def insert_user_info(self, username: str, email: str, password: str, avatar_data: Optional[bytes] = None) -> bool:
+    def create_chat_messages_table(self):
+        """创建聊天消息表（如果不存在）"""
+        try:
+            cursor = self.connection.cursor()
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS chat_messages (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                session_id VARCHAR(255) NOT NULL,
+                from_user_id INT NOT NULL,
+                to_user_id INT,
+                message TEXT NOT NULL,
+                message_type ENUM('text', 'image', 'file') DEFAULT 'text',
+                is_read BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_session (session_id),
+                INDEX idx_from_user (from_user_id),
+                INDEX idx_to_user (to_user_id),
+                INDEX idx_created (created_at)
+            )
+            """
+            cursor.execute(create_table_query)
+            self.connection.commit()
+        except pymysql.Error as e:
+            logging.error(f"创建聊天消息表失败: {e}")
+
+    def create_password_reset_tokens_table(self):
+        """创建密码重置token表（如果不存在）"""
+        try:
+            cursor = self.connection.cursor()
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS password_reset_tokens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                email VARCHAR(255) NOT NULL,
+                token VARCHAR(255) NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                used BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                INDEX idx_email (email),
+                INDEX idx_token (token),
+                INDEX idx_expires (expires_at)
+            )
+            """
+            cursor.execute(create_table_query)
+            self.connection.commit()
+        except pymysql.Error as e:
+            logging.error(f"创建密码重置token表失败: {e}")
+
+    def insert_password_reset_token(self, email: str, token: str, expires_at: datetime) -> bool:
+        """插入密码重置token"""
+        try:
+            cursor = self.connection.cursor()
+            # 先删除该邮箱的旧token
+            delete_query = "DELETE FROM password_reset_tokens WHERE email = %s"
+            cursor.execute(delete_query, (email,))
+            # 插入新token
+            insert_query = """
+            INSERT INTO password_reset_tokens (email, token, expires_at)
+            VALUES (%s, %s, %s)
+            """
+            cursor.execute(insert_query, (email, token, expires_at))
+            self.connection.commit()
+            return True
+        except pymysql.Error as e:
+            logging.error(f"插入密码重置token失败: {e}")
+            self.connection.rollback()
+            return False
+
+    def get_password_reset_token(self, token: str) -> Optional[Dict[str, Any]]:
+        """获取密码重置token信息"""
+        try:
+            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT email, token, expires_at, used
+            FROM password_reset_tokens
+            WHERE token = %s
+            """
+            cursor.execute(query, (token,))
+            return cursor.fetchone()
+        except pymysql.Error as e:
+            logging.error(f"查询密码重置token失败: {e}")
+            return None
+
+    def mark_password_reset_token_as_used(self, token: str) -> bool:
+        """标记密码重置token为已使用"""
+        try:
+            cursor = self.connection.cursor()
+            update_query = "UPDATE password_reset_tokens SET used = TRUE WHERE token = %s"
+            cursor.execute(update_query, (token,))
+            self.connection.commit()
+            return True
+        except pymysql.Error as e:
+            logging.error(f"标记密码重置token为已使用失败: {e}")
+            self.connection.rollback()
+            return False
+
+    def update_user_password(self, email: str, new_password: str) -> bool:
+        """更新用户密码"""
+        try:
+            import bcrypt
+            hashed = bcrypt.hashpw(new_password.encode("utf-8"), bcrypt.gensalt())
+            cursor = self.connection.cursor()
+            update_query = "UPDATE users SET password = %s WHERE email = %s"
+            cursor.execute(update_query, (hashed, email))
+            self.connection.commit()
+            logging.info(f"用户 {email} 密码更新成功")
+            return True
+        except pymysql.Error as e:
+            logging.error(f"更新用户密码失败: {e}")
+            self.connection.rollback()
+            return False
+
+    def insert_chat_message(self, session_id: str, from_user_id: int, to_user_id: Optional[int], message: str, message_type: str = 'text') -> Optional[int]:
+        """插入聊天消息"""
+        try:
+            cursor = self.connection.cursor()
+            insert_query = """
+            INSERT INTO chat_messages (session_id, from_user_id, to_user_id, message, message_type)
+            VALUES (%s, %s, %s, %s, %s)
+            """
+            cursor.execute(insert_query, (session_id, from_user_id, to_user_id, message, message_type))
+            message_id = cursor.lastrowid
+            self.connection.commit()
+            return message_id
+        except pymysql.Error as e:
+            logging.error(f"插入聊天消息失败: {e}")
+            self.connection.rollback()
+            return None
+
+    def get_chat_messages(self, session_id: str, limit: int = 100) -> list:
+        """获取会话的聊天消息"""
+        try:
+            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT id, from_user_id, to_user_id, message, message_type, is_read, created_at
+            FROM chat_messages
+            WHERE session_id = %s
+            ORDER BY created_at ASC
+            LIMIT %s
+            """
+            cursor.execute(query, (session_id, limit))
+            return cursor.fetchall()
+        except pymysql.Error as e:
+            logging.error(f"获取聊天消息失败: {e}")
+            return []
+
+    def get_user_sessions(self, user_id: int, role: str) -> list:
+        """获取用户的会话列表
+        
+        Args:
+            user_id: 用户ID
+            role: 用户角色，'user' 返回用户发起的会话，'customer_service' 返回分配给客服的会话
+        """
+        try:
+            cursor = self.connection.cursor(pymysql.cursors.DictCursor)
+            if role == 'customer_service':
+                # 客服：获取所有分配给该客服的会话，或所有用户发起的会话（待分配）
+                query = """
+                SELECT DISTINCT 
+                    cm.session_id,
+                    u.id as user_id,
+                    u.username,
+                    u.email,
+                    (SELECT COUNT(*) FROM chat_messages cm2 
+                     WHERE cm2.session_id = cm.session_id 
+                     AND cm2.to_user_id = %s 
+                     AND cm2.is_read = FALSE) as unread_count,
+                    (SELECT message FROM chat_messages cm3 
+                     WHERE cm3.session_id = cm.session_id 
+                     ORDER BY cm3.created_at DESC LIMIT 1) as last_message,
+                    (SELECT created_at FROM chat_messages cm4 
+                     WHERE cm4.session_id = cm.session_id 
+                     ORDER BY cm4.created_at DESC LIMIT 1) as last_time
+                FROM chat_messages cm
+                JOIN users u ON (cm.from_user_id = u.id OR cm.to_user_id = u.id)
+                WHERE (cm.to_user_id = %s OR cm.to_user_id IS NULL)
+                AND u.role = 'user'
+                GROUP BY cm.session_id, u.id, u.username, u.email
+                ORDER BY last_time DESC
+                """
+                cursor.execute(query, (user_id, user_id))
+            else:
+                # 普通用户：获取自己发起的会话
+                query = """
+                SELECT DISTINCT 
+                    cm.session_id,
+                    u.id as user_id,
+                    u.username,
+                    u.email,
+                    (SELECT COUNT(*) FROM chat_messages cm2 
+                     WHERE cm2.session_id = cm.session_id 
+                     AND cm2.to_user_id = %s 
+                     AND cm2.is_read = FALSE) as unread_count,
+                    (SELECT message FROM chat_messages cm3 
+                     WHERE cm3.session_id = cm.session_id 
+                     ORDER BY cm3.created_at DESC LIMIT 1) as last_message,
+                    (SELECT created_at FROM chat_messages cm4 
+                     WHERE cm4.session_id = cm.session_id 
+                     ORDER BY cm4.created_at DESC LIMIT 1) as last_time
+                FROM chat_messages cm
+                JOIN users u ON cm.from_user_id = u.id
+                WHERE cm.from_user_id = %s
+                GROUP BY cm.session_id, u.id, u.username, u.email
+                ORDER BY last_time DESC
+                """
+                cursor.execute(query, (user_id, user_id))
+            return cursor.fetchall()
+        except pymysql.Error as e:
+            logging.error(f"获取用户会话列表失败: {e}")
+            return []
+
+    def insert_user_info(self, username: str, email: str, password: str, avatar_data: Optional[bytes] = None, role: str = 'user') -> bool:
         """插入用户信息到数据库，头像可选，默认为默认头像。
 
         Args:
@@ -188,6 +428,7 @@ class DatabaseManager:
             email: 邮箱（登录唯一标识）
             password: 原始明文密码，将在此处进行哈希
             avatar_data: 头像二进制数据，缺省时使用默认头像
+            role: 用户角色，'user'（普通用户）、'admin'（管理员）、'customer_service'（客服），默认为 'user'
         """
         try:
             cursor = self.connection.cursor()
@@ -201,17 +442,18 @@ class DatabaseManager:
 
             # 插入用户数据
             insert_query = """
-            INSERT INTO users (username, email, password, avatar) 
-            VALUES (%s, %s, %s, %s)
+            INSERT INTO users (username, email, password, avatar, role) 
+            VALUES (%s, %s, %s, %s, %s)
             """
-            cursor.execute(insert_query, (username, email, hashed, avatar_data))
+            cursor.execute(insert_query, (username, email, hashed, avatar_data, role))
             user_id = cursor.lastrowid
             self.connection.commit()
 
-            # 插入默认的 VIP 信息
-            self.insert_user_vip_info(user_id)
+            # 只有普通用户才插入默认的 VIP 信息
+            if role == 'user':
+                self.insert_user_vip_info(user_id)
 
-            logging.info(f"用户 {username} 注册成功，ID: {user_id}")
+            logging.info(f"用户 {username} 注册成功，ID: {user_id}, 角色: {role}")
             return True
         except pymysql.Error as e:
             logging.info(f"插入用户信息失败: {e}")
@@ -222,23 +464,23 @@ class DatabaseManager:
         """根据邮箱查询用户信息。
 
         Returns:
-            包含 id、username、password、avatar 等字段的字典，查询失败或未找到返回 None。
+            包含 id、username、password、avatar、role 等字段的字典，查询失败或未找到返回 None。
         """
         try:
             # PyMySQL 的 Connection.cursor() 不支持 cursorclass 关键字参数，需直接传入游标类
             cursor = self.connection.cursor(pymysql.cursors.DictCursor)
-            query = "SELECT id, username, password, avatar FROM users WHERE email = %s"
+            query = "SELECT id, username, email, password, avatar, role FROM users WHERE email = %s"
             cursor.execute(query, (email,))
-            return cursor.fetchone()  # 返回包含用户头像的结果
+            return cursor.fetchone()  # 返回包含用户头像和角色的结果
         except pymysql.Error as e:
             logging.error(f"查询用户信息失败: {e}")
             return None
 
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
-        """根据用户 ID 查询用户基础信息（含头像）。"""
+        """根据用户 ID 查询用户基础信息（含头像和角色）。"""
         try:
             cursor = self.connection.cursor(pymysql.cursors.DictCursor)
-            query = "SELECT id, username, avatar FROM users WHERE id = %s"
+            query = "SELECT id, username, email, avatar, role FROM users WHERE id = %s"
             cursor.execute(query, (user_id,))
             return cursor.fetchone()
         except pymysql.Error as e:
