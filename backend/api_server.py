@@ -1634,8 +1634,6 @@ def handle_send_message(data):
 
 
 if __name__ == "__main__":
-    # 请使用本入口启动，避免 flask run/reloader 触发 werkzeug 的 write() before start_response
-    # 如已安装 eventlet，_ASYNC_MODE=eventlet；否则回退 threading
     socketio.run(
         app,
         host="0.0.0.0",

@@ -41,7 +41,8 @@ def health_check() -> bool:
 
 def send_verification_code(email: str, mode: str) -> Dict[str, Any]:
     """发送验证码"""
-    return _post("/api/send_verification_code", {"email": email, "mode": mode})
+    # 邮件发送可能较慢，设置30秒超时
+    return _post("/api/send_verification_code", {"email": email, "mode": mode}, timeout=30.0)
 
 
 def register_user(email: str, password: str, username: str, code: str) -> Dict[str, Any]:
