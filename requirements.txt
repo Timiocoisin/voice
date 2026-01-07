@@ -1,0 +1,17 @@
+# 后端依赖
+Flask>=2.0.0
+flask-socketio>=5.0.0
+pymysql>=1.0.0
+bcrypt>=3.2.0
+cryptography>=3.4.0
+requests>=2.25.0
+beautifulsoup4>=4.9.0
+
+# 客户端依赖
+PyQt6>=6.0.0
+requests>=2.25.0
+cryptography>=3.4.0
+
+# 可选：用于异步支持（推荐）
+eventlet>=0.30.0
+

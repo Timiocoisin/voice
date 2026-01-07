@@ -124,7 +124,24 @@
                   <span class="file-placeholder">📎 {{ msg.text || '[文件]' }}</span>
                 </template>
                 <template v-else>
-                  {{ msg.text }}
+                  <div 
+                    v-if="msg.isRich && msg.richText" 
+                    class="rich-text-content" 
+                    v-html="msg.richText"
+                  ></div>
+                  <span v-else>{{ msg.text }}</span>
+                  <!-- 链接预览卡片 -->
+                  <div v-if="msg.linkUrls && msg.linkUrls.length > 0" class="link-preview-container">
+                    <div 
+                      v-for="(url, index) in msg.linkUrls.slice(0, 1)" 
+                      :key="index"
+                      class="link-preview-card"
+                      @click="openLink(url)"
+                    >
+                      <div class="link-preview-title">链接预览</div>
+                      <div class="link-preview-url">{{ getUrlDisplay(url) }}</div>
+                    </div>
+                  </div>
                 </template>
               </div>
               <div class="msg-time">{{ msg.time }}</div>
@@ -204,6 +221,7 @@
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { customerServiceApi } from '@/api/client';
+import { processRichText, extractUrlsFromText } from '@/utils/richText';
 
 const router = useRouter();
 
@@ -228,6 +246,9 @@ interface ChatMessage {
   userId?: number;
   avatar?: string;
   messageType?: 'text' | 'image' | 'file';
+  richText?: string; // 富文本HTML
+  isRich?: boolean; // 是否为富文本
+  linkUrls?: string[]; // 链接URL列表（用于预览）
 }
 
 interface QuickReply {
@@ -606,6 +627,44 @@ const acceptSession = async (sessionId: string) => {
   }
 };
 
+// 处理消息富文本
+const processMessageRichText = (text: string): { richText: string; isRich: boolean; linkUrls: string[] } => {
+  if (!text) {
+    return { richText: '', isRich: false, linkUrls: [] };
+  }
+  
+  try {
+    const result = processRichText(text);
+    return {
+      richText: result.html,
+      isRich: result.isRich,
+      linkUrls: result.urls || []
+    };
+  } catch (error) {
+    console.error('处理富文本失败:', error);
+    return { richText: text, isRich: false, linkUrls: [] };
+  }
+};
+
+// 获取URL显示文本
+const getUrlDisplay = (url: string): string => {
+  try {
+    const urlObj = new URL(url);
+    let host = urlObj.hostname;
+    if (host.startsWith('www.')) {
+      host = host.substring(4);
+    }
+    return host.length > 32 ? host.substring(0, 29) + '...' : host;
+  } catch {
+    return url.length > 32 ? url.substring(0, 29) + '...' : url;
+  }
+};
+
+// 打开链接
+const openLink = (url: string) => {
+  window.open(url, '_blank', 'noopener,noreferrer');
+};
+
 // 加载消息
 const loadMessages = async (sessionId: string) => {
   if (!currentUser.value || !token.value) return;
@@ -613,15 +672,23 @@ const loadMessages = async (sessionId: string) => {
   try {
     const response = await customerServiceApi.getMessages(sessionId, currentUser.value.id, token.value);
     if (response.success) {
-      const mapped = (response.messages || []).map((m: any) => ({
-        id: m.id,
-        from: m.from || 'user',
-        text: m.text || '',
-        time: m.time || '刚刚',
-        userId: m.userId,
-        avatar: m.avatar,
-        messageType: (m.message_type || 'text') as ChatMessage['messageType'],
-      }));
+      const mapped = (response.messages || []).map((m: any) => {
+        const text = m.text || '';
+        const richTextResult = processMessageRichText(text);
+        
+        return {
+          id: m.id,
+          from: m.from || 'user',
+          text: text,
+          time: m.time || '刚刚',
+          userId: m.userId,
+          avatar: m.avatar,
+          messageType: (m.message_type || 'text') as ChatMessage['messageType'],
+          richText: richTextResult.richText,
+          isRich: richTextResult.isRich,
+          linkUrls: richTextResult.linkUrls,
+        };
+      });
       messages.value = mapped;
 
       // 同步已接收消息ID，避免HTTP轮询重复追加
@@ -801,14 +868,20 @@ const startMessagePolling = () => {
                 ? msg.text || '[文件]'
                 : msg.text || '';
 
+          const text = msg.text || '';
+          const richTextResult = processMessageRichText(text);
+          
           const chatMsg: ChatMessage = {
             id: msgId,
             from: msg.from === 'agent' ? 'agent' : 'user',
-            text: msg.text || '',
+            text: text,
             time: msg.time || '刚刚',
             userId: msg.userId,
             avatar: msg.avatar,
-            messageType: msgType
+            messageType: msgType,
+            richText: richTextResult.richText,
+            isRich: richTextResult.isRich,
+            linkUrls: richTextResult.linkUrls,
           };
 
           // 更新会话概览
@@ -1513,6 +1586,205 @@ const stopMessagePolling = () => {
   font-size: 10px;
   color: rgba(15, 23, 42, 0.55);
   text-align: right;
+}
+
+/* 富文本样式 */
+.rich-text-content {
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.rich-text-content :deep(code) {
+  background-color: #f1f5f9;
+  padding: 3px 6px;
+  border-radius: 4px;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  color: #e11d48;
+  border: 1px solid #e2e8f0;
+  font-weight: 500;
+}
+
+.rich-text-content :deep(pre) {
+  background-color: #1e293b;
+  padding: 12px;
+  border-radius: 8px;
+  overflow-x: auto;
+  margin: 8px 0;
+  border: 1px solid #334155;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.rich-text-content :deep(pre code) {
+  background-color: transparent;
+  padding: 0;
+  color: #e2e8f0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 0.9em;
+  line-height: 1.6;
+  border: none;
+}
+
+.rich-text-content :deep(strong) {
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rich-text-content :deep(em) {
+  font-style: italic;
+  color: #475569;
+}
+
+.rich-text-content :deep(a) {
+  color: #2563eb;
+  text-decoration: none;
+  font-weight: 500;
+  border-bottom: 1px solid rgba(37, 99, 235, 0.3);
+  transition: all 0.2s ease;
+}
+
+.rich-text-content :deep(a:hover) {
+  color: #1d4ed8;
+  border-bottom-color: #2563eb;
+  text-decoration: none;
+}
+
+.rich-text-content :deep(.mention) {
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-block;
+  transition: all 0.2s ease;
+  border: 1px solid;
+}
+
+.rich-text-content :deep(.mention[data-mention-type="service"]) {
+  color: #2563eb;
+  background-color: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.rich-text-content :deep(.mention[data-mention-type="user"]) {
+  color: #7c3aed;
+  background-color: rgba(124, 58, 237, 0.12);
+  border-color: rgba(124, 58, 237, 0.2);
+}
+
+.rich-text-content :deep(.mention:hover) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.rich-text-content :deep(.mention[data-mention-type="service"]:hover) {
+  background-color: rgba(59, 130, 246, 0.18);
+}
+
+.rich-text-content :deep(.mention[data-mention-type="user"]:hover) {
+  background-color: rgba(124, 58, 237, 0.18);
+}
+
+.rich-text-content :deep(blockquote) {
+  border-left: 4px solid #3b82f6;
+  padding: 8px 12px;
+  margin: 8px 0;
+  background-color: #f8fafc;
+  border-radius: 0 6px 6px 0;
+  color: #475569;
+  font-style: italic;
+}
+
+.rich-text-content :deep(ul),
+.rich-text-content :deep(ol) {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.rich-text-content :deep(li) {
+  margin: 4px 0;
+}
+
+.rich-text-content :deep(h1),
+.rich-text-content :deep(h2),
+.rich-text-content :deep(h3),
+.rich-text-content :deep(h4),
+.rich-text-content :deep(h5),
+.rich-text-content :deep(h6) {
+  margin: 12px 0 8px 0;
+  font-weight: 700;
+  color: #0f172a;
+  line-height: 1.3;
+}
+
+.rich-text-content :deep(h1) {
+  font-size: 20px;
+}
+
+.rich-text-content :deep(h2) {
+  font-size: 18px;
+}
+
+.rich-text-content :deep(h3) {
+  font-size: 16px;
+}
+
+.rich-text-content :deep(h4) {
+  font-size: 14px;
+}
+
+.rich-text-content :deep(h5) {
+  font-size: 13px;
+}
+
+.rich-text-content :deep(h6) {
+  font-size: 12px;
+}
+
+/* 链接预览卡片 */
+.link-preview-container {
+  margin-top: 10px;
+}
+
+.link-preview-card {
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  max-width: 320px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.link-preview-card:hover {
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  border-color: #cbd5e1;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.08);
+}
+
+.link-preview-title {
+  font-size: 11px;
+  font-weight: 600;
+  color: #64748b;
+  margin-bottom: 6px;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.link-preview-title::before {
+  content: '🔗';
+  font-size: 14px;
+}
+
+.link-preview-url {
+  font-size: 12px;
+  color: #2563eb;
+  word-break: break-all;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .chat-input-area {

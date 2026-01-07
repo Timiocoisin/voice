@@ -12,6 +12,7 @@ from __future__ import annotations
 import base64
 import logging
 import secrets
+import threading
 from datetime import datetime, timedelta
 from typing import Any, Dict
 
@@ -42,6 +43,8 @@ from backend.logging_manager import setup_logging  # noqa: F401
 from backend.membership_service import MembershipService
 from backend.validation.validator import validate_email, validate_password
 from backend.validation.verification_manager import VerificationManager
+from backend.utils.rich_text_processor import process_rich_text, extract_urls_from_text, extract_mentions_from_text
+from backend.utils.link_preview import fetch_link_preview, get_simple_preview
 
 
 # 初始化日志
@@ -130,6 +133,21 @@ def health() -> Any:
     return jsonify({"status": "ok"})
 
 
+def _send_verification_code_async(email: str, code: str) -> None:
+    """
+    在后台线程中异步发送验证码邮件。
+    这样可以避免阻塞 HTTP 响应，提升用户体验。
+    """
+    try:
+        ok = email_sender.send_verification_code(email, code)
+        if not ok:
+            logger.warning("验证码邮件发送失败：%s（验证码已保存，用户可能无法收到）", email)
+        else:
+            logger.info("验证码邮件已成功发送至：%s", email)
+    except Exception as e:
+        logger.error("发送验证码邮件失败：%s", e, exc_info=True)
+
+
 @app.post("/api/send_verification_code")
 def send_verification_code_api() -> Any:
     """
@@ -137,8 +155,10 @@ def send_verification_code_api() -> Any:
     Request JSON: { "email": str, "mode": "login" | "register" }
 
     规则：
-    - login 模式：邮箱必须已注册，否则不给发码，提示“请先注册”；
-    - register 模式：邮箱必须未注册，否则不给发码，提示“邮箱已被注册”。
+    - login 模式：邮箱必须已注册，否则不给发码，提示"请先注册"；
+    - register 模式：邮箱必须未注册，否则不给发码，提示"邮箱已被注册"。
+    
+    注意：验证码会立即保存，邮件发送在后台异步执行，避免客户端超时。
     """
     data = request.get_json(force=True) or {}
     email = str(data.get("email", "")).strip()
@@ -153,7 +173,7 @@ def send_verification_code_api() -> Any:
             return jsonify(
                 {
                     "success": False,
-                    "message": "该邮箱尚未注册，请先切换到“注册”并完成注册。",
+                    "message": "该邮箱尚未注册，请先切换到注册并完成注册。",
                 }
             ), 400
     elif mode == "register":
@@ -165,17 +185,16 @@ def send_verification_code_api() -> Any:
                 }
             ), 400
 
+    # 生成验证码并立即保存
     code = generate_verification_code()
-    try:
-        ok = email_sender.send_verification_code(email, code)
-    except Exception as e:
-        logger.error("发送验证码邮件失败：%s", e, exc_info=True)
-        ok = False
-
-    if not ok:
-        return jsonify({"success": False, "message": "验证码发送失败，请稍后重试"}), 500
-
     verification_manager.set_verification_code(email, code)
+    
+    # 在后台线程中异步发送邮件，避免阻塞 HTTP 响应
+    # 这样可以防止客户端因邮件发送慢而超时
+    thread = threading.Thread(target=_send_verification_code_async, args=(email, code), daemon=True)
+    thread.start()
+    
+    # 立即返回成功响应，不等待邮件发送完成
     return jsonify({"success": True})
 
 
@@ -1631,6 +1650,91 @@ def handle_send_message(data):
     except Exception as e:
         logger.error("WebSocket 发送消息失败: %s", e, exc_info=True)
         return {"success": False, "message": "服务器错误"}
+
+
+@app.post("/api/link/preview")
+def get_link_preview_api() -> Any:
+    """
+    获取链接预览信息（富文本功能）。
+    Request JSON: { url, token? }
+    """
+    data = request.get_json(force=True) or {}
+    url = str(data.get("url", "")).strip()
+    token = str(data.get("token", "")).strip()
+    
+    if not url:
+        return jsonify({"success": False, "message": "缺少URL参数"}), 400
+    
+    # Token 可选，如果有则验证
+    if token:
+        payload = verify_token(token)
+        if not payload:
+            return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+    
+    # 获取链接预览
+    try:
+        preview = fetch_link_preview(url, timeout=5)
+        if not preview.get("success"):
+            # 降级到简单预览
+            preview = get_simple_preview(url)
+        
+        return jsonify({
+            "success": True,
+            "preview": preview
+        })
+    except Exception as e:
+        logger.error(f"获取链接预览失败: {url}, 错误: {e}", exc_info=True)
+        # 降级到简单预览
+        preview = get_simple_preview(url)
+        return jsonify({
+            "success": True,
+            "preview": preview
+        })
+
+
+@app.post("/api/message/process_rich_text")
+def process_rich_text_api() -> Any:
+    """
+    处理富文本消息（提取URL、@提及等元数据）。
+    Request JSON: { content, user_id?, token? }
+    """
+    data = request.get_json(force=True) or {}
+    content = str(data.get("content", "")).strip()
+    user_id = data.get("user_id")
+    token = str(data.get("token", "")).strip()
+    
+    if not content:
+        return jsonify({
+            "success": True,
+            "html": "",
+            "is_rich": False,
+            "urls": [],
+            "mentions": []
+        })
+    
+    # Token 可选，如果有则验证
+    if token:
+        payload = verify_token(token)
+        if not payload:
+            return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+        # 如果提供了user_id，验证是否匹配
+        if user_id and payload.get("user_id"):
+            if int(user_id) != int(payload.get("user_id", 0)):
+                return jsonify({"success": False, "message": "Token 与用户ID不匹配"}), 403
+    
+    # 处理富文本
+    try:
+        result = process_rich_text(content, user_id)
+        return jsonify({
+            "success": True,
+            **result
+        })
+    except Exception as e:
+        logger.error(f"处理富文本失败: {e}", exc_info=True)
+        return jsonify({
+            "success": False,
+            "message": "处理富文本时出错"
+        }), 500
 
 
 if __name__ == "__main__":

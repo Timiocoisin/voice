@@ -1,0 +1,5 @@
+# 客户端依赖
+PyQt6>=6.0.0
+requests>=2.25.0
+cryptography>=3.4.0
+

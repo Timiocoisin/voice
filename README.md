@@ -43,6 +43,7 @@
   - 内置客服聊天窗口，支持文本、图片、文件消息气泡展示  
   - 基于 `client/customer_service` 下的关键词匹配模块，实现 FAQ 智能回复（本地匹配）  
   - 支持 FAQ 列表、常见问题卡片、表情插入、未读消息角标等交互
+  - **消息富文本支持**：Markdown 格式（加粗、斜体、代码、标题、列表、引用等）、@提及功能（@用户、@客服，自动高亮显示）、链接预览（自动识别链接并生成预览卡片）
 
 - **系统公告**
   - `announcements` 表存储系统公告，支持在主界面滚动展示最新公告
@@ -51,6 +52,7 @@
   - 基于 Vue 3 + TypeScript + Vite 构建的现代化 Web 前端
   - 支持多坐席同时在线、会话队列管理（我的会话 / 待接入）
   - 聊天面板支持文本消息、用户信息展示、VIP 标识、会话时长统计
+  - **消息富文本支持**：Markdown 格式渲染、@提及高亮、链接预览卡片
   - 右侧信息栏展示用户基础信息、变声器环境信息、快捷回复等
   - 路由守卫实现登录鉴权，支持登录/注册/忘记密码/重置密码页面
 
@@ -77,6 +79,8 @@ change_voice/
 │   ├── resources/               # 资源加载（后端版本）
 │   ├── timer/                   # 定时任务相关
 │   └── utils / validation ...   # 通用工具与校验
+│       ├── rich_text_processor.py  # 富文本处理模块
+│       └── link_preview.py         # 链接预览模块
 │
 ├── client/                      # 客户端（PyQt6 UI）
 │   ├── main.py                  # 程序入口，初始化 QApplication 与主窗口
@@ -92,6 +96,7 @@ change_voice/
 │   ├── gui/                      # 界面层（PyQt6）
 │   │   ├── main_window.py       # 主窗口，拼装整体 UI 与事件处理
 │   │   ├── components/          # 聊天气泡、顶部栏、布局等 UI 组件
+│   │   │   └── chat_rich_text.py  # 富文本处理组件
 │   │   ├── handlers/            # 事件处理（聊天、窗口、会员、头像等）
 │   │   └── styles/ & views/     # 样式与视图封装
 │   └── modules/                  # 各类弹窗 / 对话框
@@ -108,7 +113,8 @@ change_voice/
         │   ├── views/            # 页面组件（登录页、工作台等）
         │   ├── components/       # 通用组件（聊天面板等）
         │   ├── api/              # API 客户端封装
-        │   └── utils/            # 工具函数（表单验证等）
+        │   └── utils/            # 工具函数（表单验证、富文本处理等）
+        │       └── richText.ts   # 富文本处理工具
         ├── package.json          # 依赖配置
         ├── vite.config.ts        # Vite 构建配置
         └── README.md             # 前端项目说明文档
@@ -128,6 +134,7 @@ change_voice/
   - `bcrypt` - 密码加密
   - `cryptography` - Token 加密
   - `requests` - HTTP 客户端（用于测试）
+  - `beautifulsoup4` - HTML 解析（用于链接预览）
 
 ### 桌面客户端
 - **操作系统**：Windows 10 / 11（其他平台需自行测试）  
@@ -168,7 +175,7 @@ cd change_voice
 
 ```bash
 # 后端依赖
-pip install Flask pymysql bcrypt cryptography requests
+pip install Flask pymysql bcrypt cryptography requests beautifulsoup4
 
 # 客户端依赖
 pip install PyQt6 requests cryptography
@@ -177,7 +184,12 @@ pip install PyQt6 requests cryptography
 或根据你实际维护的 `requirements.txt` 执行：
 
 ```bash
+# 安装所有依赖（推荐）
 pip install -r requirements.txt
+
+# 或分别安装
+pip install -r backend/requirements.txt  # 后端依赖
+pip install -r client/requirements.txt   # 客户端依赖
 ```
 
 ### 3. 配置数据库
@@ -287,6 +299,10 @@ npm run dev
 ### 公告相关
 - `GET /api/announcement/latest` - 获取最新公告
 
+### 富文本相关（新增）
+- `POST /api/message/process_rich_text` - 处理富文本消息（提取URL、@提及等元数据）
+- `POST /api/link/preview` - 获取链接预览信息
+
 所有接口的详细说明和请求/响应格式，请参考 `backend/api_server.py` 和 `client/api_client.py`。
 
 ---
@@ -352,6 +368,7 @@ npm run dev
 
 ## 开发规划 / TODO（示例）
 
+- [x] ✅ 消息富文本功能（Markdown、@提及、链接预览）
 - [ ] 接入实际的音频处理 / 变声后端服务  
 - [ ] 增加多语言支持（中 / 英等）  
 - [ ] 丰富会员权益展示与运营位文案  
@@ -373,6 +390,7 @@ npm run dev
 - ✅ WebSocket 基础设施（SocketIO 已集成）
 - ✅ 基础会话和消息存储（数据库表结构）
 - ✅ 客服在线状态管理
+- ✅ **消息富文本功能**（Markdown 格式、@提及、链接预览）
 
 **功能差距分析：**
 当前系统实现了客服对话的基础框架，以下详细列出待完成的功能模块。
@@ -415,11 +433,10 @@ npm run dev
   - 消息引用回复（@回复特定消息）
   - 消息收藏（重要消息标记收藏）
 
-- [ ] **消息富文本**
-  - Markdown 格式支持
-  - 表情包/Emoji 支持
-  - @提及功能（@用户、@客服）
-  - 链接预览（自动识别链接并生成预览卡片）
+- [x] **消息富文本** ✅
+  - ✅ Markdown 格式支持（加粗、斜体、代码、标题、列表、引用等）
+  - ✅ @提及功能（@用户、@客服，自动高亮显示）
+  - ✅ 链接预览（自动识别链接并生成预览卡片）
 
 ---
 

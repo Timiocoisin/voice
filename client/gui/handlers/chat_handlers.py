@@ -9,15 +9,16 @@ from PyQt6.QtWidgets import (
     QScrollArea, QPushButton, QMenu, QWidgetAction, QGridLayout,
     QDialog, QFileDialog, QGraphicsDropShadowEffect, QGraphicsOpacityEffect
 )
-from PyQt6.QtCore import Qt, QPoint, QTimer, QRectF
+from PyQt6.QtCore import Qt, QPoint, QTimer, QRectF, QUrl
 from PyQt6.QtGui import (
-    QPixmap, QCursor, QPainter, QPainterPath, QColor, QImage
+    QPixmap, QCursor, QPainter, QPainterPath, QColor, QImage, QDesktopServices
 )
 
 from client.resources import get_default_avatar
 from gui.components.chat_bubble import ChatBubble
 from gui.handlers import dialog_handlers
 from gui.handlers.message_utils import show_message
+from gui.components.chat_rich_text import format_message_rich_text
 
 if TYPE_CHECKING:
     from gui.main_window import MainWindow
@@ -483,6 +484,25 @@ def append_chat_message(
     if not hasattr(main_window, "chat_layout"):
         return
 
+    # 先根据需要将纯文本转换为富文本（Markdown / @提及 / 链接）
+    effective_content = content
+    rich_flag = is_html
+    link_urls: List[str] = []
+
+    # 仅在原始消息非 HTML 时尝试自动解析富文本，避免破坏已有 HTML 文本
+    if not is_html and content:
+        try:
+            html, is_rich, urls = format_message_rich_text(content)
+            if is_rich:
+                effective_content = html
+                rich_flag = True
+                link_urls = urls or []
+        except Exception:
+            # 如果富文本处理出错，使用原始内容
+            effective_content = content
+            rich_flag = False
+            link_urls = []
+
     # 容器：一条完整的消息
     message_widget = QWidget()
     v_layout = QVBoxLayout(message_widget)
@@ -557,12 +577,12 @@ def append_chat_message(
 
     if from_self:
         bubble_label = ChatBubble(
-            content,
+            effective_content,
             background=QColor("#dcf8c6"),
             text_color=QColor("#0f172a"),
             max_width=420,
             align_right=True,
-            rich_text=is_html,
+            rich_text=rich_flag,
         )
         avatar_label.setStyleSheet("border-radius: 16px;")
         row.addStretch()
@@ -570,13 +590,13 @@ def append_chat_message(
         row.addWidget(avatar_label)
     else:
         bubble_label = ChatBubble(
-            content,
+            effective_content,
             background=QColor("#ffffff"),
             text_color=QColor("#111827"),
             border_color=QColor("#e5e7eb"),
             max_width=420,
             align_right=False,
-            rich_text=is_html,
+            rich_text=rich_flag,
         )
         avatar_label.setStyleSheet("border-radius: 16px;")
         row.addWidget(avatar_label)
@@ -584,6 +604,100 @@ def append_chat_message(
         row.addStretch()
 
     v_layout.addLayout(row)
+
+    # 若识别到 URL，则在当前消息下方追加简单的链接预览卡片
+    if link_urls:
+        preview_container = QWidget()
+        preview_layout = QHBoxLayout(preview_container)
+        preview_layout.setContentsMargins(40 if not from_self else 0, 4, 0 if from_self else 40, 0)
+        preview_layout.setSpacing(0)
+
+        # 只展示第一个链接的预览，避免过于臃肿
+        url = link_urls[0]
+        from urllib.parse import urlparse
+
+        parsed = urlparse(url)
+        host = parsed.netloc or parsed.path
+        display_host = host if len(host) <= 32 else host[:29] + "..."
+
+        card = QWidget()
+        card.setObjectName("linkPreviewCard")
+        card.setStyleSheet("""
+            #linkPreviewCard {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #ffffff, stop:1 #f8fafc);
+                border-radius: 12px;
+                border: 1px solid #e2e8f0;
+                max-width: 320px;
+            }
+            #linkPreviewCard:hover {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                    stop:0 #f8fafc, stop:1 #f1f5f9);
+                border: 1px solid #cbd5e1;
+                transform: translateY(-1px);
+            }
+        """)
+        card_layout = QVBoxLayout(card)
+        card_layout.setContentsMargins(14, 10, 14, 10)
+        card_layout.setSpacing(6)
+
+        # 添加图标和标题行
+        header_layout = QHBoxLayout()
+        header_layout.setContentsMargins(0, 0, 0, 0)
+        header_layout.setSpacing(6)
+        
+        icon_label = QLabel("🔗")
+        icon_label.setStyleSheet("""
+            QLabel {
+                font-size: 14px;
+            }
+        """)
+        
+        title_label = QLabel("链接预览")
+        title_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 11px;
+                font-weight: 600;
+                color: #64748b;
+                letter-spacing: 0.5px;
+            }
+        """)
+        
+        header_layout.addWidget(icon_label)
+        header_layout.addWidget(title_label)
+        header_layout.addStretch()
+        
+        url_label = QLabel(display_host)
+        url_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 12px;
+                color: #2563eb;
+                font-weight: 500;
+                padding: 2px 0px;
+            }
+        """)
+        url_label.setWordWrap(True)
+
+        card_layout.addLayout(header_layout)
+        card_layout.addWidget(url_label)
+
+        # 点击整个卡片在系统浏览器中打开链接
+        def open_in_browser(*_):
+            QDesktopServices.openUrl(QUrl(url))
+
+        card.mousePressEvent = lambda event: open_in_browser(event)
+
+        if from_self:
+            preview_layout.addStretch()
+            preview_layout.addWidget(card)
+        else:
+            preview_layout.addWidget(card)
+            preview_layout.addStretch()
+
+        v_layout.addLayout(preview_layout)
+
     main_window.chat_layout.addWidget(message_widget)
 
     # 打字机效果
