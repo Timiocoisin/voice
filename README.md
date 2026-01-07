@@ -274,38 +274,7 @@ npm run dev
 
 > **注意**：当前 Web 前端使用前端假数据进行演示，后续需要对接真实后端 API 和 WebSocket 服务。
 
----
 
-## API 接口说明
-
-后端提供以下 HTTP API 接口（详见 `backend/api_server.py`）：
-
-### 健康检查
-- `GET /api/health` - 检查服务状态
-
-### 用户相关
-- `POST /api/send_verification_code` - 发送验证码
-- `POST /api/register` - 用户注册
-- `POST /api/login` - 用户登录
-- `POST /api/check_token` - 验证 Token 并获取用户信息
-- `POST /api/user/profile` - 获取用户信息
-- `POST /api/user/avatar` - 更新用户头像
-
-### VIP 相关
-- `POST /api/vip/info` - 获取 VIP 信息
-- `POST /api/vip/purchase` - 购买会员套餐
-- `POST /api/diamond/balance` - 获取钻石余额
-
-### 公告相关
-- `GET /api/announcement/latest` - 获取最新公告
-
-### 富文本相关（新增）
-- `POST /api/message/process_rich_text` - 处理富文本消息（提取URL、@提及等元数据）
-- `POST /api/link/preview` - 获取链接预览信息
-
-所有接口的详细说明和请求/响应格式，请参考 `backend/api_server.py` 和 `client/api_client.py`。
-
----
 
 ## 客服系统简要说明
 
@@ -326,45 +295,8 @@ npm run dev
 
 ---
 
-## 部署与发布建议
 
-### 开发环境
 
-- **后端**：直接运行 `python -m backend.api_server` 进行调试
-- **桌面客户端**：直接运行 `python -m client.main` 进行调试
-- **Web 前端**：运行 `cd frontend/chat-web && npm run dev` 进行调试，支持热重载
-
-### 生产环境
-
-#### 后端部署
-
-- 使用 `gunicorn` 或 `uwsgi` 部署 Flask 应用
-- 配置 Nginx 反向代理
-- 使用环境变量或配置文件管理敏感信息（数据库密码、密钥等）
-- 配置 HTTPS 证书
-
-#### 桌面客户端打包
-
-- 可以使用 `PyInstaller`、`cx_Freeze` 等工具打包为 Windows 可执行文件（`exe`）
-- 将资源目录（`client/resources`）、配置文件及依赖 DLL 一并打包
-- 修改 `client/api_client.py` 中的 `BASE_URL` 为生产环境的后端地址
-
-#### Web 前端构建
-
-- 运行 `cd frontend/chat-web && npm run build` 构建生产版本
-- 构建产物位于 `frontend/chat-web/dist` 目录
-- 可使用 `nginx`、`Apache` 等 Web 服务器部署静态文件
-- 配置反向代理，将 API 请求转发到后端服务
-- 修改 `src/api/client.ts` 中的 `BASE_URL` 为生产环境的后端地址
-
-#### 安全建议
-
-- 生产环境请将数据库与邮箱配置从代码中抽离到环境变量或独立配置文件  
-- 对敏感信息进行加密或最小化权限配置（单独的数据库账号，仅授予所需权限）
-- 使用 HTTPS 保护 API 通信
-- 定期更新密钥和依赖库
-
----
 
 ## 开发规划 / TODO（示例）
 
@@ -419,12 +351,6 @@ npm run dev
   - 大消息分片传输（支持超大文件/图片）
 
 #### 1.2 消息类型扩展
-- [ ] **多媒体消息支持**
-  - 语音消息（录音、播放、转文字）
-  - 视频消息（录制、播放）
-  - 位置消息（地图定位）
-  - 卡片消息（富文本卡片、商品卡片）
-  - 代码块消息（代码高亮显示）
 
 - [ ] **消息操作功能**
   - 消息撤回（2分钟内可撤回）
