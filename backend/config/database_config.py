@@ -8,7 +8,7 @@ from typing import Dict, Any
 
 # 数据库配置字典
 DATABASE_CONFIG: Dict[str, Any] = {
-    "host": os.getenv("DB_HOST", "localhost"),
+    "host": os.getenv("DB_HOST", "172.16.37.39"),
     "user": os.getenv("DB_USER", "root"),
     "password": os.getenv("DB_PASSWORD", "123456"),
     "database": os.getenv("DB_NAME", "voice"),

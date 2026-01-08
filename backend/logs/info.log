@@ -44,3 +44,2664 @@
 2026-01-07 19:23:30,114 - INFO - root - 数据库连接成功
 2026-01-07 19:39:32,307 - INFO - root - 数据库连接成功
 2026-01-07 19:40:05,269 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-08 14:45:22,943 - INFO - root - 数据库连接成功
+2026-01-08 15:11:54,863 - INFO - root - 数据库连接成功
+2026-01-08 15:17:37,611 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:37,613 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:37,613 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:38,581 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:38,581 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:38,582 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:39,602 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:39,603 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:39,604 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:40,572 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:40,573 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:40,573 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:41,578 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:41,579 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:41,580 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:42,609 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:42,611 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:42,611 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:43,621 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:43,622 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:43,622 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:44,572 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:44,573 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:44,573 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:45,585 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:45,586 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:45,586 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:46,607 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:46,609 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:46,610 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:47,588 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:47,589 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:47,590 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:48,570 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:48,572 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:48,572 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:49,567 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:49,568 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:49,569 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:50,626 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:50,627 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:50,627 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:51,583 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:51,584 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:51,585 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:52,598 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:52,600 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:52,600 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:53,589 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:53,590 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:53,591 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:54,633 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:54,635 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:54,636 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:55,599 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:55,600 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:55,600 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:56,574 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:56,575 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:56,576 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:57,584 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:57,585 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:57,586 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:58,627 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:58,628 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:58,629 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:17:59,584 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:59,585 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:17:59,586 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:00,629 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:00,631 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:00,632 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:01,591 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:01,592 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:01,592 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:02,603 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:02,605 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:02,605 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:03,568 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:03,569 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:03,569 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:04,592 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:04,593 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:04,593 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:05,572 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:05,574 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:05,575 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:06,634 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:06,636 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:06,636 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:07,596 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:07,597 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:07,597 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:08,607 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:08,609 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:08,610 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:09,619 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:09,620 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:09,621 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:10,598 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:10,600 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:10,600 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:11,602 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:11,604 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:11,604 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:12,547 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:12,548 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:12,549 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:13,584 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:13,587 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:13,587 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:14,579 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:14,580 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:14,581 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:15,567 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:15,568 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:15,569 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:16,610 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:16,611 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:16,612 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:17,578 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,579 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,579 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:17,895 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,896 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,896 - ERROR - __main__ - 获取客服会话列表时数据库异常: 数据库查询用户ID 2 时发生错误
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 929, in get_customer_service_sessions_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 2 时发生错误
+2026-01-08 15:18:17,898 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,899 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,900 - ERROR - __main__ - 获取客服用户信息失败（数据库异常）：数据库查询用户ID 2 时发生错误
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1033, in get_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 2 时发生错误
+2026-01-08 15:18:17,902 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,903 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,904 - ERROR - __main__ - 获取客服会话列表时数据库异常: 数据库查询用户ID 2 时发生错误
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 929, in get_customer_service_sessions_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 2 时发生错误
+2026-01-08 15:18:17,906 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,908 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,908 - ERROR - __main__ - 获取客服用户信息失败（数据库异常）：数据库查询用户ID 2 时发生错误
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1033, in get_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 2 时发生错误
+2026-01-08 15:18:17,912 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,913 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,913 - ERROR - __main__ - 更新客服在线状态时数据库异常: 数据库查询用户ID 2 时发生错误
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1546, in update_agent_status_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 2 时发生错误
+2026-01-08 15:18:17,916 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,917 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:17,918 - ERROR - __main__ - 更新客服在线状态时数据库异常: 数据库查询用户ID 2 时发生错误
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1546, in update_agent_status_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 2 时发生错误
+2026-01-08 15:18:18,570 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:18,572 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:18,573 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:19,623 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:19,624 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:19,626 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:20,602 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:20,603 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:20,603 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:21,585 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:21,586 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:21,587 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:22,623 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:22,624 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:22,625 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:23,571 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:23,572 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:23,573 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:24,579 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:24,580 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:24,581 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:25,596 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:25,598 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:25,599 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:26,617 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:26,618 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:26,619 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:27,579 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:27,581 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:27,581 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:28,601 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:28,602 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:28,602 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:29,581 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:29,583 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:29,583 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:30,610 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:30,611 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:30,612 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:31,607 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:31,609 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:31,609 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:32,567 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:32,568 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:32,569 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:33,562 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:33,563 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:33,564 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:34,578 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:34,579 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:34,580 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:18:35,597 - ERROR - root - 第1次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:35,598 - ERROR - root - 第2次根据用户ID查询用户信息失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:18:35,599 - ERROR - api_server - Exception on /api/user/chat_messages [POST]
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 44, in create_connection
+    for res in getaddrinfo(host, port, 0, SOCK_STREAM):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\support\greendns.py", line 578, in getaddrinfo
+    raise socket.gaierror(socket.EAI_NONAME, 'No address found')
+socket.gaierror: [Errno 11001] No address found
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 803, in get_user_by_id
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 723, in connect
+    raise exc
+pymysql.err.OperationalError: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 1473, in wsgi_app
+    response = self.full_dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 882, in full_dispatch_request
+    rv = self.handle_user_exception(e)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 880, in full_dispatch_request
+    rv = self.dispatch_request()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask\app.py", line 865, in dispatch_request
+    return self.ensure_sync(self.view_functions[rule.endpoint])(**view_args)  # type: ignore[no-any-return]
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1110, in get_user_chat_messages_api
+    user_row = db.get_user_by_id(user_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 812, in get_user_by_id
+    raise ConnectionError(f"数据库查询用户ID {user_id} 时发生错误") from e
+ConnectionError: 数据库查询用户ID 1 时发生错误
+2026-01-08 15:35:02,465 - INFO - root - 数据库连接成功
+2026-01-08 15:35:02,494 - INFO - root - 检测到 chat_messages 表缺少 is_recalled 列，正在自动添加...
+2026-01-08 15:46:26,604 - INFO - root - 数据库连接成功
+2026-01-08 15:46:49,218 - INFO - root - 消息 139 已被用户 2 撤回
+2026-01-08 15:52:39,740 - INFO - root - 消息 143 已被用户 2 撤回
+2026-01-08 15:54:27,724 - ERROR - root - 连接数据库失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:55:08,935 - ERROR - root - 连接数据库失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-08 15:55:35,624 - INFO - root - 数据库连接成功
+2026-01-08 15:56:24,435 - INFO - root - 消息 145 已被用户 2 撤回
+2026-01-08 16:05:36,360 - INFO - root - 数据库连接成功
+2026-01-08 16:06:06,627 - INFO - root - 消息 148 已被用户 2 撤回
+2026-01-08 16:22:09,204 - INFO - root - 数据库连接成功
+2026-01-08 16:22:56,449 - INFO - root - 消息 149 已被用户 2 撤回
+2026-01-08 16:49:01,759 - INFO - root - 数据库连接成功
+2026-01-08 16:49:34,679 - INFO - root - 消息 155 已被用户 2 撤回
+2026-01-08 17:04:59,527 - INFO - root - 数据库连接成功
+2026-01-08 17:05:31,893 - INFO - root - 消息 159 已被用户 2 撤回
+2026-01-08 17:10:01,269 - INFO - root - 数据库连接成功
+2026-01-08 17:10:34,218 - INFO - root - 消息 160 已被用户 2 撤回
+2026-01-08 17:10:37,103 - INFO - root - 消息 161 已被用户 2 撤回
+2026-01-08 17:16:46,449 - INFO - root - 数据库连接成功
+2026-01-08 17:17:20,883 - INFO - root - 消息 166 已被用户 1 撤回
+2026-01-08 17:24:06,452 - INFO - root - 数据库连接成功
+2026-01-08 17:24:36,104 - INFO - root - 消息 171 已被用户 2 撤回
+2026-01-08 17:24:56,705 - INFO - root - 消息 175 已被用户 1 撤回
+2026-01-08 17:29:25,246 - INFO - root - 数据库连接成功
+2026-01-08 17:29:54,791 - INFO - root - 消息 180 已被用户 1 撤回
+2026-01-08 17:31:01,173 - INFO - root - 消息 179 已被用户 1 撤回
+2026-01-08 17:34:15,356 - INFO - root - 数据库连接成功
+2026-01-08 17:34:37,229 - INFO - root - 消息 185 已被用户 1 撤回
+2026-01-08 17:34:53,814 - INFO - root - 消息 186 已被用户 1 撤回
+2026-01-08 20:52:57,600 - INFO - root - 数据库连接成功
+2026-01-08 20:53:05,072 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-08 20:53:31,197 - INFO - root - 消息 188 已被用户 1 撤回
+2026-01-08 20:53:48,794 - INFO - root - 消息 189 已被用户 1 撤回
+2026-01-08 21:01:19,294 - INFO - root - 数据库连接成功
+2026-01-08 21:01:50,143 - INFO - root - 消息 191 已被用户 1 撤回
+2026-01-08 21:04:44,226 - INFO - root - 消息 194 已被用户 2 撤回
+2026-01-08 21:06:10,203 - INFO - root - 数据库连接成功
+2026-01-08 21:07:44,633 - INFO - root - 消息 196 已被用户 2 撤回
+2026-01-08 21:07:59,254 - INFO - root - 消息 198 已被用户 1 撤回
+2026-01-08 21:09:28,325 - INFO - root - 消息 200 已被用户 1 撤回

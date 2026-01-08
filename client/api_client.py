@@ -169,10 +169,26 @@ def get_chat_messages(session_id: str, user_id: int, token: str) -> Dict[str, An
     )
 
 
-def send_chat_message(session_id: str, user_id: int, message: str, token: str, message_type: str = "text") -> Dict[str, Any]:
+def send_chat_message(session_id: str, user_id: int, message: str, token: str, message_type: str = "text", reply_to_message_id: Optional[int] = None) -> Dict[str, Any]:
     """发送聊天消息（用户端调用）"""
+    data = {"session_id": session_id, "user_id": user_id, "message": message, "token": token, "message_type": message_type}
+    if reply_to_message_id:
+        data["reply_to_message_id"] = reply_to_message_id
+    return _post("/api/user/send_message", data)
+
+
+def recall_message(message_id: int, user_id: int, token: str) -> Dict[str, Any]:
+    """撤回消息（2分钟内可撤回）"""
     return _post(
-        "/api/user/send_message",
-        {"session_id": session_id, "user_id": user_id, "message": message, "token": token, "message_type": message_type},
+        "/api/message/recall",
+        {"message_id": message_id, "user_id": user_id, "token": token},
     )
+
+
+def get_reply_message(message_id: int, token: Optional[str] = None) -> Dict[str, Any]:
+    """获取被引用的消息详情（用于引用回复显示）"""
+    data = {"message_id": message_id}
+    if token:
+        data["token"] = token
+    return _post("/api/message/reply", data)
 

@@ -1067,14 +1067,22 @@ def get_chat_messages_api() -> Any:
             except:
                 pass
         
+        # 获取发送者用户名
+        msg_username = None
+        if msg_user:
+            msg_username = msg_user.get("username")
+        
         formatted_messages.append({
             "id": str(msg['id']),
             "from": "agent" if msg_user_id == user_id else "user",
-            "text": msg['message'],
+            "text": "[消息已撤回]" if msg.get("is_recalled") else msg['message'],
             "time": _format_time(msg['created_at']),
             "userId": msg_user_id,
+            "username": msg_username,  # 添加用户名
             "avatar": avatar_base64,
             "message_type": msg.get("message_type", "text"),
+            "is_recalled": msg.get("is_recalled", False),
+            "reply_to_message_id": msg.get("reply_to_message_id"),
         })
 
     return jsonify({"success": True, "messages": formatted_messages})
@@ -1133,13 +1141,22 @@ def get_user_chat_messages_api() -> Any:
             except:
                 pass
         
+        # 获取发送者用户名
+        msg_username = None
+        if msg_user:
+            msg_username = msg_user.get("username")
+        
         formatted_messages.append({
             "id": str(msg['id']),
             "from": "user" if msg_user_id == user_id else "agent",
-            "text": msg['message'],
+            "text": "[消息已撤回]" if msg.get("is_recalled") else msg['message'],
             "time": _format_time(msg['created_at']),
             "message_type": msg.get("message_type", "text"),
             "avatar": avatar_base64,
+            "is_recalled": msg.get("is_recalled", False),
+            "reply_to_message_id": msg.get("reply_to_message_id"),
+            "username": msg_username,  # 添加用户名
+            "userId": msg_user_id,  # 添加用户ID
         })
 
     return jsonify({"success": True, "messages": formatted_messages})
@@ -1149,7 +1166,7 @@ def get_user_chat_messages_api() -> Any:
 def send_user_message_api() -> Any:
     """
     发送聊天消息（用户端调用，HTTP接口）。
-    Request JSON: { session_id, user_id, message, token, message_type? }
+    Request JSON: { session_id, user_id, message, token, message_type?, reply_to_message_id? }
     """
     data = request.get_json(force=True) or {}
     session_id = str(data.get("session_id", "")).strip()
@@ -1157,6 +1174,7 @@ def send_user_message_api() -> Any:
     message = str(data.get("message", "")).strip()
     token = str(data.get("token", "")).strip()
     message_type = str(data.get("message_type", "text") or "text").strip()
+    reply_to_message_id = data.get("reply_to_message_id")
 
     if not session_id:
         return jsonify({"success": False, "message": "缺少会话ID"}), 400
@@ -1204,6 +1222,20 @@ def send_user_message_api() -> Any:
     if message_type not in ["text", "image", "file"]:
         message_type = "text"
 
+    # 验证引用消息（如果提供）
+    reply_to_id = None
+    if reply_to_message_id:
+        try:
+            reply_to_id = int(reply_to_message_id)
+            # 验证引用消息是否存在且属于当前会话
+            reply_msg = db.get_message_by_id(reply_to_id)
+            if not reply_msg or reply_msg.get("session_id") != session_id:
+                return jsonify({"success": False, "message": "引用消息不存在或不属于当前会话"}), 400
+            if reply_msg.get("is_recalled"):
+                return jsonify({"success": False, "message": "不能引用已撤回的消息"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "引用消息ID格式错误"}), 400
+
     # 插入消息
     try:
         message_id = db.insert_chat_message(
@@ -1211,7 +1243,8 @@ def send_user_message_api() -> Any:
             from_user_id=user_id,
             to_user_id=to_user_id,
             message=message,
-            message_type=message_type
+            message_type=message_type,
+            reply_to_message_id=reply_to_id
         )
     except ConnectionError as e:
         logger.error("发送消息写库失败（数据库异常）：%s", e, exc_info=True)
@@ -1231,7 +1264,7 @@ def send_user_message_api() -> Any:
 def send_agent_message_api() -> Any:
     """
     发送聊天消息（客服端调用，HTTP接口）。
-    Request JSON: { session_id, from_user_id, to_user_id?, message, token, message_type? }
+    Request JSON: { session_id, from_user_id, to_user_id?, message, token, message_type?, reply_to_message_id? }
     """
     data = request.get_json(force=True) or {}
     session_id = str(data.get("session_id", "")).strip()
@@ -1240,6 +1273,7 @@ def send_agent_message_api() -> Any:
     message = str(data.get("message", "")).strip()
     token = str(data.get("token", "")).strip()
     message_type = str(data.get("message_type", "text") or "text").strip()
+    reply_to_message_id = data.get("reply_to_message_id")
 
     if not session_id:
         return jsonify({"success": False, "message": "缺少会话ID"}), 400
@@ -1293,6 +1327,20 @@ def send_agent_message_api() -> Any:
     if message_type not in ["text", "image", "file"]:
         message_type = "text"
 
+    # 验证引用消息（如果提供）
+    reply_to_id = None
+    if reply_to_message_id:
+        try:
+            reply_to_id = int(reply_to_message_id)
+            # 验证引用消息是否存在且属于当前会话
+            reply_msg = db.get_message_by_id(reply_to_id)
+            if not reply_msg or reply_msg.get("session_id") != session_id:
+                return jsonify({"success": False, "message": "引用消息不存在或不属于当前会话"}), 400
+            if reply_msg.get("is_recalled"):
+                return jsonify({"success": False, "message": "不能引用已撤回的消息"}), 400
+        except (ValueError, TypeError):
+            return jsonify({"success": False, "message": "引用消息ID格式错误"}), 400
+
     # 插入消息
     try:
         message_id = db.insert_chat_message(
@@ -1300,7 +1348,8 @@ def send_agent_message_api() -> Any:
             from_user_id=from_user_id,
             to_user_id=to_user_id,
             message=message,
-            message_type=message_type
+            message_type=message_type,
+            reply_to_message_id=reply_to_id
         )
     except ConnectionError as e:
         logger.error("发送消息写库失败（数据库异常）：%s", e, exc_info=True)
@@ -1314,6 +1363,143 @@ def send_agent_message_api() -> Any:
         "message_id": message_id,
         "time": _format_time(datetime.now())
     })
+
+
+@app.post("/api/message/recall")
+def recall_message_api() -> Any:
+    """
+    撤回消息（2分钟内可撤回）。
+    Request JSON: { message_id, user_id, token }
+    """
+    data = request.get_json(force=True) or {}
+    message_id = data.get("message_id")
+    user_id = int(data.get("user_id", 0) or 0)
+    token = str(data.get("token", "")).strip()
+
+    if not message_id:
+        return jsonify({"success": False, "message": "缺少消息ID"}), 400
+    if not user_id:
+        return jsonify({"success": False, "message": "缺少用户ID"}), 400
+    if not token:
+        return jsonify({"success": False, "message": "缺少 Token"}), 400
+
+    # 验证 token
+    payload = verify_token(token)
+    if not payload:
+        return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    # 验证用户
+    try:
+        user_row = db.get_user_by_id(user_id)
+    except ConnectionError as e:
+        logger.error("撤回消息时获取用户信息失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    if not user_row:
+        return jsonify({"success": False, "message": "用户不存在"}), 404
+
+    # 验证 token 与用户匹配
+    token_email = payload.get("email")
+    if token_email and user_row.get("email") != token_email:
+        return jsonify({"success": False, "message": "Token 与用户不匹配"}), 403
+
+    # 撤回消息
+    try:
+        success = db.recall_message(int(message_id), user_id)
+        if success:
+            return jsonify({
+                "success": True,
+                "message": "消息已撤回"
+            })
+        else:
+            return jsonify({"success": False, "message": "撤回失败，可能是消息不存在、无权撤回、已撤回或超过2分钟"}), 400
+    except ConnectionError as e:
+        logger.error("撤回消息失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    except Exception as e:
+        logger.error("撤回消息时发生错误: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "撤回消息失败"}), 500
+
+
+@app.post("/api/message/reply")
+def get_reply_message_api() -> Any:
+    """
+    获取被引用的消息详情（用于引用回复显示）。
+    Request JSON: { message_id, token? }
+    """
+    data = request.get_json(force=True) or {}
+    message_id = data.get("message_id")
+    token = str(data.get("token", "")).strip()
+
+    if not message_id:
+        return jsonify({"success": False, "message": "缺少消息ID"}), 400
+
+    # Token 可选，如果有则验证
+    if token:
+        payload = verify_token(token)
+        if not payload:
+            return jsonify({"success": False, "message": "Token 无效或已过期"}), 401
+
+    # 获取消息详情
+    try:
+        message = db.get_message_by_id(int(message_id))
+        if not message:
+            return jsonify({"success": False, "message": "消息不存在"}), 404
+        
+        # 获取发送者用户名
+        from_user_id = message.get("from_user_id")
+        from_username = None
+        if from_user_id:
+            try:
+                from_user = db.get_user_by_id(from_user_id)
+                if from_user:
+                    from_username = from_user.get("username")
+            except Exception:
+                pass
+        
+        # 如果消息已撤回，返回撤回提示
+        if message.get("is_recalled"):
+            return jsonify({
+                "success": True,
+                "message": {
+                    "id": message.get("id"),
+                    "message": "[消息已撤回]",
+                    "message_type": message.get("message_type"),
+                    "is_recalled": True,
+                    "from_user_id": from_user_id,
+                    "from_username": from_username,  # 添加发送者用户名
+                    "created_at": message.get("created_at")
+                }
+            })
+        
+        # 获取发送者用户名
+        from_user_id = message.get("from_user_id")
+        from_username = None
+        if from_user_id:
+            try:
+                from_user = db.get_user_by_id(from_user_id)
+                if from_user:
+                    from_username = from_user.get("username")
+            except Exception:
+                pass
+        
+        return jsonify({
+            "success": True,
+            "message": {
+                "id": message.get("id"),
+                "message": message.get("message"),
+                "message_type": message.get("message_type"),
+                "is_recalled": message.get("is_recalled", False),
+                "from_user_id": from_user_id,
+                "from_username": from_username,  # 添加发送者用户名
+                "created_at": message.get("created_at")
+            }
+        })
+    except ConnectionError as e:
+        logger.error("获取引用消息详情失败（数据库异常）：%s", e, exc_info=True)
+        return jsonify({"success": False, "message": "数据库连接错误，请稍后重试"}), 500
+    except Exception as e:
+        logger.error("获取引用消息详情时发生错误: %s", e, exc_info=True)
+        return jsonify({"success": False, "message": "获取消息详情失败"}), 500
 
 
 ### 已废弃的 WebSocket 发送消息接口，统一改为 HTTP 接口，保留占位防止误用。

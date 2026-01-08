@@ -113,8 +113,27 @@ export const customerServiceApi = {
     to_user_id?: number;
     message: string;
     token: string;
+    reply_to_message_id?: number;
   }) => {
     const response = await api.post('/api/customer_service/send_message', data);
+    return response.data;
+  },
+
+  // 撤回消息
+  recallMessage: async (data: { message_id: number; user_id: number; token: string }) => {
+    const response = await api.post('/api/message/recall', data);
+    return response.data;
+  },
+
+  // 编辑消息
+  editMessage: async (data: { message_id: number; user_id: number; new_content: string; token: string }) => {
+    const response = await api.post('/api/message/edit', data);
+    return response.data;
+  },
+
+  // 获取被引用的消息详情
+  getReplyMessage: async (data: { message_id: number; token?: string }) => {
+    const response = await api.post('/api/message/reply', data);
     return response.data;
   },
 

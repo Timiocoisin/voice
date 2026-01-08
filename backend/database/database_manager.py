@@ -138,6 +138,7 @@ class DatabaseManager:
         self.create_user_vip_table()
         self.create_announcement_table()
         self.create_chat_messages_table()
+        self._ensure_message_recall_fields()  # 确保消息撤回字段存在
         self.create_password_reset_tokens_table()
         self.create_chat_sessions_table()
         self.create_agent_status_table()
@@ -283,11 +284,15 @@ class DatabaseManager:
                 message MEDIUMTEXT NOT NULL,
                 message_type ENUM('text', 'image', 'file') DEFAULT 'text',
                 is_read BOOLEAN DEFAULT FALSE,
+                is_recalled BOOLEAN DEFAULT FALSE,
+                reply_to_message_id INT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_session (session_id),
                 INDEX idx_from_user (from_user_id),
                 INDEX idx_to_user (to_user_id),
-                INDEX idx_created (created_at)
+                INDEX idx_created (created_at),
+                INDEX idx_reply_to (reply_to_message_id),
+                FOREIGN KEY (reply_to_message_id) REFERENCES chat_messages(id) ON DELETE SET NULL
             )
             """
             cursor.execute(create_table_query)
@@ -295,8 +300,44 @@ class DatabaseManager:
             # 升级已有表的 message 列为 MEDIUMTEXT（幂等）
             cursor.execute("ALTER TABLE chat_messages MODIFY COLUMN message MEDIUMTEXT NOT NULL")
             self.connection.commit()
+            # 确保新增字段存在（迁移已有表）
+            self._ensure_message_recall_fields()
         except pymysql.Error as e:
             logging.error(f"创建/升级聊天消息表失败: {e}")
+
+    def _ensure_message_recall_fields(self):
+        """确保 chat_messages 表中存在 is_recalled 和 reply_to_message_id 字段（迁移方法）"""
+        try:
+            cursor = self.connection.cursor()
+            # 检查 is_recalled 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'is_recalled'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 is_recalled 列，正在自动添加...")
+                cursor.execute("ALTER TABLE chat_messages ADD COLUMN is_recalled BOOLEAN DEFAULT FALSE AFTER is_read")
+                self.connection.commit()
+            
+            # 检查 reply_to_message_id 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'reply_to_message_id'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 reply_to_message_id 列，正在自动添加...")
+                # 先添加列
+                cursor.execute("ALTER TABLE chat_messages ADD COLUMN reply_to_message_id INT NULL AFTER is_recalled")
+                # 添加索引
+                cursor.execute("ALTER TABLE chat_messages ADD INDEX idx_reply_to (reply_to_message_id)")
+                # 添加外键（如果可能）
+                try:
+                    cursor.execute("""
+                        ALTER TABLE chat_messages 
+                        ADD FOREIGN KEY (reply_to_message_id) 
+                        REFERENCES chat_messages(id) ON DELETE SET NULL
+                    """)
+                except Exception:
+                    # 如果外键添加失败（可能是已有数据不符合），仅记录日志
+                    logging.warning("添加 reply_to_message_id 外键失败，可能已有数据不符合约束")
+                self.connection.commit()
+                logging.info("chat_messages 表字段升级完成")
+        except pymysql.Error as e:
+            logging.error(f"确保消息撤回字段存在时出错: {e}")
 
     def create_password_reset_tokens_table(self):
         """创建密码重置token表（如果不存在）"""
@@ -384,7 +425,7 @@ class DatabaseManager:
             self.connection.rollback()
             return False
 
-    def insert_chat_message(self, session_id: str, from_user_id: int, to_user_id: Optional[int], message: str, message_type: str = 'text') -> Optional[int]:
+    def insert_chat_message(self, session_id: str, from_user_id: int, to_user_id: Optional[int], message: str, message_type: str = 'text', reply_to_message_id: Optional[int] = None) -> Optional[int]:
         """插入聊天消息（单次独立连接，避免多线程共享导致协议错误）"""
         conn = None
         cursor = None
@@ -392,10 +433,10 @@ class DatabaseManager:
             conn = self._open_conn()
             cursor = conn.cursor()
             insert_query = """
-            INSERT INTO chat_messages (session_id, from_user_id, to_user_id, message, message_type)
-            VALUES (%s, %s, %s, %s, %s)
+            INSERT INTO chat_messages (session_id, from_user_id, to_user_id, message, message_type, reply_to_message_id)
+            VALUES (%s, %s, %s, %s, %s, %s)
             """
-            cursor.execute(insert_query, (session_id, from_user_id, to_user_id, message, message_type))
+            cursor.execute(insert_query, (session_id, from_user_id, to_user_id, message, message_type, reply_to_message_id))
             message_id = cursor.lastrowid
             conn.commit()
             return message_id
@@ -427,7 +468,7 @@ class DatabaseManager:
             conn = self._open_conn()
             cursor = conn.cursor(pymysql.cursors.DictCursor)
             query = """
-            SELECT id, from_user_id, to_user_id, message, message_type, is_read, created_at
+            SELECT id, from_user_id, to_user_id, message, message_type, is_read, is_recalled, reply_to_message_id, created_at
             FROM chat_messages
             WHERE session_id = %s
             ORDER BY created_at ASC
@@ -439,6 +480,124 @@ class DatabaseManager:
         except pymysql.Error as e:
             logging.error(f"获取聊天消息失败: {e}")
             return []
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def get_message_by_id(self, message_id: int) -> Optional[Dict[str, Any]]:
+        """根据消息ID获取消息详情（用于引用回复，独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT id, session_id, from_user_id, to_user_id, message, message_type, is_read, is_recalled, reply_to_message_id, created_at
+            FROM chat_messages
+            WHERE id = %s
+            """
+            cursor.execute(query, (message_id,))
+            result = cursor.fetchone()
+            return result
+        except pymysql.Error as e:
+            logging.error(f"获取消息详情失败: {e}")
+            return None
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+
+    def recall_message(self, message_id: int, user_id: int) -> bool:
+        """撤回消息（2分钟内可撤回，只有发送者可以撤回，独立连接）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            
+            # 首先检查消息是否存在、是否属于该用户、是否已撤回、是否在2分钟内
+            query = """
+            SELECT id, from_user_id, created_at, is_recalled
+            FROM chat_messages
+            WHERE id = %s
+            """
+            cursor.execute(query, (message_id,))
+            message = cursor.fetchone()
+            
+            if not message:
+                logging.warning(f"消息 {message_id} 不存在")
+                return False
+            
+            if message.get("from_user_id") != user_id:
+                logging.warning(f"用户 {user_id} 无权撤回消息 {message_id}")
+                return False
+            
+            if message.get("is_recalled"):
+                logging.warning(f"消息 {message_id} 已被撤回")
+                return False
+            
+            # 检查时间：2分钟内
+            from datetime import timedelta
+            created_at = message.get("created_at")
+            if isinstance(created_at, datetime):
+                # MySQL TIMESTAMP 返回的是 datetime 对象
+                pass
+            elif isinstance(created_at, str):
+                try:
+                    created_at = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
+                except Exception:
+                    logging.error(f"消息创建时间格式错误: {created_at}")
+                    return False
+            else:
+                logging.error(f"消息创建时间类型错误: {type(created_at)}")
+                return False
+            
+            time_diff = datetime.now() - created_at
+            if time_diff > timedelta(minutes=2):
+                logging.warning(f"消息 {message_id} 已超过2分钟，不能撤回")
+                return False
+            
+            # 更新消息为已撤回状态
+            update_query = """
+            UPDATE chat_messages
+            SET is_recalled = TRUE
+            WHERE id = %s
+            """
+            cursor.execute(update_query, (message_id,))
+            conn.commit()
+            logging.info(f"消息 {message_id} 已被用户 {user_id} 撤回")
+            return True
+        except pymysql.Error as e:
+            logging.error(f"撤回消息失败: {e}")
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            return False
+        except Exception as e:
+            logging.error(f"撤回消息时发生错误: {e}")
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            return False
         finally:
             if cursor:
                 try:

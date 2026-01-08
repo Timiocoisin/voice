@@ -105,6 +105,7 @@
             v-for="msg in messages"
             :key="msg.id"
             :class="['msg-row', msg.from === 'agent' ? 'from-agent' : 'from-user']"
+            @contextmenu.prevent="showMessageContextMenu($event, msg)"
           >
             <div class="msg-avatar">
               <img 
@@ -124,12 +125,36 @@
                   <span class="file-placeholder">📎 {{ msg.text || '[文件]' }}</span>
                 </template>
                 <template v-else>
+                  <!-- 撤回状态显示 - 灰色居中显示"xxx撤回了一条消息" -->
                   <div 
-                    v-if="msg.isRich && msg.richText" 
-                    class="rich-text-content" 
-                    v-html="msg.richText"
-                  ></div>
-                  <span v-else>{{ msg.text }}</span>
+                    v-if="msg.isRecalled" 
+                    class="recalled-message"
+                    style="text-align: center; color: #9ca3af; font-size: 11px; padding: 4px 0;"
+                  >
+                    {{ msg.fromUsername || '用户' }}撤回了一条消息
+                  </div>
+                  <!-- 正常消息内容 -->
+                  <template v-else>
+                    <!-- 引用消息显示（微信风格：浅灰背景，左侧蓝色竖线，显示"发送者: 消息内容"，在消息内容上方） -->
+                    <div 
+                      v-if="msg.replyToMessage" 
+                      class="reply-message-preview"
+                      style="background-color: #f0f0f0; border-left: 3px solid #07c160; padding: 8px 10px; margin-bottom: 6px; border-radius: 0; max-width: 100%;"
+                    >
+                      <div class="reply-text" style="color: #576b95; font-size: 12px;">
+                        {{ (msg.replyToUsername || '用户') }}: {{ msg.replyToMessage === '该引用消息已被撤回' ? '该引用消息已被撤回' : (msg.replyToMessage.length > 50 ? msg.replyToMessage.substring(0, 50) + '...' : msg.replyToMessage) }}
+                      </div>
+                    </div>
+                    <!-- 消息内容 -->
+                    <div>
+                      <div 
+                        v-if="msg.isRich && msg.richText" 
+                        class="rich-text-content" 
+                        v-html="msg.richText"
+                      ></div>
+                      <span v-else>{{ msg.text }}</span>
+                    </div>
+                  </template>
                   <!-- 链接预览卡片 -->
                   <div v-if="msg.linkUrls && msg.linkUrls.length > 0" class="link-preview-container">
                     <div 
@@ -249,6 +274,12 @@ interface ChatMessage {
   richText?: string; // 富文本HTML
   isRich?: boolean; // 是否为富文本
   linkUrls?: string[]; // 链接URL列表（用于预览）
+  isRecalled?: boolean; // 是否已撤回
+  reply_to_message_id?: number | null; // 引用消息ID
+  replyToMessage?: string; // 引用消息内容（用于显示）
+  created_at?: string; // 创建时间（用于判断撤回时限）
+  userId?: number; // 发送者用户ID
+  fromUsername?: string; // 发送者用户名（用于撤回提示）
 }
 
 interface QuickReply {
@@ -265,6 +296,9 @@ const sessions = ref<Session[]>([]);
 const messages = ref<ChatMessage[]>([]);
 const loading = ref(false);
 const pendingCount = ref<number>(0);
+const replyToMessageId = ref<number | null>(null); // 引用消息ID
+const replyToMessageText = ref<string | null>(null); // 引用消息内容
+const replyToMessageUsername = ref<string | null>(null); // 引用消息的发送者用户名
 
 // HTTP轮询：已接收消息ID集合（用于去重）
 const receivedMessageIds = new Set<string>();
@@ -665,6 +699,146 @@ const openLink = (url: string) => {
   window.open(url, '_blank', 'noopener,noreferrer');
 };
 
+// 显示消息右键菜单（撤回、引用回复）
+// 客服端：客服发送的消息可以撤回+引用，用户发送的消息只能引用
+const showMessageContextMenu = async (event: MouseEvent, msg: ChatMessage) => {
+  // 已撤回的消息不显示菜单
+  if (msg.isRecalled) {
+    return;
+  }
+
+  const menu = document.createElement('div');
+  menu.className = 'context-menu';
+  menu.style.cssText = `
+    position: fixed;
+    top: ${event.clientY}px;
+    left: ${event.clientX}px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    padding: 4px 0;
+    z-index: 1000;
+    min-width: 120px;
+  `;
+
+  // 撤回消息（只有客服发送的消息才能撤回）
+  if (msg.from === 'agent') {
+    const recallItem = document.createElement('div');
+    recallItem.textContent = '撤回消息';
+    recallItem.style.cssText = `
+      padding: 8px 16px;
+      cursor: pointer;
+      font-size: 14px;
+      color: #1f2937;
+    `;
+    recallItem.onmouseenter = () => {
+      recallItem.style.backgroundColor = '#f3f4f6';
+    };
+    recallItem.onmouseleave = () => {
+      recallItem.style.backgroundColor = 'transparent';
+    };
+    recallItem.onclick = async () => {
+      document.body.removeChild(menu);
+      await recallMessage(msg);
+    };
+    menu.appendChild(recallItem);
+  }
+
+  // 引用回复（所有消息都可以引用）
+  const replyItem = document.createElement('div');
+  replyItem.textContent = '引用回复';
+  replyItem.style.cssText = `
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #1f2937;
+    ${msg.from === 'agent' ? 'border-top: 1px solid #e5e7eb;' : ''}
+  `;
+  replyItem.onmouseenter = () => {
+    replyItem.style.backgroundColor = '#f3f4f6';
+  };
+  replyItem.onmouseleave = () => {
+    replyItem.style.backgroundColor = 'transparent';
+  };
+  replyItem.onclick = () => {
+    document.body.removeChild(menu);
+    const msgId = parseInt(msg.id);
+    if (!isNaN(msgId)) {
+      replyToMessageId.value = msgId;
+      // 使用原始消息文本，如果已撤回则显示提示
+      replyToMessageText.value = msg.isRecalled ? '[消息已撤回]' : msg.text;
+      // 保存引用消息的发送者用户名
+      replyToMessageUsername.value = msg.fromUsername || (msg.from === 'agent' ? '客服' : '用户');
+      // 更新输入框占位符（显示发送者名称）
+      const input = document.querySelector('.chat-input') as HTMLTextAreaElement;
+      if (input) {
+        const senderName = replyToMessageUsername.value;
+        const displayText = msg.isRecalled ? '[消息已撤回]' : msg.text;
+        const preview = displayText.length > 30 ? displayText.substring(0, 30) + '...' : displayText;
+        input.placeholder = `回复 ${senderName}：${preview}`;
+        input.focus();
+      }
+    }
+  };
+  menu.appendChild(replyItem);
+
+  document.body.appendChild(menu);
+
+  // 点击其他地方关闭菜单
+  const closeMenu = (e: MouseEvent) => {
+    if (!menu.contains(e.target as Node)) {
+      document.body.removeChild(menu);
+      document.removeEventListener('click', closeMenu);
+    }
+  };
+  setTimeout(() => {
+    document.addEventListener('click', closeMenu);
+  }, 0);
+};
+
+// 撤回消息
+const recallMessage = async (msg: ChatMessage) => {
+  if (!currentUser.value || !token.value) {
+    alert('未登录，无法撤回消息');
+    return;
+  }
+
+  try {
+    const msgId = parseInt(msg.id);
+    if (isNaN(msgId)) {
+      alert('消息ID无效');
+      return;
+    }
+
+    const response = await customerServiceApi.recallMessage({
+      message_id: msgId,
+      user_id: currentUser.value.id,
+      token: token.value
+    });
+
+    if (response.success) {
+      // 更新消息显示为撤回状态
+      const index = messages.value.findIndex(m => m.id === msg.id);
+      if (index !== -1) {
+        messages.value[index].isRecalled = true;
+        // 保留用户名用于显示撤回提示
+        if (!messages.value[index].fromUsername) {
+          messages.value[index].fromUsername = currentUser.value?.username || '客服';
+        }
+        messages.value[index].text = '';
+        messages.value[index].richText = undefined;
+        messages.value[index].isRich = false;
+      }
+    } else {
+      alert(response.message || '撤回失败');
+    }
+  } catch (error: any) {
+    console.error('撤回消息失败:', error);
+    alert('撤回消息时发生错误：' + (error.message || '未知错误'));
+  }
+};
+
 // 加载消息
 const loadMessages = async (sessionId: string) => {
   if (!currentUser.value || !token.value) return;
@@ -672,23 +846,47 @@ const loadMessages = async (sessionId: string) => {
   try {
     const response = await customerServiceApi.getMessages(sessionId, currentUser.value.id, token.value);
     if (response.success) {
-      const mapped = (response.messages || []).map((m: any) => {
+      // 先创建消息列表，然后异步加载引用消息
+      const mapped = await Promise.all((response.messages || []).map(async (m: any) => {
         const text = m.text || '';
         const richTextResult = processMessageRichText(text);
         
+        // 异步加载引用消息内容（如果有）
+        let replyToMessage = null;
+        let replyToUsername = null;
+        if (m.reply_to_message_id) {
+          try {
+            const replyResp = await customerServiceApi.getReplyMessage({
+              message_id: m.reply_to_message_id,
+              token: token.value
+            });
+            if (replyResp.success && replyResp.message) {
+              replyToMessage = replyResp.message.message || '';
+              replyToUsername = replyResp.message.from_username || null;
+            }
+          } catch (error) {
+            console.error('获取引用消息失败:', error);
+          }
+        }
+        
         return {
-          id: m.id,
-          from: m.from || 'user',
-          text: text,
-          time: m.time || '刚刚',
-          userId: m.userId,
-          avatar: m.avatar,
-          messageType: (m.message_type || 'text') as ChatMessage['messageType'],
+        id: m.id,
+        from: m.from || 'user',
+          text: m.is_recalled ? '' : text,
+        time: m.time || '刚刚',
+        userId: m.userId,
+        avatar: m.avatar,
+        messageType: (m.message_type || 'text') as ChatMessage['messageType'],
           richText: richTextResult.richText,
           isRich: richTextResult.isRich,
           linkUrls: richTextResult.linkUrls,
+          isRecalled: m.is_recalled || false,
+          reply_to_message_id: m.reply_to_message_id,
+          replyToMessage: replyToMessage, // 已加载
+          replyToUsername: replyToUsername, // 已加载
+          fromUsername: m.username || (m.from === 'agent' ? '客服' : '用户'), // 用户名用于撤回提示
         };
-      });
+      }));
       messages.value = mapped;
 
       // 同步已接收消息ID，避免HTTP轮询重复追加
@@ -754,8 +952,14 @@ const handleSend = async () => {
       to_user_id: toUserId,
       message: text,
       token: token.value,
-      message_type: 'text'
+      message_type: 'text',
+      reply_to_message_id: replyToMessageId.value || undefined
     });
+    
+    // 清除引用状态
+    replyToMessageId.value = null;
+    replyToMessageText.value = null;
+    replyToMessageUsername.value = null;
 
     if (!response || !response.success) {
       // 失败时恢复输入框
@@ -763,9 +967,11 @@ const handleSend = async () => {
       const msg = response?.message || '发送失败，请稍后重试';
       alert(msg);
     } else {
-      // 发送成功，立即轮询一次以获取自己的消息
+      // 发送成功，立即轮询一次以获取自己的消息（包含引用信息）
       if (activeSessionId.value) {
         await loadMessages(activeSessionId.value);
+        // 确保滚动到底部
+        scrollToBottom();
       }
     }
   } catch (error: any) {
@@ -846,10 +1052,62 @@ const startMessagePolling = () => {
             continue;
           }
 
-          // 检查是否是新消息（不在当前消息列表中且未记录）
+          // 检查是否是已存在的消息
           const existingMsg = messages.value.find((m) => m.id === msgId);
           if (existingMsg) {
-            // 如果消息已存在，也记录到receivedMessageIds
+            // 更新撤回状态
+            if (msg.is_recalled && !existingMsg.isRecalled) {
+              existingMsg.isRecalled = true;
+              existingMsg.text = '';
+              existingMsg.replyToMessage = null;
+              existingMsg.replyToUsername = null;
+              existingMsg.fromUsername = msg.username || existingMsg.fromUsername || (msg.from === 'agent' ? '客服' : '用户');
+              
+              // 当消息被撤回时，更新所有引用这条消息的其他消息的引用内容
+              const recalledMsgId = parseInt(msgId);
+              messages.value.forEach((otherMsg) => {
+                if (otherMsg.id !== msgId && otherMsg.reply_to_message_id === recalledMsgId) {
+                  // 找到引用这条被撤回消息的消息，更新引用内容
+                  otherMsg.replyToMessage = '该引用消息已被撤回';
+                }
+              });
+            }
+
+            // 如果消息已存在，检查是否需要更新引用信息
+            // 需要检查引用消息的状态，即使当前消息没有被撤回
+            if (msg.reply_to_message_id) {
+              // 如果引用信息不存在，或者需要检查引用消息是否被撤回
+              if (!existingMsg.replyToMessage || !existingMsg.replyToUsername || 
+                  (existingMsg.replyToMessage && existingMsg.replyToMessage !== '该引用消息已被撤回')) {
+                // 异步加载引用消息内容
+                (async () => {
+                  try {
+                    const replyResp = await customerServiceApi.getReplyMessage({
+                      message_id: msg.reply_to_message_id,
+                      token: token.value
+                    });
+                    if (replyResp.success && replyResp.message) {
+                      // 检查引用消息是否被撤回
+                      if (replyResp.message.is_recalled || replyResp.message.message === '[消息已撤回]') {
+                        existingMsg.replyToMessage = '该引用消息已被撤回';
+                      } else {
+                        existingMsg.replyToMessage = replyResp.message.message || '';
+                      }
+                      existingMsg.replyToUsername = replyResp.message.from_username || null;
+                    }
+                  } catch (error) {
+                    console.error('获取引用消息失败:', error);
+                  }
+                })();
+              }
+            }
+
+            // 更新时间、头像等基础信息（防止后端有更新）
+            existingMsg.time = msg.time || existingMsg.time;
+            existingMsg.avatar = msg.avatar || existingMsg.avatar;
+            existingMsg.fromUsername = msg.username || existingMsg.fromUsername || (msg.from === 'agent' ? '客服' : '用户');
+
+            // 记录到receivedMessageIds
             if (!receivedMessageIds.has(msgId)) {
               receivedMessageIds.add(msgId);
             }
@@ -870,11 +1128,34 @@ const startMessagePolling = () => {
 
           const text = msg.text || '';
           const richTextResult = processMessageRichText(text);
-          
+
+          // 获取引用消息内容（如果有）
+          let replyToMessage = null;
+          let replyToUsername = null;
+          if (msg.reply_to_message_id) {
+            try {
+              const replyResp = await customerServiceApi.getReplyMessage({
+                message_id: msg.reply_to_message_id,
+                token: token.value
+              });
+              if (replyResp.success && replyResp.message) {
+                // 检查引用消息是否被撤回
+                if (replyResp.message.is_recalled || replyResp.message.message === '[消息已撤回]') {
+                  replyToMessage = '该引用消息已被撤回';
+                } else {
+                  replyToMessage = replyResp.message.message || '';
+                }
+                replyToUsername = replyResp.message.from_username || null;  // 获取引用消息的发送者用户名
+              }
+            } catch (error) {
+              console.error('获取引用消息失败:', error);
+            }
+          }
+
           const chatMsg: ChatMessage = {
             id: msgId,
             from: msg.from === 'agent' ? 'agent' : 'user',
-            text: text,
+            text: msg.is_recalled ? '' : text,
             time: msg.time || '刚刚',
             userId: msg.userId,
             avatar: msg.avatar,
@@ -882,6 +1163,11 @@ const startMessagePolling = () => {
             richText: richTextResult.richText,
             isRich: richTextResult.isRich,
             linkUrls: richTextResult.linkUrls,
+            isRecalled: msg.is_recalled || false,
+            reply_to_message_id: msg.reply_to_message_id,
+            replyToMessage: replyToMessage,
+            replyToUsername: replyToUsername,  // 添加引用消息的发送者用户名
+            fromUsername: msg.username || (msg.from === 'agent' ? '客服' : (msg.userId === currentUser.value?.id ? currentUser.value?.username : '用户')),
           };
 
           // 更新会话概览
