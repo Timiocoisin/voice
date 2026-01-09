@@ -42,11 +42,12 @@ class ChatBubble(QWidget):
         layout.setContentsMargins(self._padding_h, self._padding_v, self._padding_h, self._padding_v)
         layout.setSpacing(0)
 
-        # 处理文本，每20个字符（包括符号）换行
+        # 处理文本：不再强制固定字符数换行，交给 QLabel 根据最大宽度自动换行
         processed_text = self._format_text_with_line_breaks(text)
         
         self.label = QLabel(processed_text, self)
-        self.label.setWordWrap(False)  # 禁用自动换行，使用手动插入的换行符
+        # 启用自动换行，让文本根据气泡最大宽度自然换行
+        self.label.setWordWrap(True)
         self.label.setTextFormat(
             Qt.TextFormat.RichText if self._rich_text else Qt.TextFormat.PlainText
         )
@@ -67,52 +68,12 @@ class ChatBubble(QWidget):
     
     def _format_text_with_line_breaks(self, text: str, chars_per_line: int = 20) -> str:
         """
-        将文本按指定字符数（包括符号）换行
-        
-        Args:
-            text: 原始文本
-            chars_per_line: 每行字符数（包括符号）
-            
-        Returns:
-            处理后的文本，每chars_per_line个字符换行
+        保留接口，但不再强制每行固定字符数，由 QLabel 的自动换行处理。
         """
         if not text:
             return text
-        
-        # 如果是富文本，需要特殊处理（暂时只处理纯文本）
-        if self._rich_text:
-            # 富文本模式暂时不处理，保持原样
-            return text
-        
-        result = []
-        current_line = []
-        current_count = 0
-        
-        for char in text:
-            # 检查是否是换行符
-            if char == '\n':
-                # 遇到原有的换行符，先处理当前行的内容，然后添加换行
-                if current_line:
-                    result.append(''.join(current_line))
-                    current_line = []
-                    current_count = 0
-                result.append('')  # 添加空行
-                continue
-            
-            current_line.append(char)
-            current_count += 1
-            
-            # 达到每行字符数时换行
-            if current_count >= chars_per_line:
-                result.append(''.join(current_line))
-                current_line = []
-                current_count = 0
-        
-        # 添加最后一行
-        if current_line:
-            result.append(''.join(current_line))
-        
-        return '\n'.join(result)
+        # 富文本或纯文本都直接返回原文
+        return text
 
     def sizeHint(self):
         """基于内部 QLabel 的尺寸，自动适应文本或图片大小"""

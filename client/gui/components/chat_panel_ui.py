@@ -243,11 +243,6 @@ def _create_chat_input_bar(main_window: "MainWindow") -> QWidget:
     main_window.pic_button.clicked.connect(lambda: chat_handlers.send_image(main_window))
     tools_row.addWidget(main_window.pic_button, alignment=Qt.AlignmentFlag.AlignLeft)
 
-    main_window.file_button = QPushButton()
-    set_icon_button(main_window.file_button, 16, "发送文件（≤100MB）")
-    main_window.file_button.clicked.connect(lambda: chat_handlers.send_file(main_window))
-    tools_row.addWidget(main_window.file_button, alignment=Qt.AlignmentFlag.AlignLeft)
-
     tools_row.addStretch()
     input_layout.addLayout(tools_row)
 

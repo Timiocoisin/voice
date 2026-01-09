@@ -2617,3 +2617,66 @@ Traceback (most recent call last):
 ConnectionError: 数据库查询用户ID 1 时发生错误
 2026-01-08 15:54:27,724 - ERROR - root - 连接数据库失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
 2026-01-08 15:55:08,935 - ERROR - root - 连接数据库失败: (2003, "Can't connect to MySQL server on 'localhost' ([Errno 11001] No address found)")
+2026-01-09 11:57:53,381 - ERROR - engineio.server - disconnect handler error
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 620, in _trigger_event
+    return handler(*args)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 282, in _handler
+    return self._handle_event(handler, message, namespace, sid,
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 827, in _handle_event
+    ret = handler(*args)
+TypeError: handle_disconnect() takes 0 positional arguments but 1 was given
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\engineio\server.py", line 450, in run_handler
+    return self.handlers[event](*args)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 674, in _handle_eio_disconnect
+    self._handle_disconnect(eio_sid, n, reason)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 571, in _handle_disconnect
+    self._trigger_event('disconnect', namespace, sid,
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 624, in _trigger_event
+    return handler(*args[:-1])
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 282, in _handler
+    return self._handle_event(handler, message, namespace, sid,
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 827, in _handle_event
+    ret = handler(*args)
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1583, in handle_disconnect
+    ws_manager.disconnect(socket_id=socket_id)
+  File "D:\Desktop\work\change_voice\backend\websocket\websocket_manager.py", line 198, in disconnect
+    self.db.disconnect_user_connection(connection_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 1489, in disconnect_user_connection
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 53, in create_connection
+    sock.connect(sa)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\greenio\base.py", line 265, in connect
+    socket_checkerr(fd)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\greenio\base.py", line 48, in socket_checkerr
+    err = descriptor.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+KeyboardInterrupt
+2026-01-09 13:20:28,250 - ERROR - backend.websocket.websocket_manager - 断开连接失败: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\websocket\websocket_manager.py", line 201, in disconnect
+    leave_room(f"user_{user_id}")
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 1057, in leave_room
+    socketio = flask.current_app.extensions['socketio']
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.

@@ -170,11 +170,25 @@ def get_chat_messages(session_id: str, user_id: int, token: str) -> Dict[str, An
 
 
 def send_chat_message(session_id: str, user_id: int, message: str, token: str, message_type: str = "text", reply_to_message_id: Optional[int] = None) -> Dict[str, Any]:
-    """发送聊天消息（用户端调用）"""
-    data = {"session_id": session_id, "user_id": user_id, "message": message, "token": token, "message_type": message_type}
-    if reply_to_message_id:
-        data["reply_to_message_id"] = reply_to_message_id
-    return _post("/api/user/send_message", data)
+    """
+    发送聊天消息（已废弃，请使用 WebSocket）
+    
+    注意：HTTP 消息发送接口已移除，现在必须使用 WebSocket 发送消息。
+    请使用 client.websocket_client.WebSocketClient.send_message() 方法。
+    
+    此函数保留仅为向后兼容，但会抛出错误提示使用 WebSocket。
+    """
+    raise NotImplementedError(
+        "HTTP 消息发送接口已移除。请使用 WebSocket 发送消息：\n"
+        "1. 使用 client.websocket_client.WebSocketClient 创建 WebSocket 客户端\n"
+        "2. 连接后调用 ws_client.send_message(session_id, message, role='user', ...)\n"
+        "参考：backend/websocket/README.md 和 client/websocket_client.py"
+    )
+    # 旧代码（已移除）
+    # data = {"session_id": session_id, "user_id": user_id, "message": message, "token": token, "message_type": message_type}
+    # if reply_to_message_id:
+    #     data["reply_to_message_id"] = reply_to_message_id
+    # return _post("/api/user/send_message", data)
 
 
 def recall_message(message_id: int, user_id: int, token: str) -> Dict[str, Any]:

@@ -948,6 +948,9 @@ class LoginDialog(QDialog):
 
         is_vip = bool(vip_info.get("is_vip", False))
         diamonds = vip_info.get("diamonds", 0)
+        
+        # 不再在登录时自动连接 WebSocket
+        # WebSocket 连接将在用户匹配上客服后才建立
 
         # 通过用户资料接口获取最新头像，确保使用用户上传的头像
         from client.api_client import get_user_profile

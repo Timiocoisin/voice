@@ -161,14 +161,8 @@ class MainWindow(QMainWindow):
     def send_image(self):
         return chat_handlers.send_image(self)
 
-    def send_file(self):
-        return chat_handlers.send_file(self)
-
     def open_emoji_menu(self):
         return chat_handlers.open_emoji_menu(self)
-
-    def _append_file_message(self, filename: str, size_str: str, from_self: bool = True):
-        return chat_handlers.append_file_message(self, filename, size_str, from_self)
 
     def _start_streaming_text(self, bubble: "ChatBubble", full_text: str, interval_ms: int = 30):
         return chat_handlers.start_streaming_text(self, bubble, full_text, interval_ms)

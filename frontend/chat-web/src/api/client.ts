@@ -107,6 +107,14 @@ export const customerServiceApi = {
   },
 
   // 发送消息
+  /**
+   * 发送消息（已废弃，请使用 WebSocket）
+   * 
+   * 注意：HTTP 消息发送接口已移除，现在必须使用 WebSocket 发送消息。
+   * 请使用 WebSocket 客户端发送消息，参考：
+   * - backend/websocket/README.md
+   * - 需要在前端实现 WebSocket 客户端
+   */
   sendMessage: async (data: {
     session_id: string;
     from_user_id: number;
@@ -115,8 +123,13 @@ export const customerServiceApi = {
     token: string;
     reply_to_message_id?: number;
   }) => {
-    const response = await api.post('/api/customer_service/send_message', data);
-    return response.data;
+    throw new Error(
+      'HTTP 消息发送接口已移除。请使用 WebSocket 发送消息。\n' +
+      '参考: backend/websocket/README.md'
+    );
+    // 旧代码（已移除）
+    // const response = await api.post('/api/customer_service/send_message', data);
+    // return response.data;
   },
 
   // 撤回消息

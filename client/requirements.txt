@@ -3,3 +3,6 @@ PyQt6>=6.0.0
 requests>=2.25.0
 cryptography>=3.4.0
 
+# WebSocket 支持
+python-socketio>=5.0.0
+

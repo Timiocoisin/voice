@@ -104,36 +104,56 @@
           <div
             v-for="msg in messages"
             :key="msg.id"
-            :class="['msg-row', msg.from === 'agent' ? 'from-agent' : 'from-user']"
+            :class="['msg-row', msg.from === 'agent' ? 'from-agent' : 'from-user', msg.isRecalled ? 'recalled-row' : '']"
             @contextmenu.prevent="showMessageContextMenu($event, msg)"
           >
-            <div class="msg-avatar">
-              <img 
-                v-if="msg.avatar" 
-                :src="msg.avatar" 
-                :alt="msg.from === 'agent' ? '客服' : '用户'"
-                @error="handleAvatarError"
-              />
-              <span v-else>{{ msg.from === 'agent' ? '客' : '用' }}</span>
-            </div>
-            <div class="msg-bubble">
-              <div class="msg-text">
-                <template v-if="msg.messageType === 'image'">
-                  <img class="msg-image" :src="msg.text" alt="图片" />
-                </template>
-                <template v-else-if="msg.messageType === 'file'">
-                  <span class="file-placeholder">📎 {{ msg.text || '[文件]' }}</span>
-                </template>
-                <template v-else>
-                  <!-- 撤回状态显示 - 灰色居中显示"xxx撤回了一条消息" -->
-                  <div 
-                    v-if="msg.isRecalled" 
-                    class="recalled-message"
-                    style="text-align: center; color: #9ca3af; font-size: 11px; padding: 4px 0;"
-                  >
-                    {{ msg.fromUsername || '用户' }}撤回了一条消息
-                  </div>
-                  <!-- 正常消息内容 -->
+            <!-- 撤回消息：只显示居中灰色小字，不显示气泡和头像 -->
+            <template v-if="msg.isRecalled">
+              <div class="recalled-message" style="text-align: center; color: #9ca3af; font-size: 11px; padding: 4px 0; width: 100%;">
+                {{ msg.userId === currentUser?.id ? '你' : (msg.fromUsername || '用户') }}撤回了一条消息
+              </div>
+            </template>
+            <!-- 正常消息：显示头像和气泡 -->
+            <template v-else>
+              <div class="msg-avatar">
+                <img 
+                  v-if="msg.avatar" 
+                  :src="msg.avatar" 
+                  :alt="msg.from === 'agent' ? '客服' : '用户'"
+                  @error="handleAvatarError"
+                />
+                <span v-else>{{ msg.from === 'agent' ? '客' : '用' }}</span>
+              </div>
+              <div class="msg-bubble">
+                <div class="msg-text">
+                  <template v-if="msg.messageType === 'image'">
+                    <img 
+                      class="msg-image" 
+                      :src="msg.text" 
+                      alt="图片" 
+                      @click="openImagePreview(msg.text)"
+                      style="cursor: pointer;"
+                    />
+                  </template>
+                  <template v-else-if="msg.messageType === 'file'">
+                    <div class="file-message-card" @click="downloadFile(msg)">
+                      <div class="file-icon">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M14 2H6C5.46957 2 4.96086 2.21071 4.58579 2.58579C4.21071 2.96086 4 3.46957 4 4V20C4 20.5304 4.21071 21.0391 4.58579 21.4142C4.96086 21.7893 5.46957 22 6 22H18C18.5304 22 19.0391 21.7893 19.4142 21.4142C19.7893 21.0391 20 20.5304 20 20V8L14 2Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M14 2V8H20" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
+                      <div class="file-info">
+                        <div class="file-name">{{ extractFileName(msg.text, msg.id) }}</div>
+                        <div class="file-size">{{ extractFileSize(msg.text) }}</div>
+                      </div>
+                      <div class="file-download-icon">
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M8 11V1M8 11L4 7M8 11L12 7M2 14H14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                      </div>
+                    </div>
+                  </template>
                   <template v-else>
                     <!-- 引用消息显示（微信风格：浅灰背景，左侧蓝色竖线，显示"发送者: 消息内容"，在消息内容上方） -->
                     <div 
@@ -141,7 +161,18 @@
                       class="reply-message-preview"
                       style="background-color: #f0f0f0; border-left: 3px solid #07c160; padding: 8px 10px; margin-bottom: 6px; border-radius: 0; max-width: 100%;"
                     >
-                      <div class="reply-text" style="color: #576b95; font-size: 12px;">
+                      <!-- 如果是图片消息，显示缩略图 -->
+                      <div v-if="msg.replyToMessageType === 'image' && msg.replyToMessage && msg.replyToMessage.startsWith('data:image')" style="display: flex; align-items: center; gap: 6px;">
+                        <span style="color: #576b95; font-size: 12px;">{{ (msg.replyToUsername || '用户') }}:</span>
+                        <img 
+                          :src="msg.replyToMessage" 
+                          alt="引用图片"
+                          style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;"
+                          @error="(e) => { e.target.style.display = 'none'; }"
+                        />
+                      </div>
+                      <!-- 文本消息或其他类型 -->
+                      <div v-else class="reply-text" style="color: #576b95; font-size: 12px;">
                         {{ (msg.replyToUsername || '用户') }}: {{ msg.replyToMessage === '该引用消息已被撤回' ? '该引用消息已被撤回' : (msg.replyToMessage.length > 50 ? msg.replyToMessage.substring(0, 50) + '...' : msg.replyToMessage) }}
                       </div>
                     </div>
@@ -154,23 +185,23 @@
                       ></div>
                       <span v-else>{{ msg.text }}</span>
                     </div>
-                  </template>
-                  <!-- 链接预览卡片 -->
-                  <div v-if="msg.linkUrls && msg.linkUrls.length > 0" class="link-preview-container">
-                    <div 
-                      v-for="(url, index) in msg.linkUrls.slice(0, 1)" 
-                      :key="index"
-                      class="link-preview-card"
-                      @click="openLink(url)"
-                    >
-                      <div class="link-preview-title">链接预览</div>
-                      <div class="link-preview-url">{{ getUrlDisplay(url) }}</div>
+                    <!-- 链接预览卡片 -->
+                    <div v-if="msg.linkUrls && msg.linkUrls.length > 0" class="link-preview-container">
+                      <div 
+                        v-for="(url, index) in msg.linkUrls.slice(0, 1)" 
+                        :key="index"
+                        class="link-preview-card"
+                        @click="openLink(url)"
+                      >
+                        <div class="link-preview-title">链接预览</div>
+                        <div class="link-preview-url">{{ getUrlDisplay(url) }}</div>
+                      </div>
                     </div>
-                  </div>
-                </template>
+                  </template>
+                </div>
+                <div class="msg-time">{{ msg.time }}</div>
               </div>
-              <div class="msg-time">{{ msg.time }}</div>
-            </div>
+            </template>
           </div>
         </div>
 
@@ -183,15 +214,51 @@
             @keydown.shift.enter.stop
           />
           <div class="chat-input-toolbar">
-            <button type="button" class="toolbar-btn">
-              常用回复
-            </button>
+            <div class="toolbar-left">
+              <button
+                type="button"
+                class="toolbar-icon-btn"
+                title="表情"
+                @click="toggleEmojiPanel"
+              >
+                😊
+              </button>
+              <button
+                type="button"
+                class="toolbar-icon-btn"
+                title="发送图片"
+                @click="triggerImageSelect"
+              >
+                🖼
+              </button>
+              <button type="button" class="toolbar-btn">
+                常用回复
+              </button>
+            </div>
             <div class="toolbar-spacer" />
             <button type="submit" class="primary-button" :disabled="!inputText.trim()">
               发送
             </button>
           </div>
         </form>
+        <div v-if="emojiPanelVisible" class="emoji-panel">
+          <button
+            v-for="emoji in emojis"
+            :key="emoji"
+            type="button"
+            class="emoji-item"
+            @click="insertEmoji(emoji)"
+          >
+            {{ emoji }}
+          </button>
+        </div>
+        <input
+          ref="imageInputRef"
+          type="file"
+          accept="image/*"
+          style="display: none"
+          @change="handleImageChange"
+        />
       </main>
 
       <!-- 右侧：用户信息 / 快捷回复 -->
@@ -243,10 +310,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue';
+import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue';
 import { useRouter } from 'vue-router';
 import { customerServiceApi } from '@/api/client';
 import { processRichText, extractUrlsFromText } from '@/utils/richText';
+import { websocketClient, ConnectionStatus, WebSocketMessage } from '@/utils/websocket';
 
 const router = useRouter();
 
@@ -277,8 +345,8 @@ interface ChatMessage {
   isRecalled?: boolean; // 是否已撤回
   reply_to_message_id?: number | null; // 引用消息ID
   replyToMessage?: string; // 引用消息内容（用于显示）
+  replyToMessageType?: 'text' | 'image' | 'file'; // 引用消息类型
   created_at?: string; // 创建时间（用于判断撤回时限）
-  userId?: number; // 发送者用户ID
   fromUsername?: string; // 发送者用户名（用于撤回提示）
 }
 
@@ -395,11 +463,20 @@ const getStatusStyle = (status: StatusOption) => {
   } as any;
 };
 
-// 点击外部关闭菜单
+// 点击外部关闭菜单 / 面板
 const handleClickOutside = (event: MouseEvent) => {
   const target = event.target as HTMLElement;
+  // 关闭状态菜单
   if (!target.closest('.status-container')) {
     showStatusMenu.value = false;
+  }
+  // 关闭表情面板：点击表情面板内部或表情按钮本身不关闭，其它区域点击关闭
+  if (
+    emojiPanelVisible.value &&
+    !target.closest('.emoji-panel') &&
+    !target.closest('.toolbar-icon-btn')
+  ) {
+    emojiPanelVisible.value = false;
   }
 };
 
@@ -425,6 +502,21 @@ const quickReplies = ref<QuickReply[]>([
 const activeSessionId = ref<string>('');
 const inputText = ref('');
 const messagesRef = ref<HTMLDivElement | null>(null);
+const emojiPanelVisible = ref(false);
+const emojis = ref<string[]>([
+  '😀','😁','😂','🤣','😃','😄','😅','😆','😉','😊',
+  '😍','😘','🥰','😗','😙','😚','😋','😛','😜','🤪',
+  '🤨','🧐','🤓','😎','🥳','🤩','😏','😒','🙄','😬',
+  '😢','😭','😤','😡','🤯','😳','😱','😨','😰','😥',
+  '😴','🤤','🤒','🤕','🤢','🤮','🤧','🥵','🥶','🥴',
+  '👍','👎','👌','🤌','🤏','✌️','🤞','🤟','🤘','🤙',
+  '👏','🙌','🙏','👐','🤝','💪','✍️','💅','👋','🤗',
+  '❤️','🧡','💛','💚','💙','💜','🖤','🤍','💔','❣️',
+  '💥','💫','✨','⭐','🌟','🔥','🌈','⚡','🎉','🎊',
+  '🍉','🍎','🍔','🍟','🍕','🍣','🍰','🍺','☕','🧋',
+  '📷','🎥','🎧','🎮','💻','📱','🖼','📎','📝','💬'
+]);
+const imageInputRef = ref<HTMLInputElement | null>(null);
 const activeTab = ref<'my' | 'pending'>('my');
 
 const activeSession = computed(() =>
@@ -481,21 +573,24 @@ onMounted(async () => {
         localStorage.setItem('user', JSON.stringify(verifyResponse.user));
       }
       
-      // 登录成功后自动设置为在线状态
-      if (currentUser.value && token.value) {
-        try {
-          await customerServiceApi.updateStatus(currentUser.value.id, 'online', token.value);
-          // 更新当前状态显示
-          const onlineStatus = statusOptions.find(s => s.type === 'online');
-          if (onlineStatus) {
-            currentStatus.value = onlineStatus;
-            saveStatus('online');
+        // 登录成功后自动设置为在线状态
+        if (currentUser.value && token.value) {
+          try {
+            await customerServiceApi.updateStatus(currentUser.value.id, 'online', token.value);
+            // 更新当前状态显示
+            const onlineStatus = statusOptions.find(s => s.type === 'online');
+            if (onlineStatus) {
+              currentStatus.value = onlineStatus;
+              saveStatus('online');
+            }
+          } catch (error) {
+            console.error('设置在线状态失败:', error);
           }
-        } catch (error) {
-          console.error('设置在线状态失败:', error);
+
+          // 不再在登录时自动连接 WebSocket
+          // WebSocket 连接将在客服接入会话时才建立
         }
-      }
-      // 启动消息轮询（必须在 token 与 user 准备好之后）
+      // 启动消息轮询（作为备用，WebSocket 连接后可以停止轮询）
       startMessagePolling();
     } catch (error) {
       console.error('Token 验证失败:', error);
@@ -517,7 +612,18 @@ onMounted(async () => {
       updatePendingCount();
     }, 5000);
     
-    // 组件卸载时清除定时器
+    // 监听浏览器关闭/刷新事件，清除 localStorage
+    const handleBeforeUnload = () => {
+      // 断开 WebSocket 连接
+      disconnectWebSocket();
+      // 清除所有 localStorage 数据（包括 token、user、device_id、agent_status 等）
+      localStorage.clear();
+    };
+    
+    // 监听页面卸载前事件
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    
+    // 组件卸载时清除定时器和断开 WebSocket
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside);
       stopHeartbeat();
@@ -526,6 +632,10 @@ onMounted(async () => {
       }
       // 组件卸载时停止消息轮询
       stopMessagePolling();
+      // 断开 WebSocket 连接
+      disconnectWebSocket();
+      // 移除 beforeunload 事件监听
+      window.removeEventListener('beforeunload', handleBeforeUnload);
     });
   } catch (error) {
     console.error('解析用户信息失败:', error);
@@ -650,7 +760,17 @@ const acceptSession = async (sessionId: string) => {
       // 选择刚接入的会话
       activeSessionId.value = sessionId;
       await loadMessages(sessionId);
-      // 接入会话后启动轮询
+      
+      // 接入会话成功后，连接 WebSocket 进行实时通信
+      try {
+        await connectWebSocket();
+        console.log('接入会话后，WebSocket 连接成功');
+      } catch (error) {
+        console.error('接入会话后，WebSocket 连接失败:', error);
+        // WebSocket 连接失败不影响接入流程，消息将通过轮询获取
+      }
+      
+      // 接入会话后启动轮询（作为备用方案）
       startMessagePolling();
     } else {
       alert(response.message || '接入失败');
@@ -699,13 +819,149 @@ const openLink = (url: string) => {
   window.open(url, '_blank', 'noopener,noreferrer');
 };
 
+// 表情面板
+const toggleEmojiPanel = () => {
+  // 始终以“打开”为主，关闭交给点击外部的逻辑处理
+  if (!emojiPanelVisible.value) {
+    emojiPanelVisible.value = true;
+  }
+};
+
+const insertEmoji = async (emoji: string) => {
+  const textarea = document.querySelector('.chat-input') as HTMLTextAreaElement | null;
+  const current = inputText.value || '';
+
+  if (textarea && typeof textarea.selectionStart === 'number') {
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd ?? start;
+    inputText.value = current.slice(0, start) + emoji + current.slice(end);
+    await nextTick();
+    const pos = start + emoji.length;
+    textarea.focus();
+    textarea.setSelectionRange(pos, pos);
+  } else {
+    inputText.value = current + emoji;
+  }
+};
+
+// 选择图片并发送
+const triggerImageSelect = () => {
+  if (!activeSessionId.value) {
+    alert('请先选择一个会话再发送图片');
+    return;
+  }
+  if (!currentUser.value || !token.value) {
+    alert('未登录，无法发送图片');
+    return;
+  }
+  if (imageInputRef.value) {
+    imageInputRef.value.click();
+  }
+};
+
+const handleImageChange = async (event: Event) => {
+  const input = event.target as HTMLInputElement;
+  const file = input.files && input.files[0];
+  // 重置 input，避免同一张图片无法重复选择
+  input.value = '';
+  if (!file) return;
+
+  await sendImageMessage(file);
+};
+
+const sendImageMessage = async (file: File) => {
+  if (!activeSessionId.value || !currentUser.value || !token.value) {
+    alert('未登录或未选择会话，无法发送图片');
+    return;
+  }
+
+  if (!file.type.startsWith('image/')) {
+    alert('只能发送图片文件');
+    return;
+  }
+
+  const maxSizeMb = 5;
+  if (file.size > maxSizeMb * 1024 * 1024) {
+    alert(`图片大小不能超过 ${maxSizeMb} MB，请压缩后再发送`);
+    return;
+  }
+
+  // 确保 WebSocket 已连接
+  if (!websocketClient.isConnected()) {
+    try {
+      await connectWebSocket();
+    } catch (error) {
+      alert('实时通信未连接，请稍等片刻或刷新页面后重试。');
+      return;
+    }
+  }
+
+  const toDataUrl = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === 'string') {
+          resolve(reader.result);
+        } else {
+          reject(new Error('图片读取失败'));
+        }
+      };
+      reader.onerror = () => reject(new Error('图片读取失败'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  try {
+    const dataUrl = await toDataUrl(file);
+    const response = await websocketClient.sendMessage(
+      activeSessionId.value,
+      dataUrl,
+      'agent',
+      'image',
+      replyToMessageId.value || undefined
+    );
+
+    // 发送图片后清除引用状态（如果有）
+    replyToMessageId.value = null;
+    replyToMessageText.value = null;
+    replyToMessageUsername.value = null;
+
+    if (!response || !response.success) {
+      alert(response?.message || '图片发送失败，请稍后重试');
+    } else {
+      console.log('图片发送成功');
+    }
+  } catch (error: any) {
+    console.error('发送图片失败:', error);
+    alert(error?.message || '图片发送失败，请稍后重试');
+  }
+};
+
+// 全局变量，用于存储当前打开的右键菜单
+let currentContextMenu: HTMLElement | null = null;
+
+// 关闭当前打开的右键菜单
+const closeContextMenu = () => {
+  if (currentContextMenu && currentContextMenu.parentNode) {
+    currentContextMenu.parentNode.removeChild(currentContextMenu);
+    currentContextMenu = null;
+  }
+};
+
 // 显示消息右键菜单（撤回、引用回复）
 // 客服端：客服发送的消息可以撤回+引用，用户发送的消息只能引用
 const showMessageContextMenu = async (event: MouseEvent, msg: ChatMessage) => {
+  // 阻止默认右键菜单
+  event.preventDefault();
+  event.stopPropagation();
+  
   // 已撤回的消息不显示菜单
   if (msg.isRecalled) {
     return;
   }
+
+  // 先关闭之前打开的菜单
+  closeContextMenu();
 
   const menu = document.createElement('div');
   menu.className = 'context-menu';
@@ -724,24 +980,81 @@ const showMessageContextMenu = async (event: MouseEvent, msg: ChatMessage) => {
 
   // 撤回消息（只有客服发送的消息才能撤回）
   if (msg.from === 'agent') {
+    // 检查消息是否超过2分钟
+    let canRecall = false; // 默认不允许撤回，必须有有效时间才能撤回
+    let recallTooltip = '';
+    
+    if (msg.created_at) {
+      try {
+        // 处理不同的时间格式
+        let createdTime: Date;
+        if (typeof msg.created_at === 'string') {
+          // 如果是 ISO 格式字符串，直接解析
+          createdTime = new Date(msg.created_at);
+        } else {
+          // 如果是其他格式，尝试转换
+          createdTime = new Date(msg.created_at);
+        }
+        
+        // 检查日期是否有效
+        if (isNaN(createdTime.getTime())) {
+          // 如果日期无效，不允许撤回
+          canRecall = false;
+          recallTooltip = '消息时间无效，无法撤回';
+        } else {
+          const now = new Date();
+          const diffMs = now.getTime() - createdTime.getTime();
+          const diffMinutes = diffMs / (1000 * 60);
+          canRecall = diffMinutes <= 2;
+          if (!canRecall) {
+            recallTooltip = '消息已超过2分钟，无法撤回';
+          }
+        }
+      } catch (e) {
+        console.error('解析消息创建时间失败:', e, msg.created_at);
+        // 如果解析失败，不允许撤回
+        canRecall = false;
+        recallTooltip = '无法解析消息时间，无法撤回';
+      }
+    } else {
+      // 如果没有 created_at 字段，不允许撤回
+      canRecall = false;
+      recallTooltip = '消息时间信息缺失，无法撤回';
+      console.warn('消息缺少 created_at 字段:', msg.id, msg);
+    }
+    
     const recallItem = document.createElement('div');
     recallItem.textContent = '撤回消息';
     recallItem.style.cssText = `
       padding: 8px 16px;
-      cursor: pointer;
+      cursor: ${canRecall ? 'pointer' : 'not-allowed'};
       font-size: 14px;
-      color: #1f2937;
+      color: ${canRecall ? '#1f2937' : '#9ca3af'};
+      ${!canRecall ? 'opacity: 0.5;' : ''}
+      ${!canRecall ? 'pointer-events: none;' : ''}
     `;
-    recallItem.onmouseenter = () => {
-      recallItem.style.backgroundColor = '#f3f4f6';
-    };
-    recallItem.onmouseleave = () => {
-      recallItem.style.backgroundColor = 'transparent';
-    };
-    recallItem.onclick = async () => {
-      document.body.removeChild(menu);
-      await recallMessage(msg);
-    };
+    
+    if (canRecall) {
+      recallItem.onmouseenter = () => {
+        recallItem.style.backgroundColor = '#f3f4f6';
+      };
+      recallItem.onmouseleave = () => {
+        recallItem.style.backgroundColor = 'transparent';
+      };
+      recallItem.onclick = async () => {
+        closeContextMenu();
+        await recallMessage(msg);
+      };
+    } else {
+      // 禁用点击，并显示提示
+      recallItem.title = recallTooltip || '消息已超过2分钟，无法撤回';
+      recallItem.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // 不执行任何操作
+      };
+    }
+    
     menu.appendChild(recallItem);
   }
 
@@ -762,7 +1075,7 @@ const showMessageContextMenu = async (event: MouseEvent, msg: ChatMessage) => {
     replyItem.style.backgroundColor = 'transparent';
   };
   replyItem.onclick = () => {
-    document.body.removeChild(menu);
+    closeContextMenu();
     const msgId = parseInt(msg.id);
     if (!isNaN(msgId)) {
       replyToMessageId.value = msgId;
@@ -784,30 +1097,76 @@ const showMessageContextMenu = async (event: MouseEvent, msg: ChatMessage) => {
   menu.appendChild(replyItem);
 
   document.body.appendChild(menu);
+  
+  // 保存当前菜单引用
+  currentContextMenu = menu;
 
   // 点击其他地方关闭菜单
-  const closeMenu = (e: MouseEvent) => {
+  const closeMenuOnClick = (e: MouseEvent) => {
     if (!menu.contains(e.target as Node)) {
-      document.body.removeChild(menu);
-      document.removeEventListener('click', closeMenu);
+      closeContextMenu();
+      document.removeEventListener('click', closeMenuOnClick);
+      document.removeEventListener('contextmenu', closeMenuOnContextMenu);
+      window.removeEventListener('scroll', closeMenuOnScroll, true);
     }
   };
+  
+  // 右键点击其他地方也关闭菜单
+  const closeMenuOnContextMenu = (e: MouseEvent) => {
+    if (!menu.contains(e.target as Node)) {
+      closeContextMenu();
+      document.removeEventListener('click', closeMenuOnClick);
+      document.removeEventListener('contextmenu', closeMenuOnContextMenu);
+      window.removeEventListener('scroll', closeMenuOnScroll, true);
+    }
+  };
+  
+  // 滚动时关闭菜单
+  const closeMenuOnScroll = () => {
+    closeContextMenu();
+    document.removeEventListener('click', closeMenuOnClick);
+    document.removeEventListener('contextmenu', closeMenuOnContextMenu);
+    window.removeEventListener('scroll', closeMenuOnScroll, true);
+  };
+  
+  // 延迟添加事件监听器，避免立即触发
   setTimeout(() => {
-    document.addEventListener('click', closeMenu);
+    document.addEventListener('click', closeMenuOnClick);
+    document.addEventListener('contextmenu', closeMenuOnContextMenu);
+    window.addEventListener('scroll', closeMenuOnScroll, true);
   }, 0);
 };
 
 // 撤回消息
 const recallMessage = async (msg: ChatMessage) => {
   if (!currentUser.value || !token.value) {
-    alert('未登录，无法撤回消息');
+    // 不弹窗，静默处理
+    console.warn('未登录，无法撤回消息');
     return;
+  }
+
+  // 再次检查时间（防止在检查后到点击之间超过2分钟）
+  if (msg.created_at) {
+    try {
+      const createdTime = new Date(msg.created_at);
+      const now = new Date();
+      const diffMs = now.getTime() - createdTime.getTime();
+      const diffMinutes = diffMs / (1000 * 60);
+      if (diffMinutes > 2) {
+        // 超过2分钟，静默处理，不弹窗
+        console.warn('消息已超过2分钟，无法撤回');
+        return;
+      }
+    } catch (e) {
+      console.error('解析消息创建时间失败:', e);
+    }
   }
 
   try {
     const msgId = parseInt(msg.id);
     if (isNaN(msgId)) {
-      alert('消息ID无效');
+      // 不弹窗，静默处理
+      console.warn('消息ID无效');
       return;
     }
 
@@ -822,20 +1181,25 @@ const recallMessage = async (msg: ChatMessage) => {
       const index = messages.value.findIndex(m => m.id === msg.id);
       if (index !== -1) {
         messages.value[index].isRecalled = true;
-        // 保留用户名用于显示撤回提示
+        // 保留用户名用于显示撤回提示（如果是自己撤回的，显示"你"）
         if (!messages.value[index].fromUsername) {
           messages.value[index].fromUsername = currentUser.value?.username || '客服';
+        }
+        // 确保 userId 正确（用于判断是否是自己撤回的）
+        if (!messages.value[index].userId) {
+          messages.value[index].userId = currentUser.value?.id;
         }
         messages.value[index].text = '';
         messages.value[index].richText = undefined;
         messages.value[index].isRich = false;
       }
     } else {
-      alert(response.message || '撤回失败');
+      // 撤回失败，不弹窗，只记录日志
+      console.warn('撤回消息失败:', response.message || '撤回失败');
     }
   } catch (error: any) {
+    // 不弹窗，只记录日志
     console.error('撤回消息失败:', error);
-    alert('撤回消息时发生错误：' + (error.message || '未知错误'));
   }
 };
 
@@ -854,6 +1218,7 @@ const loadMessages = async (sessionId: string) => {
         // 异步加载引用消息内容（如果有）
         let replyToMessage = null;
         let replyToUsername = null;
+        let replyToMessageType: 'text' | 'image' | 'file' | undefined = undefined;
         if (m.reply_to_message_id) {
           try {
             const replyResp = await customerServiceApi.getReplyMessage({
@@ -861,8 +1226,15 @@ const loadMessages = async (sessionId: string) => {
               token: token.value
             });
             if (replyResp.success && replyResp.message) {
-              replyToMessage = replyResp.message.message || '';
-              replyToUsername = replyResp.message.from_username || null;
+              // 检查引用消息是否已被撤回
+              if (replyResp.message.is_recalled) {
+                const senderName = replyResp.message.from_username || '用户';
+                replyToMessage = `${senderName}: 该引用消息已被撤回`;
+              } else {
+                replyToMessage = replyResp.message.message || '';
+                replyToUsername = replyResp.message.from_username || null;
+                replyToMessageType = replyResp.message.message_type || 'text';
+              }
             }
           } catch (error) {
             console.error('获取引用消息失败:', error);
@@ -874,6 +1246,7 @@ const loadMessages = async (sessionId: string) => {
         from: m.from || 'user',
           text: m.is_recalled ? '' : text,
         time: m.time || '刚刚',
+        created_at: m.created_at, // 使用后端返回的创建时间（ISO 格式）
         userId: m.userId,
         avatar: m.avatar,
         messageType: (m.message_type || 'text') as ChatMessage['messageType'],
@@ -884,6 +1257,7 @@ const loadMessages = async (sessionId: string) => {
           reply_to_message_id: m.reply_to_message_id,
           replyToMessage: replyToMessage, // 已加载
           replyToUsername: replyToUsername, // 已加载
+          replyToMessageType: replyToMessageType, // 引用消息类型
           fromUsername: m.username || (m.from === 'agent' ? '客服' : '用户'), // 用户名用于撤回提示
         };
       }));
@@ -930,7 +1304,399 @@ watch(
   () => scrollToBottom()
 );
 
-// 发送消息（HTTP接口）
+// 连接 WebSocket
+const connectWebSocket = async (): Promise<void> => {
+  if (!currentUser.value || !token.value) {
+    throw new Error('未登录');
+  }
+
+  // 注册消息回调
+  websocketClient.on('onMessage', (message: WebSocketMessage) => {
+    handleWebSocketMessage(message);
+  });
+
+  websocketClient.on('onConnect', () => {
+    console.log('WebSocket 连接成功');
+    // 连接成功后可以停止消息轮询，改为使用 WebSocket 实时推送
+    // stopMessagePolling();
+  });
+
+  websocketClient.on('onDisconnect', () => {
+    console.warn('WebSocket 连接断开');
+    // 连接断开后恢复消息轮询
+    // startMessagePolling();
+  });
+
+  websocketClient.on('onError', (error: any) => {
+    console.error('WebSocket 错误:', error);
+  });
+
+  // 获取设备信息
+  const deviceInfo = {
+    device_name: navigator.userAgent,
+    device_type: 'web',
+    platform: navigator.platform,
+    browser: getBrowserInfo(),
+    os_version: navigator.platform,
+  };
+
+  // 连接 WebSocket
+  await websocketClient.connect(currentUser.value.id, token.value, deviceInfo);
+};
+
+// 断开 WebSocket
+const disconnectWebSocket = (): void => {
+  websocketClient.disconnect();
+};
+
+// 图片预览（点击放大）
+const openImagePreview = (imageSrc: string) => {
+  // 创建预览模态框
+  const modal = document.createElement('div');
+  modal.style.cssText = `
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.9);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 10000;
+    cursor: pointer;
+  `;
+  
+  const img = document.createElement('img');
+  img.src = imageSrc;
+  img.style.cssText = `
+    max-width: 90%;
+    max-height: 90%;
+    object-fit: contain;
+    border-radius: 8px;
+  `;
+  
+  modal.appendChild(img);
+  document.body.appendChild(modal);
+  
+  // 点击关闭
+  modal.onclick = () => {
+    document.body.removeChild(modal);
+  };
+  
+  // ESC键关闭
+  const handleEsc = (e: KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      document.body.removeChild(modal);
+      document.removeEventListener('keydown', handleEsc);
+    }
+  };
+  document.addEventListener('keydown', handleEsc);
+};
+
+// 从消息文本中提取文件名
+const extractFileName = (text: string, messageId?: number): string => {
+  if (!text) return '[文件]';
+  
+  // 如果是base64 data URL，优先提取文件名
+  if (text.startsWith('data:')) {
+    const filenameMatch = text.match(/filename="([^"]+)"/);
+    if (filenameMatch && filenameMatch[1]) {
+      return filenameMatch[1];
+    }
+    // 如果没有文件名，根据MIME类型推断
+    const mimeMatch = text.match(/data:([^;]+)/);
+    if (mimeMatch) {
+      const mimeType = mimeMatch[1];
+      const ext = mimeType.split('/')[1] || 'bin';
+      return `file_${messageId || Date.now()}.${ext}`;
+    }
+  }
+  
+  // 格式: [文件] filename.ext (size)
+  const match = text.match(/\[文件\]\s+(.+?)\s+\(/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  
+  // 如果是URL路径，提取文件名
+  if (text.includes('/')) {
+    const parts = text.split('/');
+    const lastPart = parts[parts.length - 1];
+    if (lastPart && lastPart !== text) {
+      return lastPart.split('?')[0]; // 移除查询参数
+    }
+  }
+  
+  return '[文件]';
+};
+
+// 从消息文本中提取文件大小
+const extractFileSize = (text: string): string => {
+  if (!text) return '';
+  
+  // 格式: [文件] filename.ext (size)
+  const match = text.match(/\(([^)]+)\)$/);
+  if (match && match[1]) {
+    return match[1].trim();
+  }
+  
+  return '';
+};
+
+// 文件下载
+const downloadFile = async (msg: ChatMessage) => {
+  if (!msg.text) {
+    alert('文件内容为空');
+    return;
+  }
+  
+  try {
+    // 提取文件名
+    const fileName = extractFileName(msg.text, msg.id);
+    
+    // 如果消息文本是base64编码的文件，直接下载
+    if (msg.text.startsWith('data:')) {
+      // 提取base64内容
+      const base64Match = msg.text.match(/base64,(.+?)(?:;filename=|$)/);
+      if (base64Match && base64Match[1]) {
+        // 提取MIME类型
+        const mimeMatch = msg.text.match(/data:([^;]+)/);
+        const mimeType = mimeMatch ? mimeMatch[1] : 'application/octet-stream';
+        
+        // 将base64转换为Blob
+        const byteCharacters = atob(base64Match[1]);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: mimeType });
+        
+        // 创建下载链接
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // 释放URL对象
+        setTimeout(() => URL.revokeObjectURL(url), 100);
+      } else {
+        // 如果没有base64内容，尝试直接使用data URL
+        const link = document.createElement('a');
+        link.href = msg.text;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      }
+    } else {
+      // 如果是文件路径或URL，尝试下载
+      const link = document.createElement('a');
+      link.href = msg.text;
+      link.download = fileName;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  } catch (error) {
+    console.error('下载文件失败:', error);
+    alert('下载文件失败，请稍后重试');
+  }
+};
+
+// 获取浏览器信息
+const getBrowserInfo = (): string => {
+  const ua = navigator.userAgent;
+  if (ua.includes('Chrome')) return 'Chrome';
+  if (ua.includes('Firefox')) return 'Firefox';
+  if (ua.includes('Safari')) return 'Safari';
+  if (ua.includes('Edge')) return 'Edge';
+  return 'Unknown';
+};
+
+// 处理收到的 WebSocket 消息
+const handleWebSocketMessage = (message: WebSocketMessage): void => {
+  // 检查消息是否属于当前活动会话
+  if (message.session_id !== activeSessionId.value) {
+    // 如果不是当前会话的消息，更新会话列表的未读数量
+    const session = sessions.value.find(s => s.id === message.session_id);
+    if (session) {
+      session.unread = (session.unread || 0) + 1;
+      // 更新最后一条消息
+      session.lastMessage = (message.text || '').substring(0, 50);
+      session.lastTime = formatTime(message.time || new Date().toISOString());
+    }
+    return;
+  }
+
+  // 检查消息是否已显示（去重）
+  if (receivedMessageIds.has(message.id)) {
+    return;
+  }
+  receivedMessageIds.add(message.id);
+
+  // 限制集合大小
+  if (receivedMessageIds.size > 1000) {
+    const idsArray = Array.from(receivedMessageIds);
+    receivedMessageIds.clear();
+    idsArray.slice(500).forEach(id => receivedMessageIds.add(id));
+  }
+
+  // 判断是否是自己的消息（多设备同步）
+  // 优先使用服务端提供的 is_from_self 标记（更可靠），如果没有则回退到通过 user_id 比较
+  const isFromSelf = message.is_from_self !== undefined 
+    ? message.is_from_self 
+    : (message.from_user_id === currentUser.value?.id);
+
+  // 处理富文本
+  let processedMessage = message.text;
+  let isRich = false;
+  let linkUrls: string[] = [];
+
+  if (message.text) {
+    try {
+      const result = processRichText(message.text);
+      if (result.isRich) {
+        processedMessage = result.html;
+        isRich = true;
+        linkUrls = result.urls || [];
+      }
+    } catch (error) {
+      console.error('处理富文本失败:', error);
+    }
+  }
+
+  // 添加消息到列表
+  const isRecalled = (message as any).is_recalled || false;
+  
+  // 如果是撤回消息，更新现有消息而不是添加新消息
+  if (isRecalled) {
+    const existingIndex = messages.value.findIndex(m => m.id === message.id);
+    if (existingIndex !== -1) {
+      // 更新现有消息为撤回状态
+      messages.value[existingIndex].isRecalled = true;
+      messages.value[existingIndex].text = '';
+      messages.value[existingIndex].richText = undefined;
+      messages.value[existingIndex].fromUsername = message.username || messages.value[existingIndex].fromUsername;
+      messages.value[existingIndex].userId = message.from_user_id || messages.value[existingIndex].userId;
+      
+      // 更新所有引用这条被撤回消息的其他消息
+      const recalledMessageId = parseInt(message.id);
+      if (!isNaN(recalledMessageId)) {
+        messages.value.forEach((msg, index) => {
+          if (msg.reply_to_message_id === recalledMessageId && msg.replyToMessage) {
+            // 更新引用消息显示为"该引用消息已被撤回"
+            const senderName = messages.value[existingIndex].fromUsername || '用户';
+            messages.value[index].replyToMessage = `${senderName}: 该引用消息已被撤回`;
+          }
+        });
+      }
+      
+      return; // 撤回消息不需要添加新消息
+    }
+    // 如果消息不存在，可能是新收到的撤回消息，仍然需要显示撤回提示
+  }
+  
+  const chatMessage: ChatMessage = {
+    id: message.id,
+    from: isFromSelf ? 'agent' : 'user',
+    text: isRecalled ? '[消息已撤回]' : processedMessage,
+    time: formatTime(message.time),
+    created_at: message.created_at || message.time, // 添加创建时间（用于判断撤回时限）
+    userId: message.from_user_id,
+    avatar: message.avatar,
+    messageType: message.message_type || 'text',
+    richText: isRich ? processedMessage : undefined,
+    isRich: isRich,
+    linkUrls: linkUrls,
+    isRecalled: isRecalled,
+    reply_to_message_id: message.reply_to_message_id || null,
+    fromUsername: message.username || (message.from === 'agent' ? '客服' : '用户'),
+  };
+
+  // 如果是引用消息，需要获取引用消息的详情
+  if (message.reply_to_message_id) {
+    console.log(`收到引用消息: message_id=${message.id}, reply_to_message_id=${message.reply_to_message_id}`);
+    loadReplyMessage(message.reply_to_message_id)
+      .then(replyMsg => {
+        if (replyMsg) {
+          // 检查引用消息是否已被撤回
+          if (replyMsg.is_recalled) {
+            const senderName = replyMsg.from_username || '用户';
+            chatMessage.replyToMessage = `${senderName}: 该引用消息已被撤回`;
+          } else {
+            chatMessage.replyToMessage = replyMsg.message;
+            chatMessage.replyToUsername = replyMsg.from_username || '用户';
+            chatMessage.replyToMessageType = replyMsg.message_type || 'text';
+          }
+          console.log(`引用消息加载成功: replyToMessage=${chatMessage.replyToMessage}, replyToUsername=${chatMessage.replyToUsername}`);
+        } else {
+          console.warn(`引用消息加载失败: message_id=${message.reply_to_message_id} 不存在`);
+        }
+        messages.value.push(chatMessage);
+        scrollToBottom();
+      })
+      .catch((error) => {
+        console.error(`加载引用消息失败: message_id=${message.reply_to_message_id}`, error);
+        messages.value.push(chatMessage);
+        scrollToBottom();
+      });
+  } else {
+    messages.value.push(chatMessage);
+    scrollToBottom();
+  }
+};
+
+// 加载引用消息详情
+const loadReplyMessage = async (messageId: number): Promise<any> => {
+  try {
+    const response = await customerServiceApi.getReplyMessage({
+      message_id: messageId,
+      token: token.value || '',
+    });
+    if (response.success && response.message) {
+      // 返回消息详情，包括是否已撤回和消息类型
+      return {
+        message: response.message.message || '',
+        from_username: response.message.from_username || '用户',
+        is_recalled: response.message.is_recalled || false,
+        message_type: response.message.message_type || 'text',
+      };
+    }
+  } catch (error) {
+    console.error('加载引用消息失败:', error);
+  }
+  return null;
+};
+
+// 格式化时间
+const formatTime = (timeStr: string): string => {
+  try {
+    const date = new Date(timeStr);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return '刚刚';
+    if (minutes < 60) return `${minutes} 分钟前`;
+    if (hours < 24) return `${hours} 小时前`;
+    if (days < 7) return `${days} 天前`;
+    
+    return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + 
+           ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+  } catch {
+    return timeStr;
+  }
+};
+
+// 发送消息（使用 WebSocket）
 const handleSend = async () => {
   const text = inputText.value.trim();
   if (!text || !activeSessionId.value || !currentUser.value || !token.value) return;
@@ -940,26 +1706,42 @@ const handleSend = async () => {
     return;
   }
 
-  const toUserId = sessions.value.find(s => s.id === activeSessionId.value)?.userId;
+  // 检查 WebSocket 是否连接
+  if (!websocketClient.isConnected()) {
+    // 如果未连接，尝试连接（可能是因为刚接入会话，连接还未建立）
+    try {
+      await connectWebSocket();
+      // 连接成功后继续发送
+    } catch (error) {
+      // 连接失败，提示用户并恢复输入框
+      alert('实时通信未连接，请稍等片刻或刷新页面后重试。');
+      return;
+    }
+  }
 
   const originalText = inputText.value;
   inputText.value = '';
 
   try {
-    const response = await customerServiceApi.sendMessage({
-      session_id: activeSessionId.value,
-      from_user_id: currentUser.value.id,
-      to_user_id: toUserId,
-      message: text,
-      token: token.value,
-      message_type: 'text',
-      reply_to_message_id: replyToMessageId.value || undefined
-    });
+    // 使用 WebSocket 发送消息
+    const response = await websocketClient.sendMessage(
+      activeSessionId.value,
+      text,
+      'agent', // 客服角色
+      'text',
+      replyToMessageId.value || undefined
+    );
     
     // 清除引用状态
     replyToMessageId.value = null;
     replyToMessageText.value = null;
     replyToMessageUsername.value = null;
+
+    // 恢复输入框占位符
+    const input = document.querySelector('.chat-input') as HTMLTextAreaElement;
+    if (input) {
+      input.placeholder = '请输入回复内容，Enter 发送，Shift+Enter 换行';
+    }
 
     if (!response || !response.success) {
       // 失败时恢复输入框
@@ -967,18 +1749,15 @@ const handleSend = async () => {
       const msg = response?.message || '发送失败，请稍后重试';
       alert(msg);
     } else {
-      // 发送成功，立即轮询一次以获取自己的消息（包含引用信息）
-      if (activeSessionId.value) {
-        await loadMessages(activeSessionId.value);
-        // 确保滚动到底部
-        scrollToBottom();
-      }
+      // WebSocket 发送成功，消息会通过 new_message 事件接收
+      // 不需要手动轮询，消息会自动显示
+      console.log('消息发送成功');
     }
   } catch (error: any) {
     // 失败时恢复输入框
     inputText.value = originalText;
     console.error('发送消息失败:', error);
-    alert('发送失败，请稍后重试');
+    alert(error.message || '发送失败，请稍后重试');
   }
 };
 
@@ -1019,8 +1798,12 @@ const handleLogout = async () => {
   // 停止消息轮询
   stopMessagePolling();
   
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
+  // 断开 WebSocket 连接
+  disconnectWebSocket();
+  
+  // 清除所有 localStorage 数据（包括 token、user、device_id、agent_status 等）
+  localStorage.clear();
+  
   router.push('/login');
 };
 
@@ -1132,6 +1915,7 @@ const startMessagePolling = () => {
           // 获取引用消息内容（如果有）
           let replyToMessage = null;
           let replyToUsername = null;
+          let replyToMessageType: 'text' | 'image' | 'file' | undefined = undefined;
           if (msg.reply_to_message_id) {
             try {
               const replyResp = await customerServiceApi.getReplyMessage({
@@ -1144,6 +1928,7 @@ const startMessagePolling = () => {
                   replyToMessage = '该引用消息已被撤回';
                 } else {
                   replyToMessage = replyResp.message.message || '';
+                  replyToMessageType = replyResp.message.message_type || 'text';
                 }
                 replyToUsername = replyResp.message.from_username || null;  // 获取引用消息的发送者用户名
               }
@@ -1167,6 +1952,7 @@ const startMessagePolling = () => {
             reply_to_message_id: msg.reply_to_message_id,
             replyToMessage: replyToMessage,
             replyToUsername: replyToUsername,  // 添加引用消息的发送者用户名
+            replyToMessageType: replyToMessageType, // 引用消息类型
             fromUsername: msg.username || (msg.from === 'agent' ? '客服' : (msg.userId === currentUser.value?.id ? currentUser.value?.username : '用户')),
           };
 
@@ -1856,10 +2642,83 @@ const stopMessagePolling = () => {
   border-radius: 8px;
   display: block;
 }
-.file-placeholder {
-  display: inline-flex;
+.file-message-card {
+  display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 12px;
+  padding: 14px 16px;
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+  border: 1.5px solid #e2e8f0;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-width: 340px;
+  min-width: 220px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.file-message-card:hover {
+  background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
+}
+
+.file-icon {
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  border-radius: 10px;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(59, 130, 246, 0.2);
+}
+
+.file-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.file-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.file-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #1e293b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  letter-spacing: -0.01em;
+}
+
+.file-size {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.file-download-icon {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #6b7280;
+  transition: color 0.2s ease;
+}
+
+.file-message-card:hover .file-download-icon {
+  color: #3b82f6;
 }
 
 /* 用户消息文字颜色稍深 */
@@ -2148,6 +3007,16 @@ const stopMessagePolling = () => {
   gap: 10px;
 }
 
+.chat-main {
+  position: relative;
+}
+
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
 .toolbar-btn {
   border-radius: 999px;
   border: 1px solid rgba(255, 255, 255, 0.4);
@@ -2192,6 +3061,108 @@ const stopMessagePolling = () => {
   transform: translateY(-1px);
   box-shadow: 0 14px 28px rgba(51, 112, 255, 0.26);
   filter: brightness(1.02);
+}
+
+/* 表情面板与图标按钮样式 */
+.toolbar-icon-btn {
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  border: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 16px;
+  cursor: pointer;
+  padding: 0;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.18);
+  transition: transform 0.12s ease, box-shadow 0.12s ease, background 0.12s ease, filter 0.12s ease;
+}
+
+.toolbar-icon-btn:hover {
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(15, 23, 42, 0.26);
+  filter: brightness(1.03);
+}
+
+.toolbar-icon-btn:active {
+  transform: translateY(0);
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.18);
+}
+
+.emoji-panel {
+  position: absolute;
+  bottom: 70px;
+  left: 32px;
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: rgba(15, 23, 42, 0.92);
+  box-shadow:
+    0 18px 45px rgba(15, 23, 42, 0.55),
+    0 0 0 1px rgba(148, 163, 184, 0.35);
+  display: grid;
+  grid-template-columns: repeat(10, 1fr);
+  gap: 6px;
+  max-width: 360px;
+  max-height: 220px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  backdrop-filter: blur(14px);
+  z-index: 20;
+}
+
+/* emoji 面板滚动条美化 */
+.emoji-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.emoji-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.emoji-panel::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.55);
+  border-radius: 999px;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.6);
+}
+
+.emoji-panel::-webkit-scrollbar-thumb:hover {
+  background: rgba(248, 250, 252, 0.85);
+}
+
+/* Firefox */
+.emoji-panel {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.7) transparent;
+}
+
+.emoji-item {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  border: none;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 18px;
+  padding: 0;
+  transition: transform 0.08s ease, background 0.08s ease, box-shadow 0.08s ease;
+}
+
+.emoji-item:hover {
+  background: rgba(148, 163, 184, 0.25);
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.5);
+}
+
+.emoji-item:active {
+  transform: translateY(0) scale(0.98);
+  box-shadow: none;
 }
 
 .detail-section {

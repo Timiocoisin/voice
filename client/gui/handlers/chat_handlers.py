@@ -1,6 +1,7 @@
 import os
 import random
 import base64
+import logging
 from datetime import datetime
 from typing import TYPE_CHECKING, List, Tuple, Optional
 
@@ -195,15 +196,7 @@ def close_chat_panel(main_window: "MainWindow"):
             finally:
                 main_window._message_poll_timer = None
 
-        # 停止人工客服消息轮询
-        if hasattr(main_window, "_agent_poll_timer") and main_window._agent_poll_timer:
-            try:
-                main_window._agent_poll_timer.stop()
-                main_window._agent_poll_timer.deleteLater()
-            except RuntimeError:
-                pass
-            finally:
-                main_window._agent_poll_timer = None
+        # 不再需要停止HTTP轮询（已移除）
         
         # 清空聊天记录（仅清除UI，不清除数据库）
         if hasattr(main_window, "chat_layout"):
@@ -225,6 +218,15 @@ def close_chat_panel(main_window: "MainWindow"):
         if hasattr(main_window, "_chat_session_id"):
             main_window._chat_session_id = None
         clear_unread_count(main_window)
+        
+        # 断开 WebSocket 连接（因为客服会话已结束）
+        try:
+            from client.utils.websocket_helper import disconnect_websocket
+            disconnect_websocket(main_window)
+            logging.info("客服会话结束，已断开 WebSocket 连接")
+        except Exception as e:
+            logging.warning(f"断开 WebSocket 连接失败: {e}")
+            # 断开失败不影响关闭流程
         
         # 恢复原来的布局
         if getattr(main_window, "_chat_panel_added", False):
@@ -289,7 +291,6 @@ def handle_chat_send(main_window: "MainWindow"):
     # 如果已连接人工客服，强制走人工通道（禁用关键词机器人）
     if hasattr(main_window, "_human_service_connected") and main_window._human_service_connected:
         from client.login.token_storage import read_token
-        from client.api_client import send_chat_message
 
         token = read_token()
         session_id = getattr(main_window, "_chat_session_id", None)
@@ -299,6 +300,7 @@ def handle_chat_send(main_window: "MainWindow"):
             reply_to_id = getattr(main_window, "_reply_to_message_id", None)
             reply_to_text = getattr(main_window, "_reply_to_message_text", None)
             reply_to_username = getattr(main_window, "_reply_to_username", None)
+            reply_to_message_type = getattr(main_window, "_reply_to_message_type", None)
             
             # 获取当前用户名
             current_username = None
@@ -310,6 +312,13 @@ def handle_chat_send(main_window: "MainWindow"):
             
             # 先乐观展示自己的消息（包含引用信息）
             # 注意：此时没有message_id，发送成功后会通过轮询获取完整消息信息
+            # 如果没有设置引用消息类型，则根据内容自动检测
+            if reply_to_message_type is None and reply_to_text:
+                if reply_to_text.startswith("data:image"):
+                    reply_to_message_type = "image"
+                else:
+                    reply_to_message_type = "text"
+            
             append_chat_message(
                 main_window, 
                 text, 
@@ -317,8 +326,9 @@ def handle_chat_send(main_window: "MainWindow"):
                 reply_to_message_id=reply_to_id,
                 reply_to_message=reply_to_text,
                 reply_to_username=reply_to_username,
+                reply_to_message_type=reply_to_message_type,
                 from_user_id=main_window.user_id,
-                from_username=current_username
+                from_username=current_username,
             )
             main_window.chat_input.clear()
 
@@ -333,11 +343,55 @@ def handle_chat_send(main_window: "MainWindow"):
                     main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 main_window.chat_input.setFocus()
 
-            def send_via_http():
+            def send_via_websocket():
                 try:
                     # 检查是否有引用消息
                     reply_to_id = getattr(main_window, "_reply_to_message_id", None)
-                    resp = send_chat_message(session_id, main_window.user_id, text, token, reply_to_message_id=reply_to_id)
+                    
+                    # 验证引用消息ID是否有效（必须是大于0的正整数）
+                    if reply_to_id is not None:
+                        try:
+                            reply_to_id_int = int(reply_to_id)
+                            # 数据库ID从1开始，所以允许 >= 1
+                            if reply_to_id_int <= 0:
+                                logging.warning(f"引用消息ID无效: {reply_to_id}（ID必须大于0），将按普通消息发送")
+                                reply_to_id = None
+                            else:
+                                # 验证引用消息是否真的存在（通过API检查）
+                                try:
+                                    from client.api_client import get_reply_message
+                                    from client.login.token_storage import read_token
+                                    reply_token = read_token()
+                                    if not reply_token:
+                                        logging.warning(f"无法获取token，跳过引用消息验证")
+                                        reply_to_id = None
+                                    else:
+                                        reply_resp = get_reply_message(reply_to_id_int, reply_token)
+                                        if not reply_resp.get("success") or not reply_resp.get("message"):
+                                            logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
+                                            reply_to_id = None
+                                except Exception as e:
+                                    # 如果是404错误，说明消息不存在，将按普通消息发送
+                                    error_str = str(e)
+                                    if "404" in error_str or "NOT FOUND" in error_str:
+                                        logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
+                                    else:
+                                        logging.warning(f"验证引用消息失败: {e}，将按普通消息发送")
+                                    reply_to_id = None
+                        except (ValueError, TypeError):
+                            logging.warning(f"引用消息ID格式错误: {reply_to_id}，将按普通消息发送")
+                            reply_to_id = None
+                    
+                    # 使用 WebSocket 发送消息
+                    from client.utils.websocket_helper import send_message_via_websocket
+                    resp = send_message_via_websocket(
+                        main_window,
+                        session_id,
+                        text,
+                        message_type="text",
+                        reply_to_message_id=reply_to_id
+                    )
+                    
                     # 清除引用状态
                     if hasattr(main_window, "_reply_to_message_id"):
                         main_window._reply_to_message_id = None
@@ -349,16 +403,21 @@ def handle_chat_send(main_window: "MainWindow"):
                     if hasattr(main_window, "chat_input"):
                         main_window.chat_input.setPlaceholderText("输入消息...")
                     return resp
-                except Exception:
+                except Exception as e:
+                    logging.error(f"通过 WebSocket 发送消息失败: {e}", exc_info=True)
                     return None
 
             def handle_response(resp):
                 fallback_enable()
                 
                 if not resp or not resp.get("success"):
+                    error_msg = resp.get("message", "消息发送失败，请稍后重试。") if resp else "消息发送失败，请稍后重试。"
+                    # 如果是因为 WebSocket 未连接，提供更友好的提示
+                    if "WebSocket 未连接" in error_msg or "未初始化" in error_msg:
+                        error_msg = "实时通信未连接，请稍等片刻或重新匹配客服。消息将通过备用方式发送。"
                     append_chat_message(
                         main_window,
-                        "消息发送失败，请稍后重试。",
+                        error_msg,
                         from_self=False,
                         is_html=False,
                         streaming=False
@@ -376,16 +435,62 @@ def handle_chat_send(main_window: "MainWindow"):
                     if not hasattr(main_window, "_displayed_message_ids"):
                         main_window._displayed_message_ids = set()
                     main_window._displayed_message_ids.add(str(message_id_int))
+                    # 将返回的 message_id 绑定到最新一条“自己发送且尚无 message_id 的气泡”，
+                    # 以便后续 message_status 事件能精确更新状态，不用等轮询。
+                    try:
+                        if hasattr(main_window, "chat_layout"):
+                            for i in range(main_window.chat_layout.count() - 1, -1, -1):
+                                item = main_window.chat_layout.itemAt(i)
+                                if not item or not item.widget():
+                                    continue
+                                widget = item.widget()
+                                # 只处理还没有 message_id 的气泡
+                                existing_id = widget.property("message_id")
+                                if existing_id not in (None, 0, ""):
+                                    continue
+                                # 仅限自己发送的消息：通过气泡在右侧的布局特征判断
+                                layout = widget.layout()
+                                is_self_msg = False
+                                if layout:
+                                    for j in range(layout.count()):
+                                        sub = layout.itemAt(j)
+                                        if sub and sub.layout():
+                                            row = sub.layout()
+                                            for k in range(row.count()):
+                                                ritem = row.itemAt(k)
+                                                if ritem and ritem.widget() and isinstance(ritem.widget(), ChatBubble):
+                                                    # 气泡前有 stretch 即为右侧（自己）消息
+                                                    if k > 0:
+                                                        prev = row.itemAt(k - 1)
+                                                        if prev and prev.spacerItem():
+                                                            is_self_msg = True
+                                                            break
+                                            if is_self_msg:
+                                                break
+                                if not is_self_msg:
+                                    continue
+                                # 绑定 message_id
+                                widget.setProperty("message_id", message_id_int)
+                                # 如果有状态标签，保持为“发送中”直至收到服务器回执
+                                status_label = widget.property("status_label")
+                                if status_label:
+                                    status_label.setText("发送中")
+                                    status_label.setStyleSheet("""
+                                        QLabel {
+                                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                            font-size: 10px;
+                                            color: #9ca3af;
+                                        }
+                                    """)
+                                break
+                    except Exception as e:
+                        logging.warning(f"绑定 message_id 到气泡失败: {e}")
                     
-                    # 发送成功后，立即轮询一次以获取完整的消息信息（包括引用消息）
-                    # 这样能确保消息有正确的message_id和引用信息
-                    if hasattr(main_window, "_agent_poll_timer") and main_window._agent_poll_timer:
-                        # 触发一次轮询
-                        QTimer.singleShot(100, lambda: None)  # 延迟100ms后轮询会自动触发
+                    # 消息已通过WebSocket发送，后端会通过WebSocket推送回来，无需轮询
 
-            # 使用QTimer.singleShot在后台执行HTTP请求，避免阻塞UI
+            # 使用QTimer.singleShot在后台执行WebSocket请求，避免阻塞UI
             def do_send():
-                resp = send_via_http()
+                resp = send_via_websocket()
                 QTimer.singleShot(0, lambda: handle_response(resp))
             
             QTimer.singleShot(0, do_send)
@@ -545,8 +650,10 @@ def append_chat_message(
     reply_to_message_id: Optional[int] = None,
     reply_to_message: Optional[str] = None,
     reply_to_username: Optional[str] = None,
+    reply_to_message_type: Optional[str] = None,  # 引用消息的类型：text, image, file
     from_user_id: Optional[int] = None,
-    from_username: Optional[str] = None
+    from_username: Optional[str] = None,
+    message_created_time: Optional[str] = None,
 ):
     """按左右气泡形式追加一条消息，使用真实圆角控件"""
     if not hasattr(main_window, "chat_layout"):
@@ -596,7 +703,210 @@ def append_chat_message(
         # 记录时间标签，便于撤回时隐藏
         message_widget.setProperty("time_label", time_label)
 
-    # 气泡 + 头像 行
+    # 处理撤回状态 - 如果是撤回消息，先尝试更新现有消息，而不是创建新消息
+    if is_recalled and message_id is not None:
+        try:
+            recalled_id = None
+            try:
+                recalled_id = int(message_id)
+            except (ValueError, TypeError):
+                recalled_id = message_id
+            
+            # 先尝试查找并更新现有消息
+            if recalled_id is not None and hasattr(main_window, "_message_widgets_map"):
+                widget_bubble = main_window._message_widgets_map.get(recalled_id)
+                if widget_bubble:
+                    widget, bubble = widget_bubble
+                    if widget and not widget.property("is_recalled"):
+                        # 找到现有消息，更新为撤回状态
+                        # 隐藏原有的气泡和头像
+                        if bubble:
+                            bubble.setVisible(False)
+                        
+                        # 隐藏时间标签（如果有）
+                        time_label = widget.property("time_label")
+                        if time_label:
+                            time_label.setVisible(False)
+                        
+                        # 判断是自己撤回还是对方撤回
+                        current_user_id = getattr(main_window, 'user_id', None)
+                        if current_user_id is not None and from_user_id is not None:
+                            try:
+                                is_self_recalled = (int(from_user_id) == int(current_user_id))
+                            except (ValueError, TypeError):
+                                is_self_recalled = (from_user_id == current_user_id)
+                        else:
+                            is_self_recalled = (from_user_id == current_user_id)
+                        
+                        if is_self_recalled:
+                            recall_text = "你撤回了一条消息"
+                        else:
+                            username = from_username or "用户"
+                            if from_user_id and not from_username:
+                                if hasattr(main_window, "username"):
+                                    username = main_window.username
+                                else:
+                                    try:
+                                        from client.login.login_status_manager import check_login_status
+                                        _, _, current_username = check_login_status()
+                                        if current_username:
+                                            username = current_username
+                                    except Exception:
+                                        pass
+                            recall_text = f"{username}撤回了一条消息"
+                        
+                        # 检查是否已经有撤回提示标签
+                        widget_layout = widget.layout()
+                        if widget_layout:
+                            # 查找是否已有撤回标签
+                            has_recall_label = False
+                            for i in range(widget_layout.count()):
+                                item = widget_layout.itemAt(i)
+                                if item and item.widget():
+                                    w = item.widget()
+                                    if isinstance(w, QLabel) and w.text() in ("你撤回了一条消息", f"{username}撤回了一条消息"):
+                                        has_recall_label = True
+                                        break
+                            
+                            # 如果没有撤回标签，创建一个
+                            if not has_recall_label:
+                                recall_label = QLabel(recall_text)
+                                recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                                recall_label.setStyleSheet("""
+                                    QLabel {
+                                        font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                        font-size: 11px;
+                                        color: #9ca3af;
+                                        padding: 4px 0px;
+                                        background-color: transparent;
+                                    }
+                                """)
+                                widget_layout.insertWidget(0, recall_label)
+                        
+                        # 标记为已撤回
+                        widget.setProperty("is_recalled", True)
+                        
+                        # 同步更新所有引用了这条消息的引用块文案
+                        if hasattr(main_window, "chat_layout"):
+                            parent_layout = main_window.chat_layout
+                            for i in range(parent_layout.count()):
+                                item = parent_layout.itemAt(i)
+                                w = item.widget() if item else None
+                                if not w:
+                                    continue
+                                ref_id = w.property("reply_to_message_id")
+                                if ref_id is None:
+                                    continue
+                                try:
+                                    ref_id_norm = int(ref_id)
+                                except (ValueError, TypeError):
+                                    ref_id_norm = ref_id
+                                if ref_id_norm == recalled_id:
+                                    reply_container = w.property("reply_container")
+                                    if reply_container:
+                                        sender_name = reply_container.property("reply_sender_name") or ""
+                                        reply_label = reply_container.property("reply_label")
+                                        new_text = "该引用消息已被撤回"
+                                        if sender_name:
+                                            new_text = f"{sender_name}: {new_text}"
+                                        if reply_label:
+                                            reply_label.setText(new_text)
+                        
+                        # 已更新现有消息，直接返回，不创建新消息
+                        return
+        except Exception as e:
+            logging.error(f"更新撤回消息失败: {e}", exc_info=True)
+            # 如果更新失败，继续创建新的撤回提示消息
+    
+    # 如果没有找到现有消息，或者不是撤回消息，继续正常流程
+    # 处理撤回状态 - 如果是撤回消息，只显示居中灰色小字，不显示气泡和头像
+    if is_recalled:
+        # 隐藏时间标签（如果有）
+        if time_label:
+            time_label.setVisible(False)
+        
+        # 判断是自己撤回还是对方撤回
+        current_user_id = getattr(main_window, 'user_id', None)
+        if current_user_id is not None and from_user_id is not None:
+            try:
+                is_self_recalled = (int(from_user_id) == int(current_user_id))
+            except (ValueError, TypeError):
+                is_self_recalled = (from_user_id == current_user_id)
+        else:
+            is_self_recalled = (from_user_id == current_user_id)
+        
+        if is_self_recalled:
+            recall_text = "你撤回了一条消息"
+        else:
+            username = from_username or "用户"
+            if from_user_id and not from_username:
+                if hasattr(main_window, "username"):
+                    username = main_window.username
+                else:
+                    try:
+                        from client.login.login_status_manager import check_login_status
+                        _, _, current_username = check_login_status()
+                        if current_username:
+                            username = current_username
+                    except Exception:
+                        pass
+            recall_text = f"{username}撤回了一条消息"
+        
+        # 创建撤回提示标签（灰色居中）- 一行灰色小字，独立显示，不显示气泡和头像
+        recall_label = QLabel(recall_text)
+        recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        recall_label.setStyleSheet("""
+            QLabel {
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 11px;
+                color: #9ca3af;
+                padding: 4px 0px;
+                background-color: transparent;
+            }
+        """)
+        # 直接添加到布局，不显示气泡和头像
+        v_layout.addWidget(recall_label)
+
+        # 同步更新所有引用了这条消息的引用块文案
+        try:
+            recalled_id = None
+            if message_id is not None:
+                try:
+                    recalled_id = int(message_id)
+                except (ValueError, TypeError):
+                    recalled_id = message_id
+            if recalled_id is not None and hasattr(main_window, "chat_layout"):
+                parent_layout = main_window.chat_layout
+                for i in range(parent_layout.count()):
+                    item = parent_layout.itemAt(i)
+                    w = item.widget() if item else None
+                    if not w:
+                        continue
+                    ref_id = w.property("reply_to_message_id")
+                    if ref_id is None:
+                        continue
+                    try:
+                        ref_id_norm = int(ref_id)
+                    except (ValueError, TypeError):
+                        ref_id_norm = ref_id
+                    if ref_id_norm == recalled_id:
+                        reply_container = w.property("reply_container")
+                        if reply_container:
+                            sender_name = reply_container.property("reply_sender_name") or ""
+                            reply_label = reply_container.property("reply_label")
+                            new_text = "该引用消息已被撤回"
+                            if sender_name:
+                                new_text = f"{sender_name}: {new_text}"
+                            if reply_label:
+                                reply_label.setText(new_text)
+        except Exception:
+            # 更新引用块失败不影响主流程
+            pass
+
+        # 不创建气泡和头像，直接返回
+        return
+    
+    # 气泡 + 头像 行（正常消息才显示）
     row = QHBoxLayout()
     row.setContentsMargins(0, 0, 0, 0)
     row.setSpacing(6)
@@ -674,43 +984,6 @@ def append_chat_message(
         row.addStretch()
 
     v_layout.addLayout(row)
-
-    # 处理撤回状态 - 显示"xxx撤回了一条消息"（灰色居中）
-    if is_recalled:
-        # 获取用户名
-        username = from_username or "用户"
-        if from_user_id and not from_username:
-            # 尝试从main_window获取用户名
-            if hasattr(main_window, "username"):
-                username = main_window.username
-            elif from_user_id == main_window.user_id:
-                # 如果是当前用户，尝试获取用户名
-                try:
-                    from client.login.login_status_manager import check_login_status
-                    _, _, current_username = check_login_status()
-                    if current_username:
-                        username = current_username
-                except Exception:
-                    pass
-        
-        # 创建撤回提示标签（灰色居中）
-        recall_label = QLabel(f"{username}撤回了一条消息")
-        recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        recall_label.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 11px;
-                color: #9ca3af;
-                padding: 4px 0px;
-                background-color: transparent;
-            }
-        """)
-        # 在气泡之前插入撤回提示
-        v_layout.insertWidget(v_layout.count() - 1, recall_label)
-        
-        # 隐藏气泡，只显示撤回提示
-        if isinstance(bubble_label, ChatBubble):
-            bubble_label.setVisible(False)
     
     # 处理引用消息显示（微信风格）：在主布局中单独一行显示引用块，放在正文气泡下方
     if reply_to_message_id and reply_to_message and not is_recalled:
@@ -739,21 +1012,102 @@ def append_chat_message(
         reply_text = reply_to_message
         if reply_text == "[消息已撤回]":
             reply_text = "该引用消息已被撤回"
+        
+        # 初始化 reply_label，确保在所有分支中都有定义
+        reply_label = None
+        
+        # 如果是图片消息，显示缩略图
+        if reply_to_message_type == "image" and reply_text and reply_text.startswith("data:image"):
+            try:
+                # 解析base64图片
+                b64_part = reply_text.split(",", 1)[1] if "," in reply_text else ""
+                raw = base64.b64decode(b64_part)
+                image = QImage.fromData(raw)
+                if not image.isNull():
+                    pixmap = QPixmap.fromImage(image)
+                    # 创建30*30的缩略图
+                    thumbnail = pixmap.scaled(30, 30, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    
+                    # 创建缩略图标签
+                    thumbnail_label = QLabel()
+                    thumbnail_label.setFixedSize(30, 30)
+                    thumbnail_label.setPixmap(thumbnail)
+                    thumbnail_label.setStyleSheet("""
+                        QLabel {
+                            border-radius: 4px;
+                            background-color: transparent;
+                        }
+                    """)
+                    
+                    # 创建文本标签（显示发送者名称），这个标签也作为 reply_label 用于撤回时更新
+                    sender_label = QLabel(f"{reply_sender_name}: [图片]")
+                    sender_label.setStyleSheet("""
+                        QLabel {
+                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                            font-size: 12px;
+                            color: #4b5563;
+                            background-color: transparent;
+                        }
+                    """)
+                    reply_label = sender_label  # 使用 sender_label 作为 reply_label
+                    
+                    # 水平布局：发送者名称 + 缩略图
+                    thumbnail_layout = QHBoxLayout()
+                    thumbnail_layout.setContentsMargins(0, 0, 0, 0)
+                    thumbnail_layout.setSpacing(6)
+                    thumbnail_layout.addWidget(sender_label)
+                    thumbnail_layout.addWidget(thumbnail_label)
+                    thumbnail_layout.addStretch()
+                    
+                    reply_content_layout.addLayout(thumbnail_layout)
+                else:
+                    # 图片解析失败，显示文本
+                    reply_label = QLabel(f"{reply_sender_name}: [图片]")
+                    reply_label.setStyleSheet("""
+                        QLabel {
+                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                            font-size: 12px;
+                            color: #4b5563;
+                            background-color: transparent;
+                        }
+                    """)
+                    reply_label.setWordWrap(True)
+                    reply_content_layout.addWidget(reply_label)
+            except Exception as e:
+                logging.error(f"解析引用图片失败: {e}", exc_info=True)
+                # 解析失败，显示文本
+                reply_label = QLabel(f"{reply_sender_name}: [图片]")
+                reply_label.setStyleSheet("""
+                    QLabel {
+                        font-family: "Microsoft YaHei", "SimHei", "Arial";
+                        font-size: 12px;
+                        color: #4b5563;
+                        background-color: transparent;
+                    }
+                """)
+                reply_label.setWordWrap(True)
+                reply_content_layout.addWidget(reply_label)
         else:
-            if len(reply_text) > 50:
+            # 文本消息，显示文本内容
+            if reply_text and len(reply_text) > 50:
                 reply_text = reply_text[:50] + "..."
 
-        reply_label = QLabel(f"{reply_sender_name}: {reply_text}")
-        reply_label.setStyleSheet("""
-            QLabel {
-                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                font-size: 12px;
-                color: #4b5563;
-                background-color: transparent;
-            }
-        """)
-        reply_label.setWordWrap(True)
-        reply_content_layout.addWidget(reply_label)
+            reply_label = QLabel(f"{reply_sender_name}: {reply_text}")
+            reply_label.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 12px;
+                    color: #4b5563;
+                    background-color: transparent;
+                }
+            """)
+            reply_label.setWordWrap(True)
+            reply_content_layout.addWidget(reply_label)
+
+        # 把引用信息存到容器属性里，方便后续在被引用消息撤回时更新文案
+        reply_container.setProperty("reply_sender_name", reply_sender_name)
+        if reply_label:
+            reply_container.setProperty("reply_label", reply_label)
 
         reply_layout.addLayout(reply_content_layout)
 
@@ -892,6 +1246,13 @@ def append_chat_message(
             normalized_msg_id = message_id
     message_widget.setProperty("message_id", normalized_msg_id)
     
+    # 保存消息创建时间（用于撤回时间检查）
+    if message_created_time:
+        message_widget.setProperty("message_created_time", message_created_time)
+    else:
+        # 如果没有提供创建时间，使用当前时间（用于乐观展示的消息）
+        message_widget.setProperty("message_created_time", datetime.now().isoformat())
+    
     # 为消息控件添加右键菜单
     # 用户端：用户自己的消息可以撤回+引用，客服消息只能引用
     # 注意：即使用户消息暂时没有message_id（乐观展示），也要显示右键菜单，但撤回功能需要等待message_id
@@ -932,8 +1293,60 @@ def append_chat_message(
                 # 设置引用消息ID和内容
                 # 从message_widget获取message_id（可能为None，但引用功能不需要message_id）
                 current_msg_id = message_widget.property("message_id")
-                main_window._reply_to_message_id = current_msg_id if current_msg_id else None
+                
+                # 调试日志：记录获取到的 message_id
+                logging.debug(f"引用消息时获取到的 message_id: {current_msg_id}, 类型: {type(current_msg_id)}")
+                
+                # 验证消息ID是否有效（必须是正整数）
+                valid_msg_id = None
+                if current_msg_id is not None:
+                    try:
+                        msg_id_int = int(current_msg_id)
+                        # 数据库ID从1开始，所以允许 >= 1
+                        # 但是，如果 message_id 是 1，可能是默认值，需要验证是否真的存在
+                        if msg_id_int > 0:
+                            # 特别检查：如果 message_id 是 1，可能是默认值，需要验证
+                            if msg_id_int == 1:
+                                logging.warning(f"检测到 message_id=1，可能是默认值，将验证消息是否存在")
+                                # 验证消息是否真的存在
+                                try:
+                                    from client.api_client import get_reply_message
+                                    from client.login.token_storage import read_token
+                                    reply_token = read_token()
+                                    if reply_token:
+                                        reply_resp = get_reply_message(msg_id_int, reply_token)
+                                        if not reply_resp.get("success") or not reply_resp.get("message"):
+                                            logging.warning(f"message_id=1 的消息不存在，可能是默认值，将无法引用")
+                                            valid_msg_id = None
+                                        else:
+                                            valid_msg_id = msg_id_int
+                                    else:
+                                        logging.warning(f"无法获取token，跳过验证")
+                                        valid_msg_id = None
+                                except Exception as e:
+                                    logging.warning(f"验证 message_id=1 失败: {e}，将无法引用")
+                                    valid_msg_id = None
+                            else:
+                                valid_msg_id = msg_id_int
+                        else:
+                            logging.warning(f"引用消息ID无效: {current_msg_id}（ID必须大于0），将无法发送引用信息")
+                    except (ValueError, TypeError):
+                        logging.warning(f"引用消息ID格式错误: {current_msg_id}，将无法发送引用信息")
+                
+                # 如果 message_id 无效，提示用户等待消息发送完成
+                if not valid_msg_id:
+                    from PyQt6.QtWidgets import QMessageBox
+                    QMessageBox.warning(
+                        main_window,
+                        "无法引用",
+                        "该消息尚未发送完成，请等待消息发送成功后再引用。"
+                    )
+                    return
+                
+                main_window._reply_to_message_id = valid_msg_id
                 main_window._reply_to_message_text = content
+                # 设置引用消息类型为文本（表情也是文本）
+                main_window._reply_to_message_type = "text"
                 # 获取被引用消息的发送者用户名
                 main_window._reply_to_username = from_username or (from_self and "我" or "用户")
                 # 在输入框显示引用提示
@@ -943,6 +1356,12 @@ def append_chat_message(
                     placeholder = f"回复 {sender_name}：{preview}"
                     main_window.chat_input.setPlaceholderText(placeholder)
                     main_window.chat_input.setFocus()
+                    
+                    # 如果消息ID无效，给用户提示
+                    if valid_msg_id is None:
+                        # 不弹窗，只在输入框占位符中提示
+                        placeholder = f"⚠️ 无法引用此消息（消息ID无效），将按普通消息发送"
+                        main_window.chat_input.setPlaceholderText(placeholder)
             
             reply_action.triggered.connect(reply_message_action)
             
@@ -951,40 +1370,62 @@ def append_chat_message(
                 recall_action = menu.addAction("撤回消息")
                 # 动态检查message_id（从widget属性获取，可能已经被轮询更新）
                 current_msg_id = message_widget.property("message_id")
-                if current_msg_id:
+                message_created_time = message_widget.property("message_created_time")
+                
+                # 检查消息是否超过2分钟
+                can_recall = False
+                if current_msg_id and message_created_time:
+                    try:
+                        from datetime import timedelta
+                        created_time = datetime.fromisoformat(message_created_time.replace('Z', '+00:00'))
+                        time_diff = datetime.now() - created_time.replace(tzinfo=None)
+                        can_recall = time_diff <= timedelta(minutes=2)
+                    except Exception:
+                        # 如果时间解析失败，允许撤回（由后端验证）
+                        can_recall = True
+                elif current_msg_id:
+                    # 如果没有创建时间，允许撤回（由后端验证）
+                    can_recall = True
+                
+                if current_msg_id and can_recall:
                     recall_action.setEnabled(True)
                 else:
                     recall_action.setEnabled(False)
-                    recall_action.setToolTip("消息ID尚未同步，请稍后再试")
+                    if not current_msg_id:
+                        recall_action.setToolTip("消息ID尚未同步，请稍后再试")
+                    else:
+                        recall_action.setToolTip("消息已超过2分钟，无法撤回")
                 
                 def recall_message_action():
                     # 再次检查message_id（确保是最新的）
                     current_msg_id = message_widget.property("message_id")
                     if not current_msg_id:
-                        show_message(main_window, "提示", "消息ID尚未同步，请稍后再试")
+                        # 不弹窗，直接返回（因为按钮已禁用）
                         return
                     
-                    from client.login.token_storage import read_token
-                    from client.api_client import recall_message
+                    # 再次检查时间（防止在检查后到点击之间超过2分钟）
+                    message_created_time = message_widget.property("message_created_time")
+                    if message_created_time:
+                        try:
+                            from datetime import timedelta
+                            created_time = datetime.fromisoformat(message_created_time.replace('Z', '+00:00'))
+                            time_diff = datetime.now() - created_time.replace(tzinfo=None)
+                            if time_diff > timedelta(minutes=2):
+                                # 超过2分钟，直接禁用，不弹窗
+                                recall_action.setEnabled(False)
+                                return
+                        except Exception:
+                            pass
                     
-                    token = read_token()
-                    if not token or not main_window.user_id:
-                        show_message(main_window, "错误", "未登录，无法撤回消息")
-                        return
+                    # 使用 WebSocket 撤回消息
+                    from client.utils.websocket_helper import recall_message_via_websocket
                     
                     try:
-                        resp = recall_message(current_msg_id, main_window.user_id, token)
+                        resp = recall_message_via_websocket(main_window, current_msg_id)
                         if resp.get("success"):
-                            # 获取用户名
-                            username = from_username or "用户"
-                            if not username:
-                                try:
-                                    from client.login.login_status_manager import check_login_status
-                                    _, _, current_username = check_login_status()
-                                    if current_username:
-                                        username = current_username
-                                except Exception:
-                                    pass
+                            # 判断是自己撤回还是对方撤回
+                            # 自己撤回的消息，显示"你撤回了一条消息"
+                            recall_text = "你撤回了一条消息"
                             
                             # 隐藏整个消息行（包括头像和气泡）以及引用块，显示撤回提示
                             parent_layout = message_widget.layout()
@@ -1022,34 +1463,36 @@ def append_chat_message(
                             time_label = message_widget.property("time_label")
                             if time_label:
                                 time_label.setVisible(False)
-                                
-                            # 创建撤回提示标签（灰色居中）
-                                recall_label = QLabel(f"{username}撤回了一条消息")
-                                recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                                recall_label.setStyleSheet("""
-                                    QLabel {
-                                        font-family: "Microsoft YaHei", "SimHei", "Arial";
-                                        font-size: 11px;
-                                        color: #9ca3af;
-                                        padding: 4px 0px;
-                                        background-color: transparent;
-                                    }
-                                """)
-                                
-                                # 在row布局位置插入撤回提示
-                                if row_index >= 0:
-                                    parent_layout.insertWidget(row_index, recall_label)
-                                else:
-                                    # 如果找不到row，直接添加到末尾
-                                    parent_layout.addWidget(recall_label)
+                            
+                            # 创建撤回提示标签（灰色居中）- 简化样式，只显示一行灰色小字
+                            recall_label = QLabel(recall_text)
+                            recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                            recall_label.setStyleSheet("""
+                                QLabel {
+                                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                    font-size: 11px;
+                                    color: #9ca3af;
+                                    padding: 4px 0px;
+                                    background-color: transparent;
+                                }
+                            """)
+                            
+                            # 在row布局位置插入撤回提示
+                            if row_index >= 0:
+                                parent_layout.insertWidget(row_index, recall_label)
+                            else:
+                                # 如果找不到row，直接添加到末尾
+                                parent_layout.addWidget(recall_label)
                             
                             message_widget.setProperty("message_id", None)  # 标记为已撤回
                             message_widget.setProperty("is_recalled", True)  # 标记为已撤回
                         else:
+                            # 撤回失败，但不弹窗（后端会返回具体原因，但用户已经看到按钮被禁用了）
                             error_msg = resp.get("message", "撤回失败")
-                            show_message(main_window, "撤回失败", error_msg)
+                            logging.warning(f"撤回消息失败: {error_msg}")
                     except Exception as e:
-                        show_message(main_window, "撤回失败", f"撤回消息时发生错误：{str(e)}")
+                        # 不弹窗，只记录日志
+                        logging.error(f"撤回消息时发生错误: {e}", exc_info=True)
                 
                 recall_action.triggered.connect(recall_message_action)
             
@@ -1426,8 +1869,38 @@ def match_human_service(main_window: "MainWindow"):
             main_window._human_service_connected = True
             main_window._matched_agent_id = response.get("agent_id")
             
-            # 启动轮询检查客服消息
-            start_polling_agent_messages(main_window, session_id, token)
+            # 匹配成功后，连接 WebSocket 进行实时通信
+            try:
+                from client.utils.websocket_helper import connect_websocket
+                import threading
+                # 在后台线程中连接，避免阻塞 UI
+                def connect_websocket_thread():
+                    if connect_websocket(main_window, main_window.user_id, token):
+                        logging.info("WebSocket 连接成功")
+                    else:
+                        logging.error("WebSocket 连接失败")
+                        # WebSocket 连接失败时显示提示
+                        from PyQt6.QtCore import QTimer
+                        QTimer.singleShot(0, lambda: append_chat_message(
+                            main_window,
+                            "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
+                            from_self=False,
+                            is_html=False,
+                            streaming=False
+                        ))
+                
+                threading.Thread(target=connect_websocket_thread, daemon=True).start()
+                logging.info("正在连接 WebSocket 以进行实时通信...")
+            except Exception as e:
+                logging.error(f"连接 WebSocket 失败: {e}", exc_info=True)
+                # WebSocket 连接失败时显示提示
+                append_chat_message(
+                    main_window,
+                    "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
+                    from_self=False,
+                    is_html=False,
+                    streaming=False
+                )
         else:
             # 匹配失败，加入等待队列
             wait_message = response.get("message", "暂无在线客服，您的请求已加入等待队列，客服接入后会主动联系您。")
@@ -1440,6 +1913,7 @@ def match_human_service(main_window: "MainWindow"):
             )
     except Exception as e:
         # API调用失败
+        logging.error(f"匹配客服时发生错误: {e}", exc_info=True)
         if hasattr(main_window, "_matching_message_widget") and main_window._matching_message_widget:
             widget = main_window._matching_message_widget.pop(0)
             if widget:
@@ -1447,7 +1921,7 @@ def match_human_service(main_window: "MainWindow"):
         
         append_chat_message(
             main_window,
-            "匹配客服时发生错误，请稍后重试。",
+            f"匹配客服时发生错误：{str(e)}，请稍后重试。",
             from_self=False,
             is_html=False,
             streaming=False
@@ -1455,535 +1929,6 @@ def match_human_service(main_window: "MainWindow"):
     
     # 重置匹配状态
     main_window._matching_human_service = False
-
-
-def start_polling_agent_messages(main_window: "MainWindow", session_id: str, token: str):
-    """启动HTTP轮询，定时获取客服消息"""
-    # 记录已显示的消息ID，避免重复显示
-    if not hasattr(main_window, "_displayed_message_ids"):
-        main_window._displayed_message_ids = set()
-    # 进入人工客服通道，提前标记，避免文件/图片误走机器人
-    main_window._human_service_connected = True
-    set_chat_mode_indicator(main_window, human=True)
-
-    # 停止之前的轮询定时器（如果存在）
-    try:
-        if hasattr(main_window, "_agent_poll_timer") and main_window._agent_poll_timer:
-            main_window._agent_poll_timer.stop()
-            main_window._agent_poll_timer.deleteLater()
-    except Exception:
-        pass
-
-    def poll_http_messages():
-        """轮询HTTP接口获取新消息"""
-        try:
-            from client.api_client import get_chat_messages
-            resp = get_chat_messages(session_id, main_window.user_id, token)
-            if not resp.get("success"):
-                return
-            
-            # 检查已显示的消息是否被撤回（包括用户和客服的消息）
-            # 这个检查需要在处理新消息之前执行，确保已显示的消息状态能及时更新
-            # 同时，收集所有被撤回的消息ID，用于更新引用这些消息的其他消息
-            recalled_message_ids = set()
-            if hasattr(main_window, "_message_widgets_map") and main_window._message_widgets_map:
-                for msg in resp.get("messages", []):
-                    # 统一转换为整数进行比较
-                    msg_id_raw = msg.get("id")
-                    msg_id_int = None
-                    try:
-                        msg_id_int = int(msg_id_raw) if msg_id_raw else None
-                    except (ValueError, TypeError):
-                        continue
-                    
-                    if not msg_id_int:
-                        continue
-                    
-                    msg_is_recalled = msg.get("is_recalled", False)
-                    msg_from_user_id = msg.get("userId") or msg.get("from_user_id")
-                    
-                    # 记录被撤回的消息ID
-                    if msg_is_recalled:
-                        recalled_message_ids.add(msg_id_int)
-                    
-                    # 检查消息是否在映射表中且已被撤回
-                    if msg_is_recalled and msg_id_int in main_window._message_widgets_map:
-                        widget_bubble = main_window._message_widgets_map.get(msg_id_int)
-                        if widget_bubble:
-                            widget, bubble = widget_bubble
-                            if widget and bubble and not widget.property("is_recalled"):
-                                # 获取用户名
-                                username = "用户"
-                                if msg_from_user_id:
-                                    try:
-                                        from client.api_client import get_user_profile
-                                        profile = get_user_profile(msg_from_user_id)
-                                        if profile and profile.get("user"):
-                                            username = profile.get("user").get("username", "用户")
-                                    except Exception:
-                                        # 如果获取失败，尝试从main_window获取
-                                        if msg_from_user_id == main_window.user_id:
-                                            try:
-                                                from client.login.login_status_manager import check_login_status
-                                                _, _, current_username = check_login_status()
-                                                if current_username:
-                                                    username = current_username
-                                            except Exception:
-                                                pass
-                                
-                                # 隐藏整个消息行（包括头像和气泡）以及引用块
-                                # 找到包含气泡的row布局
-                                parent_layout = widget.layout()
-                                if parent_layout:
-                                    # 找到包含bubble的row布局
-                                    row_layout = None
-                                    row_index = -1
-                                    for i in range(parent_layout.count()):
-                                        item = parent_layout.itemAt(i)
-                                        if item and item.layout():
-                                            # 检查这个布局中是否包含bubble
-                                            layout = item.layout()
-                                            for j in range(layout.count()):
-                                                layout_item = layout.itemAt(j)
-                                                if layout_item and layout_item.widget() == bubble:
-                                                    row_layout = layout
-                                                    row_index = i
-                                                    break
-                                            if row_layout:
-                                                break
-                                    
-                                    # 隐藏包含气泡的row布局中的所有控件
-                                    if row_layout:
-                                        for i in range(row_layout.count()):
-                                            item = row_layout.itemAt(i)
-                                            if item and item.widget():
-                                                item.widget().setVisible(False)
-                                    
-                                    # 隐藏引用块（如果存在）
-                                    reply_container = widget.property("reply_container")
-                                    if reply_container:
-                                        reply_container.setVisible(False)
-                                    
-                                    # 隐藏时间标签（如果有）
-                                    time_label = widget.property("time_label")
-                                    if time_label:
-                                        time_label.setVisible(False)
-                                    
-                                    # 创建撤回提示标签（灰色居中）
-                                    recall_label = QLabel(f"{username}撤回了一条消息")
-                                    recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                                    recall_label.setStyleSheet("""
-                                        QLabel {
-                                            font-family: "Microsoft YaHei", "SimHei", "Arial";
-                                            font-size: 11px;
-                                            color: #9ca3af;
-                                            padding: 4px 0px;
-                                            background-color: transparent;
-                                        }
-                                    """)
-                                    
-                                    # 在row布局位置插入撤回提示
-                                    if row_index >= 0:
-                                        parent_layout.insertWidget(row_index, recall_label)
-                                    else:
-                                        # 如果找不到row，直接添加到末尾
-                                        parent_layout.addWidget(recall_label)
-                                
-                                widget.setProperty("is_recalled", True)
-                                widget.setProperty("message_id", None)
-                                
-                                # 当消息被撤回时，更新所有引用这条消息的其他消息的引用内容
-                                # 遍历所有消息widget，检查它们的reply_to_message_id
-                                if hasattr(main_window, "_message_widgets_map"):
-                                    for other_msg_id, (other_widget, other_bubble) in main_window._message_widgets_map.items():
-                                        if other_widget and other_widget != widget:
-                                            other_reply_to_id = other_widget.property("reply_to_message_id")
-                                            if other_reply_to_id and other_reply_to_id == msg_id_int:
-                                                # 找到引用这条被撤回消息的消息，更新引用内容
-                                                other_reply_container = other_widget.property("reply_container")
-                                                if other_reply_container:
-                                                    # 找到引用容器中的标签并更新文本
-                                                    reply_layout = other_reply_container.layout()
-                                                    if reply_layout:
-                                                        for i in range(reply_layout.count()):
-                                                            item = reply_layout.itemAt(i)
-                                                            if item and item.layout():
-                                                                content_layout = item.layout()
-                                                                for j in range(content_layout.count()):
-                                                                    layout_item = content_layout.itemAt(j)
-                                                                    if layout_item and layout_item.widget():
-                                                                        label = layout_item.widget()
-                                                                        if isinstance(label, QLabel):
-                                                                            # 获取原来的文本，提取发送者名称
-                                                                            original_text = label.text()
-                                                                            if ":" in original_text:
-                                                                                sender_name = original_text.split(":", 1)[0]
-                                                                                label.setText(f"{sender_name}: 该引用消息已被撤回")
-                                                                                break
-            
-            # 主动检查所有已存在的消息，如果它们引用的消息被撤回了，更新引用内容
-            if hasattr(main_window, "_message_widgets_map") and main_window._message_widgets_map and recalled_message_ids:
-                for other_msg_id, (other_widget, other_bubble) in main_window._message_widgets_map.items():
-                    if other_widget:
-                        other_reply_to_id = other_widget.property("reply_to_message_id")
-                        if other_reply_to_id and other_reply_to_id in recalled_message_ids:
-                            # 找到引用被撤回消息的消息，更新引用内容
-                            other_reply_container = other_widget.property("reply_container")
-                            if other_reply_container:
-                                # 找到引用容器中的标签并更新文本
-                                reply_layout = other_reply_container.layout()
-                                if reply_layout:
-                                    for i in range(reply_layout.count()):
-                                        item = reply_layout.itemAt(i)
-                                        if item and item.layout():
-                                            content_layout = item.layout()
-                                            for j in range(content_layout.count()):
-                                                layout_item = content_layout.itemAt(j)
-                                                if layout_item and layout_item.widget():
-                                                    label = layout_item.widget()
-                                                    if isinstance(label, QLabel):
-                                                        # 获取原来的文本，提取发送者名称
-                                                        original_text = label.text()
-                                                        if ":" in original_text:
-                                                            sender_name = original_text.split(":", 1)[0]
-                                                            new_text = f"{sender_name}: 该引用消息已被撤回"
-                                                            if original_text != new_text:
-                                                                label.setText(new_text)
-                                                                break
-            
-            for msg in resp.get("messages", []):
-                msg_id = str(msg.get("id", "") or "")
-                msg_from = msg.get("from", "user")
-                msg_text = msg.get("text", "")
-                msg_type = msg.get("message_type", "text")
-                msg_is_recalled = msg.get("is_recalled", False)
-                msg_reply_to_id = msg.get("reply_to_message_id")
-                msg_user_id = msg.get("userId") or msg.get("from_user_id")
-
-                # 先处理用户自己的消息：更新已显示但还没有 message_id 的消息，并检查撤回状态
-                if msg_from == "user" and msg_user_id == main_window.user_id:
-                    msg_id_int = None
-                    try:
-                        msg_id_int = int(msg.get("id", 0) or 0)
-                    except (ValueError, TypeError):
-                        pass
-
-                    if msg_id_int:
-                        # 确保映射表存在
-                        if not hasattr(main_window, "_message_widgets_map"):
-                            main_window._message_widgets_map = {}
-
-                        # 检查是否已经在映射表中
-                        if msg_id_int in main_window._message_widgets_map:
-                            widget_bubble = main_window._message_widgets_map.get(msg_id_int)
-                            if widget_bubble:
-                                widget, bubble = widget_bubble
-                                
-                                # 检查引用消息的状态（即使消息本身没有被撤回）
-                                if widget and msg_reply_to_id:
-                                    # 检查引用的消息是否被撤回了
-                                    if msg_reply_to_id in recalled_message_ids:
-                                        # 更新引用内容
-                                        reply_container = widget.property("reply_container")
-                                        if reply_container:
-                                            reply_layout = reply_container.layout()
-                                            if reply_layout:
-                                                for i in range(reply_layout.count()):
-                                                    item = reply_layout.itemAt(i)
-                                                    if item and item.layout():
-                                                        content_layout = item.layout()
-                                                        for j in range(content_layout.count()):
-                                                            layout_item = content_layout.itemAt(j)
-                                                            if layout_item and layout_item.widget():
-                                                                label = layout_item.widget()
-                                                                if isinstance(label, QLabel):
-                                                                    original_text = label.text()
-                                                                    if ":" in original_text:
-                                                                        sender_name = original_text.split(":", 1)[0]
-                                                                        new_text = f"{sender_name}: 该引用消息已被撤回"
-                                                                        if original_text != new_text:
-                                                                            label.setText(new_text)
-                                                                            break
-                                
-                                # 如果消息已经存在，检查是否需要更新撤回状态
-                                if msg_is_recalled:
-                                    if widget and bubble and not widget.property("is_recalled"):
-                                        # 获取用户名
-                                        username = "用户"
-                                        if msg_user_id == main_window.user_id:
-                                            try:
-                                                from client.login.login_status_manager import check_login_status
-                                                _, _, current_username = check_login_status()
-                                                if current_username:
-                                                    username = current_username
-                                            except Exception:
-                                                pass
-                                        
-                                        # 隐藏整个消息行（包括头像和气泡）以及引用块
-                                        parent_layout = widget.layout()
-                                        if parent_layout:
-                                            # 找到包含bubble的row布局
-                                            row_layout = None
-                                            row_index = -1
-                                            for i in range(parent_layout.count()):
-                                                item = parent_layout.itemAt(i)
-                                                if item and item.layout():
-                                                    layout = item.layout()
-                                                    for j in range(layout.count()):
-                                                        layout_item = layout.itemAt(j)
-                                                        if layout_item and layout_item.widget() == bubble:
-                                                            row_layout = layout
-                                                            row_index = i
-                                                            break
-                                                    if row_layout:
-                                                        break
-                                            
-                                            # 隐藏包含气泡的row布局中的所有控件
-                                            if row_layout:
-                                                for i in range(row_layout.count()):
-                                                    item = row_layout.itemAt(i)
-                                                    if item and item.widget():
-                                                        item.widget().setVisible(False)
-                                            
-                                            # 隐藏引用块（如果存在）
-                                            reply_container = widget.property("reply_container")
-                                            if reply_container:
-                                                reply_container.setVisible(False)
-                                            
-                                            # 创建撤回提示标签（灰色居中）
-                                            recall_label = QLabel(f"{username}撤回了一条消息")
-                                            recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                                            recall_label.setStyleSheet("""
-                                                QLabel {
-                                                    font-family: "Microsoft YaHei", "SimHei", "Arial";
-                                                    font-size: 11px;
-                                                    color: #9ca3af;
-                                                    padding: 4px 0px;
-                                                    background-color: transparent;
-                                                }
-                                            """)
-                                            
-                                            # 在row布局位置插入撤回提示
-                                            if row_index >= 0:
-                                                parent_layout.insertWidget(row_index, recall_label)
-                                            else:
-                                                parent_layout.addWidget(recall_label)
-                                        
-                                        widget.setProperty("is_recalled", True)
-                                        widget.setProperty("message_id", None)
-                            
-                            # 已经存在，跳过后续处理
-                            if msg_id:
-                                if not hasattr(main_window, "_displayed_message_ids"):
-                                    main_window._displayed_message_ids = set()
-                                main_window._displayed_message_ids.add(msg_id)
-                            continue
-
-                        if hasattr(main_window, "chat_layout"):
-                            # 从后往前查找最后一条没有message_id的用户消息
-                            # 用户消息的特征：气泡在右侧（row布局中，气泡前面有stretch）
-                            found = False
-                            for i in range(main_window.chat_layout.count() - 1, -1, -1):
-                                item = main_window.chat_layout.itemAt(i)
-                                if item and item.widget():
-                                    widget = item.widget()
-                                    existing_id = widget.property("message_id")
-                                    # 如果消息没有ID或者是0，尝试更新它
-                                    if existing_id is None or existing_id == 0:
-                                        # 检查是否是用户自己的消息：气泡在右侧
-                                        layout = widget.layout()
-                                        is_user_msg = False
-                                        bubble = None
-                                        
-                                        if layout:
-                                            for j in range(layout.count()):
-                                                layout_item = layout.itemAt(j)
-                                                if layout_item and layout_item.layout():
-                                                    row_layout = layout_item.layout()
-                                                    # 检查是否有气泡，且气泡前面有stretch（用户消息特征）
-                                                    for k in range(row_layout.count()):
-                                                        row_item = row_layout.itemAt(k)
-                                                        if row_item and row_item.widget():
-                                                            w = row_item.widget()
-                                                            if isinstance(w, ChatBubble):
-                                                                # 检查前面是否有stretch（用户消息在右侧）
-                                                                if k > 0:
-                                                                    prev_item = row_layout.itemAt(k - 1)
-                                                                    if prev_item and prev_item.spacerItem():
-                                                                        is_user_msg = True
-                                                                        bubble = w
-                                                                        break
-                                                        elif row_item and row_item.spacerItem():
-                                                            # 如果stretch在气泡之后，不是用户消息
-                                                            pass
-                                        
-                                        # 如果确认是用户消息，更新message_id
-                                        if is_user_msg and bubble:
-                                            widget.setProperty("message_id", msg_id_int)
-                                            main_window._message_widgets_map[msg_id_int] = (widget, bubble)
-                                            found = True
-                                            break
-                            
-                            # 如果没找到匹配的消息，记录到displayed_ids（避免重复处理）
-                            if not found and msg_id:
-                                if not hasattr(main_window, "_displayed_message_ids"):
-                                    main_window._displayed_message_ids = set()
-                                main_window._displayed_message_ids.add(msg_id)
-                    # 用户自己的消息不在这里重复展示（已经在发送时乐观展示了）
-                    if msg_id:
-                        if not hasattr(main_window, "_displayed_message_ids"):
-                            main_window._displayed_message_ids = set()
-                        main_window._displayed_message_ids.add(msg_id)
-                    continue
-
-                # 对于其他消息，再做去重判断
-                if msg_id and msg_id in main_window._displayed_message_ids:
-                    continue
-                if msg_id:
-                    main_window._displayed_message_ids.add(msg_id)
-
-                # 只处理来自客服的消息（不是自己发的）
-                if msg_from == "user":
-                    continue
-                
-                # 获取用户名
-                msg_username = None
-                if msg_user_id:
-                    try:
-                        from client.api_client import get_user_profile
-                        profile = get_user_profile(msg_user_id)
-                        if profile and profile.get("user"):
-                            msg_username = profile.get("user").get("username")
-                    except Exception:
-                        pass
-                
-                # 获取引用消息内容（如果有）
-                reply_to_message_text = None
-                reply_to_username = None
-                if msg_reply_to_id:
-                    try:
-                        from client.api_client import get_reply_message
-                        from client.login.token_storage import read_token
-                        reply_token = read_token()
-                        reply_resp = get_reply_message(msg_reply_to_id, reply_token)
-                        if reply_resp.get("success"):
-                            reply_msg = reply_resp.get("message", {})
-                            # 检查引用消息是否被撤回
-                            if reply_msg.get("is_recalled", False) or reply_msg.get("message") == "[消息已撤回]":
-                                reply_to_message_text = "该引用消息已被撤回"
-                            else:
-                                reply_to_message_text = reply_msg.get("message", "")
-                            reply_to_username = reply_msg.get("from_username")  # 获取引用消息的发送者用户名
-                    except Exception:
-                        pass
-
-                def append_main():
-                    # 标记已连接人工客服
-                    main_window._human_service_connected = True
-                    set_chat_mode_indicator(main_window, human=True)
-
-                    # 如果是欢迎/接入提示语，额外给一条"已连接客服"提示
-                    if "您好，我是客服" in msg_text or "已连接" in msg_text:
-                        append_chat_message(
-                            main_window,
-                            "✅ 已连接客服，可以开始对话了！",
-                            from_self=False,
-                            is_html=False,
-                            streaming=False
-                        )
-
-                    # 获取头像信息
-                    avatar_base64 = msg.get("avatar")
-                    
-                    # 提取消息ID
-                    msg_id_int = None
-                    try:
-                        msg_id_int = int(msg.get("id", 0) or 0)
-                    except (ValueError, TypeError):
-                        pass
-
-                    # 按消息类型展示
-                    if msg_type == "image":
-                        pixmap = None
-                        try:
-                            if isinstance(msg_text, str) and msg_text.startswith("data:image"):
-                                b64_part = msg_text.split(",", 1)[1] if "," in msg_text else ""
-                                raw = base64.b64decode(b64_part)
-                                image = QImage.fromData(raw)
-                                if not image.isNull():
-                                    pixmap = QPixmap.fromImage(image)
-                                    if pixmap.width() > 360:
-                                        pixmap = pixmap.scaledToWidth(
-                                            360, Qt.TransformationMode.SmoothTransformation
-                                        )
-                        except Exception:
-                            pixmap = None
-
-                        if pixmap:
-                            append_image_message(main_window, pixmap, from_self=False)
-                        else:
-                            append_chat_message(
-                                main_window,
-                                "[图片] 加载失败",
-                                from_self=False,
-                                is_html=False,
-                                streaming=False,
-                                avatar_base64=avatar_base64,
-                                message_id=msg_id_int,
-                                is_recalled=msg_is_recalled,
-                                reply_to_message_id=msg_reply_to_id,
-                                reply_to_message=reply_to_message_text,
-                                reply_to_username=reply_to_username,
-                                from_user_id=msg_user_id,
-                                from_username=msg_username
-                            )
-                    elif msg_type == "file":
-                        placeholder = msg_text or "[文件]"
-                        append_chat_message(
-                            main_window,
-                            placeholder,
-                            from_self=False,
-                            is_html=False,
-                            streaming=False,
-                            avatar_base64=avatar_base64,
-                            message_id=msg_id_int,
-                            is_recalled=msg_is_recalled,
-                            reply_to_message_id=msg_reply_to_id,
-                            reply_to_message=reply_to_message_text,
-                            reply_to_username=reply_to_username,
-                            from_user_id=msg_user_id,
-                            from_username=msg_username
-                        )
-                    else:
-                        append_chat_message(
-                            main_window,
-                            msg_text,
-                            from_self=False,
-                            is_html=False,
-                            streaming=False,
-                            avatar_base64=avatar_base64,
-                            message_id=msg_id_int,
-                            is_recalled=msg_is_recalled,
-                            reply_to_message_id=msg_reply_to_id,
-                            reply_to_message=reply_to_message_text,
-                            reply_to_username=reply_to_username,
-                            from_user_id=msg_user_id,
-                            from_username=msg_username
-                        )
-                
-                QTimer.singleShot(0, append_main)
-        except Exception:
-            # 避免轮询异常影响其他功能
-            pass
-
-    # 立即执行一次轮询，获取历史消息
-    poll_http_messages()
-    
-    # 启动定时轮询（每1秒轮询一次）
-    poll_timer = QTimer(main_window)
-    poll_timer.timeout.connect(poll_http_messages)
-    poll_timer.start(1000)  # 1秒一次
-    main_window._agent_poll_timer = poll_timer
 
 
 def show_scrollbar_handle(scroll_area: QScrollArea):
@@ -2450,37 +2395,79 @@ def send_image(main_window: "MainWindow"):
                 main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
 
-        # 使用QThread在后台线程执行HTTP请求，避免阻塞UI
-        from PyQt6.QtCore import QThread, pyqtSignal
+        # 直接在主线程中使用 WebSocket 客户端发送（WebSocket 发送是异步的，不会阻塞UI）
+        from client.utils.websocket_helper import get_or_create_websocket_client
         
-        class SendImageThread(QThread):
-            finished = pyqtSignal(object)  # 发送完成信号，参数是响应结果
-            
-            def __init__(self, session_id, user_id, data_url, token):
-                super().__init__()
-                self.session_id = session_id
-                self.user_id = user_id
-                self.data_url = data_url
-                self.token = token
-                
-            def run(self):
-                try:
-                    resp = send_chat_message(self.session_id, self.user_id, self.data_url, self.token, message_type="image")
-                    self.finished.emit(resp)
-                except Exception as e:
-                    self.finished.emit(None)
-        
-        def handle_response(resp):
-            if not resp or not resp.get("success"):
-                append_chat_message(main_window, "图片发送失败，请稍后重试。", from_self=False)
+        ws_client = get_or_create_websocket_client(main_window)
+        if not ws_client or not ws_client.is_connected():
+            append_chat_message(main_window, "WebSocket 未连接，请稍后重试。", from_self=False)
             restore()
+            return
         
-        thread = SendImageThread(session_id, main_window.user_id, data_url, token)
-        thread.setParent(main_window)  # 设置父对象，确保生命周期管理
-        thread.finished.connect(handle_response)
-        thread.finished.connect(thread.deleteLater)  # 完成后自动删除
-        thread.start()
-        QTimer.singleShot(3000, restore)  # 3秒兜底
+        # 检查是否有引用消息
+        reply_to_id = getattr(main_window, "_reply_to_message_id", None)
+        
+        # 验证引用消息ID是否有效（必须是大于0的正整数）
+        if reply_to_id is not None:
+            try:
+                reply_to_id_int = int(reply_to_id)
+                # 数据库ID从1开始，所以允许 >= 1
+                if reply_to_id_int <= 0:
+                    logging.warning(f"引用消息ID无效: {reply_to_id}（ID必须大于0），将按普通消息发送")
+                    reply_to_id = None
+                else:
+                    # 验证引用消息是否真的存在（通过API检查）
+                    try:
+                        from client.api_client import get_reply_message
+                        from client.login.token_storage import read_token
+                        reply_token = read_token()
+                        if not reply_token:
+                            logging.warning(f"无法获取token，跳过引用消息验证")
+                            reply_to_id = None
+                        else:
+                            reply_resp = get_reply_message(reply_to_id_int, reply_token)
+                            if not reply_resp.get("success") or not reply_resp.get("message"):
+                                logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
+                                reply_to_id = None
+                    except Exception as e:
+                        # 如果是404错误，说明消息不存在，将按普通消息发送
+                        error_str = str(e)
+                        if "404" in error_str or "NOT FOUND" in error_str:
+                            logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
+                        else:
+                            logging.warning(f"验证引用消息失败: {e}，将按普通消息发送")
+                        reply_to_id = None
+            except (ValueError, TypeError):
+                logging.warning(f"引用消息ID格式错误: {reply_to_id}，将按普通消息发送")
+                reply_to_id = None
+        
+        # 使用 WebSocket 客户端发送消息（异步，不阻塞UI）
+        success = ws_client.send_message(
+            session_id=session_id,
+            message=data_url,
+            role="user",
+            message_type="image",
+            reply_to_message_id=reply_to_id
+        )
+        
+        # 清除引用状态
+        if hasattr(main_window, "_reply_to_message_id"):
+            main_window._reply_to_message_id = None
+        if hasattr(main_window, "_reply_to_message_text"):
+            main_window._reply_to_message_text = None
+        if hasattr(main_window, "_reply_to_username"):
+            main_window._reply_to_username = None
+        # 恢复输入框占位符
+        if hasattr(main_window, "chat_input"):
+            main_window.chat_input.setPlaceholderText("请输入消息...")
+        
+        if success:
+            # 发送成功，恢复UI状态
+            restore()
+        else:
+            # 发送失败，显示错误并恢复UI状态
+            append_chat_message(main_window, "图片发送失败，请稍后重试。", from_self=False)
+            restore()
     else:
         # 未进入人工客服，仍使用机器人回复
         reply = main_window.keyword_matcher.generate_reply("图片", add_greeting=True)
@@ -2501,7 +2488,7 @@ def send_image(main_window: "MainWindow"):
         QTimer.singleShot(delay, send_reply_and_enable)
 
 
-def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: bool = True):
+def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: bool = True, message_id: Optional[int] = None, message_created_time: Optional[str] = None, from_user_id: Optional[int] = None, from_username: Optional[str] = None, reply_to_message_id: Optional[int] = None, reply_to_message: Optional[str] = None, reply_to_username: Optional[str] = None, reply_to_message_type: Optional[str] = None, is_recalled: bool = False):
     """发送图片消息，不使用气泡，直接显示圆角图片 + 头像"""
     if not hasattr(main_window, "chat_layout"):
         return
@@ -2510,7 +2497,126 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
     v_layout = QVBoxLayout(message_widget)
     v_layout.setContentsMargins(4, 0, 4, 0)
     v_layout.setSpacing(2)
+    
+    # 处理引用消息显示（如果有）
+    if reply_to_message_id and reply_to_message and not is_recalled:
+        # 创建引用消息容器（微信风格，灰底）
+        reply_container = QWidget()
+        reply_container.setStyleSheet("""
+            QWidget {
+                background-color: #e5e5e5;
+                border-left: 3px solid #8dcf7d;
+                border-radius: 4px;
+                padding: 6px 10px;
+                margin-top: 6px;
+            }
+        """)
+        reply_layout = QHBoxLayout(reply_container)
+        reply_layout.setContentsMargins(0, 0, 0, 0)
+        reply_layout.setSpacing(0)
 
+        reply_content_layout = QVBoxLayout()
+        reply_content_layout.setContentsMargins(0, 0, 0, 0)
+        reply_content_layout.setSpacing(2)
+
+        # 获取引用消息的发送者信息
+        reply_sender_name = reply_to_username or "用户"
+        reply_text = reply_to_message
+        if reply_text == "[消息已撤回]":
+            reply_text = "该引用消息已被撤回"
+        
+        # 如果是图片消息，显示缩略图
+        if reply_to_message_type == "image" and reply_text and reply_text.startswith("data:image"):
+            try:
+                # 解析base64图片
+                import base64
+                from PyQt6.QtGui import QImage
+                b64_part = reply_text.split(",", 1)[1] if "," in reply_text else ""
+                raw = base64.b64decode(b64_part)
+                image = QImage.fromData(raw)
+                if not image.isNull():
+                    thumb_pixmap = QPixmap.fromImage(image)
+                    # 创建30*30的缩略图
+                    thumbnail = thumb_pixmap.scaled(30, 30, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    
+                    # 创建缩略图标签
+                    thumbnail_label = QLabel()
+                    thumbnail_label.setFixedSize(30, 30)
+                    thumbnail_label.setPixmap(thumbnail)
+                    thumbnail_label.setStyleSheet("""
+                        QLabel {
+                            border-radius: 4px;
+                            background-color: transparent;
+                        }
+                    """)
+                    
+                    # 创建文本标签（显示发送者名称）
+                    sender_label = QLabel(f"{reply_sender_name}: [图片]")
+                    sender_label.setStyleSheet("""
+                        QLabel {
+                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                            font-size: 12px;
+                            color: #4b5563;
+                            background-color: transparent;
+                        }
+                    """)
+                    
+                    # 水平布局：发送者名称 + 缩略图
+                    thumbnail_layout = QHBoxLayout()
+                    thumbnail_layout.setContentsMargins(0, 0, 0, 0)
+                    thumbnail_layout.setSpacing(6)
+                    thumbnail_layout.addWidget(sender_label)
+                    thumbnail_layout.addWidget(thumbnail_label)
+                    thumbnail_layout.addStretch()
+                    
+                    reply_content_layout.addLayout(thumbnail_layout)
+                else:
+                    # 图片解析失败，显示文本
+                    reply_label = QLabel(f"{reply_sender_name}: [图片]")
+                    reply_label.setStyleSheet("""
+                        QLabel {
+                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                            font-size: 12px;
+                            color: #4b5563;
+                            background-color: transparent;
+                        }
+                    """)
+                    reply_label.setWordWrap(True)
+                    reply_content_layout.addWidget(reply_label)
+            except Exception as e:
+                logging.error(f"解析引用图片失败: {e}", exc_info=True)
+                # 解析失败，显示文本
+                reply_label = QLabel(f"{reply_sender_name}: [图片]")
+                reply_label.setStyleSheet("""
+                    QLabel {
+                        font-family: "Microsoft YaHei", "SimHei", "Arial";
+                        font-size: 12px;
+                        color: #4b5563;
+                        background-color: transparent;
+                    }
+                """)
+                reply_label.setWordWrap(True)
+                reply_content_layout.addWidget(reply_label)
+        else:
+            # 文本消息，显示文本内容
+            if reply_text and len(reply_text) > 50:
+                reply_text = reply_text[:50] + "..."
+            reply_label = QLabel(f"{reply_sender_name}: {reply_text}")
+            reply_label.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 12px;
+                    color: #4b5563;
+                    background-color: transparent;
+                }
+            """)
+            reply_label.setWordWrap(True)
+            reply_content_layout.addWidget(reply_label)
+
+        reply_layout.addLayout(reply_content_layout)
+        v_layout.addWidget(reply_container)
+
+    time_label = None
     if from_self:
         time_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         time_label = QLabel(time_str)
@@ -2526,6 +2632,8 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
         time_row.addStretch()
         time_row.addWidget(time_label)
         v_layout.addLayout(time_row)
+        # 记录时间标签，便于撤回时隐藏
+        message_widget.setProperty("time_label", time_label)
 
     row = QHBoxLayout()
     row.setContentsMargins(0, 0, 0, 0)
@@ -2589,12 +2697,134 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
         row.addStretch()
 
     v_layout.addLayout(row)
+    
+    # 存储消息ID和控件引用，用于更新撤回状态和引用功能
+    # 即使 message_id 是 None（乐观展示），也要注册到 _message_widgets_map，以便后续更新
+    if not hasattr(main_window, "_message_widgets_map"):
+        main_window._message_widgets_map = {}
+    
+    if message_id is not None:
+        main_window._message_widgets_map[message_id] = (message_widget, img_label)
+        message_widget.setProperty("message_id", message_id)
+    else:
+        # 乐观展示时，使用 None 作为临时 key，后续收到 message_id 后会更新
+        main_window._message_widgets_map[None] = (message_widget, img_label)
+        # 设置一个标记，表示这是乐观展示的消息
+        message_widget.setProperty("message_id", None)
+    
+    # 保存消息创建时间（用于撤回时间检查）
+    if message_created_time:
+        message_widget.setProperty("message_created_time", message_created_time)
+    else:
+        # 如果没有提供创建时间，使用当前时间
+        message_widget.setProperty("message_created_time", datetime.now().isoformat())
+    
+    # 为图片消息添加右键菜单（引用功能）
+    def show_context_menu(pos: QPoint):
+        menu = QMenu(message_widget)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+                padding: 4px;
+                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                font-size: 13px;
+            }
+            QMenu::item {
+                padding: 8px 20px;
+                border-radius: 4px;
+                color: #1f2937;
+                min-width: 120px;
+            }
+            QMenu::item:selected {
+                background-color: #f3f4f6;
+                color: #111827;
+            }
+        """)
+        
+        # 引用回复
+        reply_action = menu.addAction("引用回复")
+        reply_action.setEnabled(True)
+        
+        def reply_message_action():
+            current_msg_id = message_widget.property("message_id")
+            valid_msg_id = None
+            if current_msg_id is not None:
+                try:
+                    msg_id_int = int(current_msg_id)
+                    # 数据库ID从1开始，所以允许 >= 1
+                    if msg_id_int > 0:
+                        valid_msg_id = msg_id_int
+                    else:
+                        logging.warning(f"引用消息ID无效: {current_msg_id}（ID必须大于0），将无法发送引用信息")
+                except (ValueError, TypeError):
+                    logging.warning(f"引用消息ID格式错误: {current_msg_id}，将无法发送引用信息")
+            
+            # 如果 message_id 无效，提示用户等待消息发送完成
+            if not valid_msg_id:
+                from PyQt6.QtWidgets import QMessageBox
+                QMessageBox.warning(
+                    main_window,
+                    "无法引用",
+                    "该消息尚未发送完成，请等待消息发送成功后再引用。"
+                )
+                return
+            
+            main_window._reply_to_message_id = valid_msg_id
+            # 如果是图片消息，需要获取完整的data URL
+            if valid_msg_id:
+                try:
+                    from client.api_client import get_reply_message
+                    from client.login.token_storage import read_token
+                    reply_token = read_token()
+                    reply_resp = get_reply_message(valid_msg_id, reply_token)
+                    if reply_resp.get("success"):
+                        reply_msg = reply_resp.get("message", {})
+                        if reply_msg.get("message_type") == "image":
+                            # 图片消息，保存完整的data URL
+                            main_window._reply_to_message_text = reply_msg.get("message", "[图片]")
+                            main_window._reply_to_message_type = "image"
+                        else:
+                            main_window._reply_to_message_text = "[图片]"  # 如果不是图片，显示文本
+                            main_window._reply_to_message_type = "text"
+                    else:
+                        main_window._reply_to_message_text = "[图片]"
+                        main_window._reply_to_message_type = "image"
+                except Exception as e:
+                    logging.error(f"获取引用图片消息失败: {e}", exc_info=True)
+                    main_window._reply_to_message_text = "[图片]"
+                    main_window._reply_to_message_type = "image"
+            else:
+                main_window._reply_to_message_text = "[图片]"  # 图片消息的引用文本
+                main_window._reply_to_message_type = "image"
+            
+            main_window._reply_to_username = from_username or (from_self and "我" or "用户")
+            # 在输入框显示引用提示
+            if hasattr(main_window, "chat_input"):
+                sender_name = main_window._reply_to_username
+                placeholder = f"回复 {sender_name}：[图片]"
+                main_window.chat_input.setPlaceholderText(placeholder)
+                main_window.chat_input.setFocus()
+                
+                if valid_msg_id is None:
+                    placeholder = f"⚠️ 无法引用此消息（消息ID无效），将按普通消息发送"
+                    main_window.chat_input.setPlaceholderText(placeholder)
+        
+        reply_action.triggered.connect(reply_message_action)
+        
+        global_pos = message_widget.mapToGlobal(pos)
+        menu.exec(global_pos)
+    
+    message_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
+    message_widget.customContextMenuRequested.connect(show_context_menu)
+    
     main_window.chat_layout.addWidget(message_widget)
 
     scroll_to_bottom(main_window)
 
 
-def _handle_file_upload_result(main_window: "MainWindow", success: bool, filename: str, size: int, error: str = ""):
+def _handle_file_upload_result(main_window: "MainWindow", success: bool, filename: str, size: int, error: str = "", file_path: str = ""):
     """处理文件上传结果"""
     if success:
         # 格式化文件大小
@@ -2606,14 +2836,38 @@ def _handle_file_upload_result(main_window: "MainWindow", success: bool, filenam
             size_str = f"{size_mb:.1f} MB"
         append_file_message(main_window, filename, size_str)
 
-        # 如已有人工客服会话，发送占位到客服，不触发机器人
+        # 如已有人工客服会话，发送文件内容到客服
         if getattr(main_window, "_human_service_connected", False) and getattr(main_window, "_chat_session_id", None):
             from client.login.token_storage import read_token
             from client.api_client import send_chat_message
             
             token = read_token()
             session_id = getattr(main_window, "_chat_session_id", None)
-            placeholder = f"[文件] {filename} ({size_str})"
+            
+            # 读取文件内容并转换为base64 data URL
+            file_data_url = None
+            if file_path and os.path.exists(file_path):
+                try:
+                    import base64
+                    import mimetypes
+                    # 获取MIME类型
+                    mime_type, _ = mimetypes.guess_type(file_path)
+                    if not mime_type:
+                        mime_type = 'application/octet-stream'
+                    
+                    # 读取文件并编码为base64
+                    with open(file_path, "rb") as f:
+                        file_content = f.read()
+                    b64_content = base64.b64encode(file_content).decode("utf-8")
+                    # 格式: data:{mime_type};base64,{content};filename="{filename}"
+                    file_data_url = f"data:{mime_type};base64,{b64_content};filename=\"{filename}\""
+                except Exception as e:
+                    logging.error(f"读取文件失败: {e}", exc_info=True)
+                    append_chat_message(main_window, f"文件读取失败：{str(e)}", from_self=False)
+            
+            # 如果文件读取失败，使用占位符
+            if not file_data_url:
+                file_data_url = f"[文件] {filename} ({size_str})"
 
             def restore():
                 main_window.chat_input.setEnabled(True)
@@ -2621,37 +2875,30 @@ def _handle_file_upload_result(main_window: "MainWindow", success: bool, filenam
                     main_window.chat_send_button.setEnabled(True)
                 QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
 
-            # 使用QThread在后台线程执行HTTP请求，避免阻塞UI
-            from PyQt6.QtCore import QThread, pyqtSignal
+            # 直接在主线程中使用 WebSocket 客户端发送（WebSocket 发送是异步的，不会阻塞UI）
+            from client.utils.websocket_helper import get_or_create_websocket_client
             
-            class SendFileThread(QThread):
-                finished = pyqtSignal(object)  # 发送完成信号，参数是响应结果
-                
-                def __init__(self, session_id, user_id, placeholder, token):
-                    super().__init__()
-                    self.session_id = session_id
-                    self.user_id = user_id
-                    self.placeholder = placeholder
-                    self.token = token
-                    
-                def run(self):
-                    try:
-                        resp = send_chat_message(self.session_id, self.user_id, self.placeholder, self.token, message_type="file")
-                        self.finished.emit(resp)
-                    except Exception as e:
-                        self.finished.emit(None)
-
-            def handle_response(resp):
-                if not resp or not resp.get("success"):
-                    append_chat_message(main_window, "文件发送提示失败，请稍后重试。", from_self=False)
+            ws_client = get_or_create_websocket_client(main_window)
+            if not ws_client or not ws_client.is_connected():
+                append_chat_message(main_window, "WebSocket 未连接，请稍后重试。", from_self=False)
                 restore()
-
-            thread = SendFileThread(session_id, main_window.user_id, placeholder, token)
-            thread.setParent(main_window)  # 设置父对象，确保生命周期管理
-            thread.finished.connect(handle_response)
-            thread.finished.connect(thread.deleteLater)  # 完成后自动删除
-            thread.start()
-            QTimer.singleShot(3000, restore)  # 3秒兜底
+                return
+            
+            # 使用 WebSocket 客户端发送消息（异步，不阻塞UI）
+            success = ws_client.send_message(
+                session_id=session_id,
+                message=file_data_url,
+                role="user",
+                message_type="file"
+            )
+            
+            if success:
+                # 发送成功，恢复UI状态
+                restore()
+            else:
+                # 发送失败，显示错误并恢复UI状态
+                append_chat_message(main_window, "文件发送失败，请稍后重试。", from_self=False)
+                restore()
             return
 
         # 无人工客服时仍使用机器人
@@ -2676,7 +2923,11 @@ def _handle_file_upload_result(main_window: "MainWindow", success: bool, filenam
 
 
 def send_file(main_window: "MainWindow"):
-    """发送文件，限制 100MB；展示文件名和大小，显示上传进度"""
+    """发送文件，限制 10MB；展示文件名和大小，显示上传进度
+    
+    为避免通过 WebSocket 发送超大 Base64 数据导致连接异常，这里在客户端
+    先做严格的体积限制和错误处理，只在文件成功读取且体积在安全范围内时发送。
+    """
     # 检查是否正在发送中，防止重复操作
     if hasattr(main_window, 'chat_send_button') and not main_window.chat_send_button.isEnabled():
         return
@@ -2690,11 +2941,14 @@ def send_file(main_window: "MainWindow"):
         return
     
     size = os.path.getsize(file_path)
-    if size > 100 * 1024 * 1024:
+    # 客户端侧限制：最大 10MB，避免 WebSocket 发送超大 Base64 消息导致断线
+    max_size_mb = 10
+    if size > max_size_mb * 1024 * 1024:
         # 显示错误提示框给用户，而不是在聊天框中显示
         show_message(
             main_window,
-            f"文件大小超过 100MB 限制，无法发送。\n\n请选择小于 100MB 的文件。",
+            f"文件大小超过 {max_size_mb} MB 限制，无法通过实时通道发送。\n\n"
+            f"请选择小于 {max_size_mb} MB 的文件，或通过其他方式发送该文件。",
             "文件过大",
             variant="error"
         )
@@ -2720,7 +2974,7 @@ def send_file(main_window: "MainWindow"):
             
             # 延迟处理文件发送逻辑，等待对话框关闭动画
             QTimer.singleShot(350, lambda: _handle_file_upload_result(
-                main_window, success, filename, size, error
+                main_window, success, filename, size, error, file_path
             ))
         
         # 启动上传
@@ -2762,7 +3016,46 @@ def send_file(main_window: "MainWindow"):
             token = read_token()
             session_id = getattr(main_window, "_chat_session_id", None)
 
-            placeholder = f"[文件] {filename} ({size_str})"
+            # 读取文件内容并转换为 base64 data URL
+            file_data_url = None
+            try:
+                import base64
+                import mimetypes
+                # 获取MIME类型
+                mime_type, _ = mimetypes.guess_type(file_path)
+                if not mime_type:
+                    mime_type = 'application/octet-stream'
+                
+                # 读取文件并编码为 base64
+                with open(file_path, "rb") as f:
+                    file_content = f.read()
+                b64_content = base64.b64encode(file_content).decode("utf-8")
+                # 格式: data:{mime_type};base64,{content};filename="{filename}"
+                file_data_url = f"data:{mime_type};base64,{b64_content};filename=\"{filename}\""
+            except Exception as e:
+                logging.error(f"读取文件失败: {e}", exc_info=True)
+                append_chat_message(main_window, f"文件读取失败：{str(e)}", from_self=False)
+                # 读取失败时直接恢复 UI，不再发送占位符，避免客服端收到错误文件
+                main_window.chat_input.setEnabled(True)
+                if hasattr(main_window, 'chat_send_button'):
+                    main_window.chat_send_button.setEnabled(True)
+                    if original_text:
+                        main_window.chat_send_button.setText(original_text)
+                    main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+                return
+
+            # 双重保险：如果 file_data_url 仍然为空，则不发送，避免发送错误占位内容
+            if not file_data_url:
+                append_chat_message(main_window, "文件处理失败，未发送。", from_self=False)
+                main_window.chat_input.setEnabled(True)
+                if hasattr(main_window, 'chat_send_button'):
+                    main_window.chat_send_button.setEnabled(True)
+                    if original_text:
+                        main_window.chat_send_button.setText(original_text)
+                    main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
+                return
 
             def restore():
                 main_window.chat_input.setEnabled(True)
@@ -2773,37 +3066,30 @@ def send_file(main_window: "MainWindow"):
                     main_window.chat_send_button.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 QTimer.singleShot(50, lambda: main_window.chat_input.setFocus())
 
-            # 使用QThread在后台线程执行HTTP请求，避免阻塞UI
-            from PyQt6.QtCore import QThread, pyqtSignal
+            # 直接在主线程中使用 WebSocket 客户端发送（WebSocket 发送是异步的，不会阻塞UI）
+            from client.utils.websocket_helper import get_or_create_websocket_client
             
-            class SendFileThread(QThread):
-                finished = pyqtSignal(object)  # 发送完成信号，参数是响应结果
-                
-                def __init__(self, session_id, user_id, placeholder, token):
-                    super().__init__()
-                    self.session_id = session_id
-                    self.user_id = user_id
-                    self.placeholder = placeholder
-                    self.token = token
-                    
-                def run(self):
-                    try:
-                        resp = send_chat_message(self.session_id, self.user_id, self.placeholder, self.token, message_type="file")
-                        self.finished.emit(resp)
-                    except Exception as e:
-                        self.finished.emit(None)
-
-            def handle_response(resp):
-                if not resp or not resp.get("success"):
-                    append_chat_message(main_window, "文件发送提示失败，请稍后重试。", from_self=False)
+            ws_client = get_or_create_websocket_client(main_window)
+            if not ws_client or not ws_client.is_connected():
+                append_chat_message(main_window, "WebSocket 未连接，请稍后重试。", from_self=False)
                 restore()
-
-            thread = SendFileThread(session_id, main_window.user_id, placeholder, token)
-            thread.setParent(main_window)  # 设置父对象，确保生命周期管理
-            thread.finished.connect(handle_response)
-            thread.finished.connect(thread.deleteLater)  # 完成后自动删除
-            thread.start()
-            QTimer.singleShot(3000, restore)  # 3秒兜底
+                return
+            
+            # 使用 WebSocket 客户端发送消息（异步，不阻塞UI）
+            success = ws_client.send_message(
+                session_id=session_id,
+                message=file_data_url,
+                role="user",
+                message_type="file"
+            )
+            
+            if success:
+                # 发送成功，恢复UI状态
+                restore()
+            else:
+                # 发送失败，显示错误并恢复UI状态
+                append_chat_message(main_window, "文件发送失败，请稍后重试。", from_self=False)
+                restore()
         else:
             # 未进入人工客服，使用机器人回复
             reply = main_window.keyword_matcher.generate_reply("文件", add_greeting=True)

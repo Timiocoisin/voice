@@ -2705,3 +2705,1328 @@ ConnectionError: 数据库查询用户ID 1 时发生错误
 2026-01-08 21:07:44,633 - INFO - root - 消息 196 已被用户 2 撤回
 2026-01-08 21:07:59,254 - INFO - root - 消息 198 已被用户 1 撤回
 2026-01-08 21:09:28,325 - INFO - root - 消息 200 已被用户 1 撤回
+2026-01-09 09:41:28,378 - INFO - root - 数据库连接成功
+2026-01-09 09:42:15,091 - INFO - root - 数据库连接成功
+2026-01-09 09:43:28,483 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 09:55:59,353 - INFO - root - 数据库连接成功
+2026-01-09 09:55:59,392 - INFO - root - 检测到 chat_messages 表缺少 status 列，正在自动添加...
+2026-01-09 09:55:59,425 - INFO - root - 检测到 chat_messages 表缺少 sent_at 列，正在自动添加...
+2026-01-09 09:55:59,448 - INFO - root - 检测到 chat_messages 表缺少 delivered_at 列，正在自动添加...
+2026-01-09 09:55:59,470 - INFO - root - 检测到 chat_messages 表缺少 read_at 列，正在自动添加...
+2026-01-09 09:55:59,490 - INFO - root - 检测到 chat_messages 表缺少 sequence_number 列，正在自动添加...
+2026-01-09 09:55:59,773 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 09:55:59,852 - INFO - root - user_connections 表创建成功
+2026-01-09 09:55:59,910 - INFO - root - offline_messages 表创建成功
+2026-01-09 09:55:59,970 - INFO - root - user_devices 表创建成功
+2026-01-09 09:56:00,027 - INFO - root - message_queue 表创建成功
+2026-01-09 09:56:00,027 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 09:56:00,028 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 09:56:37,104 - INFO - root - 消息 203 已被用户 2 撤回
+2026-01-09 09:56:53,952 - INFO - root - 消息 202 已被用户 1 撤回
+2026-01-09 10:26:56,891 - INFO - root - 数据库连接成功
+2026-01-09 10:26:56,930 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 10:26:56,942 - INFO - root - user_connections 表创建成功
+2026-01-09 10:26:56,946 - INFO - root - offline_messages 表创建成功
+2026-01-09 10:26:56,950 - INFO - root - user_devices 表创建成功
+2026-01-09 10:26:56,954 - INFO - root - message_queue 表创建成功
+2026-01-09 10:26:56,954 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 10:26:56,955 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 10:26:59,366 - INFO - __main__ - WebSocket 连接建立: 81E7JMmP3zjAlJBkAAAB
+2026-01-09 10:26:59,414 - INFO - root - 用户 1 的设备 0a23d8c2-2a30-4763-ab2e-602a3ea9100e 已注册
+2026-01-09 10:26:59,424 - INFO - root - 用户 1 的连接 6c96046c-8530-499d-b0b3-396b9105913b 已创建
+2026-01-09 10:26:59,424 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 6c96046c-8530-499d-b0b3-396b9105913b (socket: 81E7JMmP3zjAlJBkAAAB)
+2026-01-09 10:26:59,428 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 6c96046c-8530-499d-b0b3-396b9105913b
+2026-01-09 10:37:10,078 - INFO - __main__ - WebSocket 连接建立: _-BkfnW_rfv4sVhWAAAD
+2026-01-09 10:37:10,149 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 10:37:10,157 - INFO - root - 用户 2 的连接 1767926230018-s9eimlqgi 已创建
+2026-01-09 10:37:10,158 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926230018-s9eimlqgi (socket: _-BkfnW_rfv4sVhWAAAD)
+2026-01-09 10:37:10,182 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926230018-s9eimlqgi
+2026-01-09 10:38:02,747 - INFO - __main__ - WebSocket 连接建立: pTFk4_nCGdQjtKt2AAAF
+2026-01-09 10:38:02,759 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 10:38:02,770 - INFO - root - 用户 2 的连接 1767926282697-ulok8mgp8 已创建
+2026-01-09 10:38:02,771 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926282697-ulok8mgp8 (socket: pTFk4_nCGdQjtKt2AAAF)
+2026-01-09 10:38:02,774 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926282697-ulok8mgp8
+2026-01-09 10:41:31,095 - INFO - __main__ - WebSocket 连接建立: Cn1yGrEr2g93Fo5DAAAH
+2026-01-09 10:41:31,111 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 10:41:31,120 - INFO - root - 用户 2 的连接 1767926491054-y4dwfvuxu 已创建
+2026-01-09 10:41:31,121 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926491054-y4dwfvuxu (socket: Cn1yGrEr2g93Fo5DAAAH)
+2026-01-09 10:41:31,124 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926491054-y4dwfvuxu
+2026-01-09 10:42:14,582 - INFO - __main__ - WebSocket 连接断开: Cn1yGrEr2g93Fo5DAAAH
+2026-01-09 10:42:14,586 - INFO - __main__ - WebSocket 连接断开: _-BkfnW_rfv4sVhWAAAD
+2026-01-09 10:42:14,587 - INFO - __main__ - WebSocket 连接断开: pTFk4_nCGdQjtKt2AAAF
+2026-01-09 10:42:14,609 - INFO - root - 连接 1767926491054-y4dwfvuxu 已断开
+2026-01-09 10:42:14,610 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767926491054-y4dwfvuxu
+2026-01-09 10:42:14,610 - INFO - root - 连接 1767926230018-s9eimlqgi 已断开
+2026-01-09 10:42:14,611 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767926230018-s9eimlqgi
+2026-01-09 10:42:14,611 - INFO - root - 连接 1767926282697-ulok8mgp8 已断开
+2026-01-09 10:42:14,612 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767926282697-ulok8mgp8
+2026-01-09 10:42:14,686 - INFO - __main__ - WebSocket 连接建立: tlvo_3Rv0Q0oUQ4mAAAJ
+2026-01-09 10:42:14,698 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 10:42:14,719 - INFO - root - 用户 2 的连接 1767926534629-qayce3nkq 已创建
+2026-01-09 10:42:14,719 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926534629-qayce3nkq (socket: tlvo_3Rv0Q0oUQ4mAAAJ)
+2026-01-09 10:42:14,744 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926534629-qayce3nkq
+2026-01-09 10:42:19,189 - INFO - __main__ - WebSocket 连接断开: 81E7JMmP3zjAlJBkAAAB
+2026-01-09 10:42:19,197 - INFO - root - 连接 6c96046c-8530-499d-b0b3-396b9105913b 已断开
+2026-01-09 10:42:19,197 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 6c96046c-8530-499d-b0b3-396b9105913b
+2026-01-09 10:42:22,066 - INFO - __main__ - WebSocket 连接建立: 1Nty08qEyrIaDlhhAAAL
+2026-01-09 10:42:22,083 - INFO - root - 用户 1 的设备 dbbc7bae-480c-45f1-996d-1ea0d71c53a8 已注册
+2026-01-09 10:42:22,093 - INFO - root - 用户 1 的连接 1e71c79b-ae8f-4189-9594-5d5a0f36030f 已创建
+2026-01-09 10:42:22,093 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 1e71c79b-ae8f-4189-9594-5d5a0f36030f (socket: 1Nty08qEyrIaDlhhAAAL)
+2026-01-09 10:42:22,097 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 1e71c79b-ae8f-4189-9594-5d5a0f36030f
+2026-01-09 10:42:39,142 - WARNING - backend.websocket.websocket_manager - 更新消息 206 状态失败
+2026-01-09 10:42:47,198 - WARNING - backend.websocket.websocket_manager - 更新消息 207 状态失败
+2026-01-09 10:42:53,477 - WARNING - backend.websocket.websocket_manager - 更新消息 208 状态失败
+2026-01-09 10:43:02,594 - INFO - root - 消息 206 已被用户 2 撤回
+2026-01-09 10:43:17,583 - WARNING - backend.websocket.websocket_manager - 更新消息 209 状态失败
+2026-01-09 10:46:15,920 - WARNING - backend.websocket.websocket_manager - 更新消息 210 状态失败
+2026-01-09 10:46:19,378 - WARNING - root - 消息 208 已超过2分钟，不能撤回
+2026-01-09 10:46:25,638 - WARNING - root - 消息 208 已超过2分钟，不能撤回
+2026-01-09 10:47:05,785 - INFO - __main__ - WebSocket 连接断开: 1Nty08qEyrIaDlhhAAAL
+2026-01-09 10:47:05,793 - INFO - root - 连接 1e71c79b-ae8f-4189-9594-5d5a0f36030f 已断开
+2026-01-09 10:47:05,794 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 1e71c79b-ae8f-4189-9594-5d5a0f36030f
+2026-01-09 10:47:09,830 - INFO - __main__ - WebSocket 连接断开: tlvo_3Rv0Q0oUQ4mAAAJ
+2026-01-09 10:47:09,840 - INFO - root - 连接 1767926534629-qayce3nkq 已断开
+2026-01-09 10:47:09,841 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767926534629-qayce3nkq
+2026-01-09 11:37:36,815 - INFO - __main__ - WebSocket 连接建立: SSEwfUCjxaitZ7NiAAAN
+2026-01-09 11:37:36,828 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 11:37:36,838 - INFO - root - 用户 2 的连接 1767926534629-qayce3nkq 已创建
+2026-01-09 11:37:36,838 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926534629-qayce3nkq (socket: SSEwfUCjxaitZ7NiAAAN)
+2026-01-09 11:37:36,842 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926534629-qayce3nkq
+2026-01-09 11:41:15,653 - INFO - __main__ - WebSocket 连接断开: SSEwfUCjxaitZ7NiAAAN
+2026-01-09 11:41:15,662 - INFO - root - 连接 1767926534629-qayce3nkq 已断开
+2026-01-09 11:41:15,663 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767926534629-qayce3nkq
+2026-01-09 11:41:23,019 - INFO - root - 数据库连接成功
+2026-01-09 11:41:23,063 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 11:41:23,081 - INFO - root - user_connections 表创建成功
+2026-01-09 11:41:23,084 - INFO - root - offline_messages 表创建成功
+2026-01-09 11:41:23,087 - INFO - root - user_devices 表创建成功
+2026-01-09 11:41:23,092 - INFO - root - message_queue 表创建成功
+2026-01-09 11:41:23,092 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 11:41:23,092 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 11:41:23,123 - INFO - __main__ - WebSocket 连接建立: mvuyofVB1bGgkxsfAAAB
+2026-01-09 11:41:23,163 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 11:41:23,170 - INFO - root - 用户 2 的连接 1767926534629-qayce3nkq 已创建
+2026-01-09 11:41:23,170 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926534629-qayce3nkq (socket: mvuyofVB1bGgkxsfAAAB)
+2026-01-09 11:41:23,173 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926534629-qayce3nkq
+2026-01-09 11:44:30,980 - INFO - __main__ - WebSocket 连接建立: g8M1dzhBk6pzdMxWAAAD
+2026-01-09 11:44:31,033 - INFO - root - 用户 1 的设备 020f7556-6d14-43b3-86af-a6f57f656ea1 已注册
+2026-01-09 11:44:31,041 - INFO - root - 用户 1 的连接 6f3790e5-5e6f-4cad-9b2d-bd3a8c9a14ed 已创建
+2026-01-09 11:44:31,042 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 6f3790e5-5e6f-4cad-9b2d-bd3a8c9a14ed (socket: g8M1dzhBk6pzdMxWAAAD)
+2026-01-09 11:44:31,045 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 6f3790e5-5e6f-4cad-9b2d-bd3a8c9a14ed
+2026-01-09 11:44:46,281 - INFO - __main__ - WebSocket 连接断开: g8M1dzhBk6pzdMxWAAAD
+2026-01-09 11:44:46,293 - INFO - root - 连接 6f3790e5-5e6f-4cad-9b2d-bd3a8c9a14ed 已断开
+2026-01-09 11:44:46,294 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 6f3790e5-5e6f-4cad-9b2d-bd3a8c9a14ed
+2026-01-09 11:46:05,625 - INFO - __main__ - WebSocket 连接建立: dp8MCOgzX7yJV_phAAAF
+2026-01-09 11:46:05,638 - INFO - root - 用户 1 的设备 df76e145-5bbc-4a79-9fc3-5cf517e962a8 已注册
+2026-01-09 11:46:05,646 - INFO - root - 用户 1 的连接 e4fd5fe7-74d7-4a71-bf38-f2ebdc9e63ff 已创建
+2026-01-09 11:46:05,647 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: e4fd5fe7-74d7-4a71-bf38-f2ebdc9e63ff (socket: dp8MCOgzX7yJV_phAAAF)
+2026-01-09 11:46:05,651 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: e4fd5fe7-74d7-4a71-bf38-f2ebdc9e63ff
+2026-01-09 11:46:23,878 - WARNING - root - 更新消息 211 状态失败：消息不存在或已删除
+2026-01-09 11:46:23,878 - WARNING - backend.websocket.websocket_manager - 更新消息 211 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:47:09,266 - WARNING - root - 更新消息 212 状态失败：消息不存在或已删除
+2026-01-09 11:47:09,267 - WARNING - backend.websocket.websocket_manager - 更新消息 212 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:47:15,924 - WARNING - root - 更新消息 213 状态失败：消息不存在或已删除
+2026-01-09 11:47:15,924 - WARNING - backend.websocket.websocket_manager - 更新消息 213 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:47:18,301 - INFO - root - 消息 212 已被用户 2 撤回
+2026-01-09 11:47:38,330 - INFO - __main__ - WebSocket 连接断开: dp8MCOgzX7yJV_phAAAF
+2026-01-09 11:47:38,342 - INFO - root - 连接 e4fd5fe7-74d7-4a71-bf38-f2ebdc9e63ff 已断开
+2026-01-09 11:47:38,343 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: e4fd5fe7-74d7-4a71-bf38-f2ebdc9e63ff
+2026-01-09 11:57:53,366 - INFO - __main__ - WebSocket 连接断开: mvuyofVB1bGgkxsfAAAB
+2026-01-09 11:57:53,381 - ERROR - engineio.server - disconnect handler error
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 620, in _trigger_event
+    return handler(*args)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 282, in _handler
+    return self._handle_event(handler, message, namespace, sid,
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 827, in _handle_event
+    ret = handler(*args)
+TypeError: handle_disconnect() takes 0 positional arguments but 1 was given
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\engineio\server.py", line 450, in run_handler
+    return self.handlers[event](*args)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 674, in _handle_eio_disconnect
+    self._handle_disconnect(eio_sid, n, reason)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 571, in _handle_disconnect
+    self._trigger_event('disconnect', namespace, sid,
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\socketio\server.py", line 624, in _trigger_event
+    return handler(*args[:-1])
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 282, in _handler
+    return self._handle_event(handler, message, namespace, sid,
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 827, in _handle_event
+    ret = handler(*args)
+  File "D:\Desktop\work\change_voice\backend\api_server.py", line 1583, in handle_disconnect
+    ws_manager.disconnect(socket_id=socket_id)
+  File "D:\Desktop\work\change_voice\backend\websocket\websocket_manager.py", line 198, in disconnect
+    self.db.disconnect_user_connection(connection_id)
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 1489, in disconnect_user_connection
+    conn = self._open_conn()
+  File "D:\Desktop\work\change_voice\backend\database\database_manager.py", line 19, in _open_conn
+    return pymysql.connect(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 365, in __init__
+    self.connect()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\pymysql\connections.py", line 661, in connect
+    sock = socket.create_connection(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\green\socket.py", line 53, in create_connection
+    sock.connect(sa)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\greenio\base.py", line 265, in connect
+    socket_checkerr(fd)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\eventlet\greenio\base.py", line 48, in socket_checkerr
+    err = descriptor.getsockopt(socket.SOL_SOCKET, socket.SO_ERROR)
+KeyboardInterrupt
+2026-01-09 11:58:06,105 - INFO - root - 数据库连接成功
+2026-01-09 11:58:06,148 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 11:58:06,159 - INFO - root - user_connections 表创建成功
+2026-01-09 11:58:06,162 - INFO - root - offline_messages 表创建成功
+2026-01-09 11:58:06,165 - INFO - root - user_devices 表创建成功
+2026-01-09 11:58:06,169 - INFO - root - message_queue 表创建成功
+2026-01-09 11:58:06,169 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 11:58:06,169 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 11:58:09,892 - INFO - __main__ - WebSocket 连接建立: WbpDE8Ym65RmXDSrAAAB
+2026-01-09 11:58:09,905 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 11:58:09,913 - INFO - root - 用户 2 的连接 1767926534629-qayce3nkq 已创建
+2026-01-09 11:58:09,914 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926534629-qayce3nkq (socket: WbpDE8Ym65RmXDSrAAAB)
+2026-01-09 11:58:09,916 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926534629-qayce3nkq
+2026-01-09 11:58:10,045 - INFO - __main__ - WebSocket 连接建立: Of89tvji2wWSFy-XAAAD
+2026-01-09 11:58:10,082 - INFO - root - 用户 1 的设备 b2bb4f89-500f-4b1d-876c-2b7b7aec37ec 已注册
+2026-01-09 11:58:10,114 - INFO - root - 用户 1 的连接 1788726b-92bc-461f-8ac5-9f0bbd4c8cf1 已创建
+2026-01-09 11:58:10,115 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 1788726b-92bc-461f-8ac5-9f0bbd4c8cf1 (socket: Of89tvji2wWSFy-XAAAD)
+2026-01-09 11:58:10,118 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 1788726b-92bc-461f-8ac5-9f0bbd4c8cf1
+2026-01-09 11:58:31,698 - WARNING - root - 更新消息 214 状态失败：消息不存在或已删除
+2026-01-09 11:58:31,700 - WARNING - backend.websocket.websocket_manager - 更新消息 214 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:58:31,769 - WARNING - root - 更新消息 214 状态失败：消息不存在或已删除
+2026-01-09 11:58:31,770 - WARNING - backend.websocket.websocket_manager - 更新消息 214 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:58:36,241 - WARNING - root - 更新消息 215 状态失败：消息不存在或已删除
+2026-01-09 11:58:36,241 - WARNING - backend.websocket.websocket_manager - 更新消息 215 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:58:36,276 - WARNING - root - 更新消息 215 状态失败：消息不存在或已删除
+2026-01-09 11:58:36,276 - WARNING - backend.websocket.websocket_manager - 更新消息 215 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:58:43,120 - WARNING - root - 更新消息 216 状态失败：消息不存在或已删除
+2026-01-09 11:58:43,120 - WARNING - backend.websocket.websocket_manager - 更新消息 216 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:58:48,990 - WARNING - root - 更新消息 217 状态失败：消息不存在或已删除
+2026-01-09 11:58:48,990 - WARNING - backend.websocket.websocket_manager - 更新消息 217 状态失败（可能消息不存在或字段未创建）
+2026-01-09 11:59:03,044 - INFO - __main__ - WebSocket 连接断开: Of89tvji2wWSFy-XAAAD
+2026-01-09 11:59:03,064 - INFO - root - 连接 1788726b-92bc-461f-8ac5-9f0bbd4c8cf1 已断开
+2026-01-09 11:59:03,064 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 1788726b-92bc-461f-8ac5-9f0bbd4c8cf1
+2026-01-09 11:59:05,127 - INFO - root - 消息 214 已被用户 2 撤回
+2026-01-09 12:07:49,851 - INFO - root - 为用户 1 创建离线消息 218
+2026-01-09 12:07:49,852 - INFO - __main__ - 用户 1 离线，消息 218 已保存为离线消息
+2026-01-09 12:07:56,523 - WARNING - root - 消息 216 已超过2分钟，不能撤回
+2026-01-09 12:08:02,124 - WARNING - root - 消息 216 已超过2分钟，不能撤回
+2026-01-09 12:08:30,119 - INFO - __main__ - WebSocket 连接断开: WbpDE8Ym65RmXDSrAAAB
+2026-01-09 12:08:30,129 - INFO - root - 连接 1767926534629-qayce3nkq 已断开
+2026-01-09 12:08:30,129 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767926534629-qayce3nkq
+2026-01-09 12:16:47,278 - INFO - __main__ - WebSocket 连接建立: vYCHQhIzw8cSbyh2AAAF
+2026-01-09 12:16:47,292 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 12:16:47,318 - INFO - root - 用户 2 的连接 1767926534629-qayce3nkq 已创建
+2026-01-09 12:16:47,319 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926534629-qayce3nkq (socket: vYCHQhIzw8cSbyh2AAAF)
+2026-01-09 12:16:47,324 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926534629-qayce3nkq
+2026-01-09 12:16:48,141 - INFO - __main__ - WebSocket 连接建立: zz7xsMVmUvoR4PkvAAAH
+2026-01-09 12:16:48,177 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 12:16:48,188 - INFO - root - 用户 2 的连接 1767926534629-qayce3nkq 已创建
+2026-01-09 12:16:48,189 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767926534629-qayce3nkq (socket: vYCHQhIzw8cSbyh2AAAF)
+2026-01-09 12:16:48,193 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767926534629-qayce3nkq
+2026-01-09 12:16:50,487 - WARNING - root - 消息 218 已超过2分钟，不能撤回
+2026-01-09 12:16:53,071 - WARNING - root - 消息 217 已超过2分钟，不能撤回
+2026-01-09 12:16:54,481 - WARNING - root - 消息 216 已超过2分钟，不能撤回
+2026-01-09 12:18:40,965 - WARNING - root - 消息 218 已超过2分钟，不能撤回
+2026-01-09 12:18:42,449 - INFO - __main__ - WebSocket 连接断开: vYCHQhIzw8cSbyh2AAAF
+2026-01-09 12:18:42,450 - INFO - __main__ - WebSocket 连接断开: zz7xsMVmUvoR4PkvAAAH
+2026-01-09 12:18:42,450 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-09 12:18:42,462 - INFO - root - 连接 1767926534629-qayce3nkq 已断开
+2026-01-09 12:18:42,462 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767926534629-qayce3nkq
+2026-01-09 12:18:42,575 - INFO - __main__ - WebSocket 连接建立: rHniLOVWtEzok91IAAAJ
+2026-01-09 12:18:42,610 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 12:18:42,640 - INFO - root - 用户 2 的连接 1767932322505-5y5msmrgi 已创建
+2026-01-09 12:18:42,641 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767932322505-5y5msmrgi (socket: rHniLOVWtEzok91IAAAJ)
+2026-01-09 12:18:42,645 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767932322505-5y5msmrgi
+2026-01-09 12:18:44,879 - WARNING - root - 消息 216 已超过2分钟，不能撤回
+2026-01-09 12:18:46,108 - WARNING - root - 消息 218 已超过2分钟，不能撤回
+2026-01-09 13:07:56,434 - INFO - __main__ - WebSocket 连接断开: rHniLOVWtEzok91IAAAJ
+2026-01-09 13:07:56,449 - INFO - root - 连接 1767932322505-5y5msmrgi 已断开
+2026-01-09 13:07:56,450 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767932322505-5y5msmrgi
+2026-01-09 13:07:56,586 - INFO - __main__ - WebSocket 连接建立: Lixwuoh487bF0CbFAAAL
+2026-01-09 13:07:56,613 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 13:07:56,625 - INFO - root - 用户 2 的连接 1767935276511-edqbonoqd 已创建
+2026-01-09 13:07:56,626 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767935276511-edqbonoqd (socket: Lixwuoh487bF0CbFAAAL)
+2026-01-09 13:07:56,629 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767935276511-edqbonoqd
+2026-01-09 13:14:24,696 - INFO - __main__ - WebSocket 连接建立: 2oNpuhKxPs8IYUxZAAAN
+2026-01-09 13:14:24,737 - INFO - root - 用户 1 的设备 00fafb81-bd64-4ef0-8432-3bed240a6c19 已注册
+2026-01-09 13:14:24,749 - INFO - root - 用户 1 的连接 ba5eba16-1792-4b22-b1a5-33aa70c10cdd 已创建
+2026-01-09 13:14:24,749 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: ba5eba16-1792-4b22-b1a5-33aa70c10cdd (socket: 2oNpuhKxPs8IYUxZAAAN)
+2026-01-09 13:14:24,753 - INFO - backend.websocket.websocket_manager - 为用户 1 推送 1 条离线消息
+2026-01-09 13:14:24,772 - INFO - root - 用户 1 的离线消息已标记为送达
+2026-01-09 13:14:24,773 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: ba5eba16-1792-4b22-b1a5-33aa70c10cdd
+2026-01-09 13:14:44,450 - WARNING - root - 更新消息 219 状态失败：消息不存在或已删除
+2026-01-09 13:14:44,450 - WARNING - backend.websocket.websocket_manager - 更新消息 219 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:14:44,478 - WARNING - root - 更新消息 219 状态失败：消息不存在或已删除
+2026-01-09 13:14:44,479 - WARNING - backend.websocket.websocket_manager - 更新消息 219 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:15:22,225 - INFO - __main__ - WebSocket 连接断开: 2oNpuhKxPs8IYUxZAAAN
+2026-01-09 13:15:22,239 - INFO - root - 连接 ba5eba16-1792-4b22-b1a5-33aa70c10cdd 已断开
+2026-01-09 13:15:22,241 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: ba5eba16-1792-4b22-b1a5-33aa70c10cdd
+2026-01-09 13:15:47,409 - INFO - __main__ - WebSocket 连接断开: Lixwuoh487bF0CbFAAAL
+2026-01-09 13:15:47,432 - INFO - root - 连接 1767935276511-edqbonoqd 已断开
+2026-01-09 13:15:47,433 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767935276511-edqbonoqd
+2026-01-09 13:17:58,089 - INFO - root - 数据库连接成功
+2026-01-09 13:17:58,133 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 13:17:58,146 - INFO - root - user_connections 表创建成功
+2026-01-09 13:17:58,150 - INFO - root - offline_messages 表创建成功
+2026-01-09 13:17:58,154 - INFO - root - user_devices 表创建成功
+2026-01-09 13:17:58,159 - INFO - root - message_queue 表创建成功
+2026-01-09 13:17:58,159 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 13:17:58,159 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 13:18:01,262 - INFO - __main__ - WebSocket 连接建立: vvUi-g2jWcI4rdahAAAB
+2026-01-09 13:18:01,297 - INFO - root - 用户 1 的设备 84049fcb-b36e-4ac0-989f-8460097f5951 已注册
+2026-01-09 13:18:01,306 - INFO - root - 用户 1 的连接 0b7748db-6b17-4d83-988f-cb204fe7e210 已创建
+2026-01-09 13:18:01,307 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 0b7748db-6b17-4d83-988f-cb204fe7e210 (socket: vvUi-g2jWcI4rdahAAAB)
+2026-01-09 13:18:01,311 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 0b7748db-6b17-4d83-988f-cb204fe7e210
+2026-01-09 13:18:08,546 - INFO - __main__ - WebSocket 连接建立: _Y1A6lHEGxbFrdZbAAAD
+2026-01-09 13:18:08,576 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 13:18:08,584 - INFO - root - 用户 2 的连接 1767935276511-edqbonoqd 已创建
+2026-01-09 13:18:08,585 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767935276511-edqbonoqd (socket: _Y1A6lHEGxbFrdZbAAAD)
+2026-01-09 13:18:08,613 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767935276511-edqbonoqd
+2026-01-09 13:18:24,742 - WARNING - __main__ - 引用消息不属于当前会话: reply_msg_session_id=chat_1_5dfeeda6, current_session_id=chat_1_311a0880, reply_msg_id=218
+2026-01-09 13:18:33,986 - WARNING - __main__ - 引用消息不属于当前会话: reply_msg_session_id=chat_1_5dfeeda6, current_session_id=chat_1_311a0880, reply_msg_id=218
+2026-01-09 13:18:47,173 - INFO - __main__ - WebSocket 连接断开: _Y1A6lHEGxbFrdZbAAAD
+2026-01-09 13:18:47,182 - INFO - root - 连接 1767935276511-edqbonoqd 已断开
+2026-01-09 13:18:47,183 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767935276511-edqbonoqd
+2026-01-09 13:18:47,293 - INFO - __main__ - WebSocket 连接建立: Kb2oRqUFwnwSGScNAAAF
+2026-01-09 13:18:47,309 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 13:18:47,317 - INFO - root - 用户 2 的连接 1767935927237-j59tz2d8e 已创建
+2026-01-09 13:18:47,317 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767935927237-j59tz2d8e (socket: Kb2oRqUFwnwSGScNAAAF)
+2026-01-09 13:18:47,336 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767935927237-j59tz2d8e
+2026-01-09 13:18:49,700 - WARNING - root - 更新消息 221 状态失败：消息不存在或已删除
+2026-01-09 13:18:49,700 - WARNING - backend.websocket.websocket_manager - 更新消息 221 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:18:49,794 - WARNING - root - 更新消息 221 状态失败：消息不存在或已删除
+2026-01-09 13:18:49,794 - WARNING - backend.websocket.websocket_manager - 更新消息 221 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:19:04,695 - WARNING - root - 更新消息 222 状态失败：消息不存在或已删除
+2026-01-09 13:19:04,696 - WARNING - backend.websocket.websocket_manager - 更新消息 222 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:19:07,800 - INFO - root - 消息 221 已被用户 2 撤回
+2026-01-09 13:19:15,335 - WARNING - root - 更新消息 223 状态失败：消息不存在或已删除
+2026-01-09 13:19:15,336 - WARNING - backend.websocket.websocket_manager - 更新消息 223 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:19:19,087 - WARNING - root - 更新消息 224 状态失败：消息不存在或已删除
+2026-01-09 13:19:19,088 - WARNING - backend.websocket.websocket_manager - 更新消息 224 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:19:23,933 - WARNING - root - 更新消息 225 状态失败：消息不存在或已删除
+2026-01-09 13:19:23,934 - WARNING - backend.websocket.websocket_manager - 更新消息 225 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:19:23,959 - WARNING - root - 更新消息 225 状态失败：消息不存在或已删除
+2026-01-09 13:19:23,959 - WARNING - backend.websocket.websocket_manager - 更新消息 225 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:19:31,813 - WARNING - root - 更新消息 226 状态失败：消息不存在或已删除
+2026-01-09 13:19:31,813 - WARNING - backend.websocket.websocket_manager - 更新消息 226 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:19:38,272 - WARNING - root - 更新消息 227 状态失败：消息不存在或已删除
+2026-01-09 13:19:38,273 - WARNING - backend.websocket.websocket_manager - 更新消息 227 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:20:00,713 - WARNING - root - 更新消息 228 状态失败：消息不存在或已删除
+2026-01-09 13:20:00,713 - WARNING - backend.websocket.websocket_manager - 更新消息 228 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:20:00,796 - WARNING - root - 更新消息 228 状态失败：消息不存在或已删除
+2026-01-09 13:20:00,796 - WARNING - backend.websocket.websocket_manager - 更新消息 228 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:20:28,224 - WARNING - backend.websocket.websocket_manager - 连接 0b7748db-6b17-4d83-988f-cb204fe7e210 心跳超时，自动断开
+2026-01-09 13:20:28,249 - INFO - root - 连接 0b7748db-6b17-4d83-988f-cb204fe7e210 已断开
+2026-01-09 13:20:28,250 - ERROR - backend.websocket.websocket_manager - 断开连接失败: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\websocket\websocket_manager.py", line 201, in disconnect
+    leave_room(f"user_{user_id}")
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\flask_socketio\__init__.py", line 1057, in leave_room
+    socketio = flask.current_app.extensions['socketio']
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\werkzeug\local.py", line 318, in __get__
+    obj = instance._get_current_object()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\werkzeug\local.py", line 519, in _get_current_object
+    raise RuntimeError(unbound_message) from None
+RuntimeError: Working outside of application context.
+
+This typically means that you attempted to use functionality that needed
+the current application. To solve this, set up an application context
+with app.app_context(). See the documentation for more information.
+2026-01-09 13:25:24,637 - INFO - __main__ - WebSocket 连接断开: vvUi-g2jWcI4rdahAAAB
+2026-01-09 13:25:24,638 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-09 13:32:16,887 - INFO - __main__ - WebSocket 连接断开: Kb2oRqUFwnwSGScNAAAF
+2026-01-09 13:32:16,908 - INFO - root - 连接 1767935927237-j59tz2d8e 已断开
+2026-01-09 13:32:16,908 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767935927237-j59tz2d8e
+2026-01-09 13:42:01,232 - INFO - root - 数据库连接成功
+2026-01-09 13:42:01,279 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 13:42:01,294 - INFO - root - user_connections 表创建成功
+2026-01-09 13:42:01,301 - INFO - root - offline_messages 表创建成功
+2026-01-09 13:42:01,306 - INFO - root - user_devices 表创建成功
+2026-01-09 13:42:01,312 - INFO - root - message_queue 表创建成功
+2026-01-09 13:42:01,312 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 13:42:01,313 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 13:42:07,400 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 13:42:21,486 - INFO - __main__ - WebSocket 连接建立: HD_8G8GsZZHjTOdPAAAB
+2026-01-09 13:42:21,518 - INFO - root - 用户 1 的设备 9d66f53f-a5bf-48fb-a09b-b2b51b45f8e6 已注册
+2026-01-09 13:42:21,526 - INFO - root - 用户 1 的连接 ecf4b29d-b194-49cf-a00c-cb0b51388b58 已创建
+2026-01-09 13:42:21,528 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: ecf4b29d-b194-49cf-a00c-cb0b51388b58 (socket: HD_8G8GsZZHjTOdPAAAB)
+2026-01-09 13:42:21,556 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: ecf4b29d-b194-49cf-a00c-cb0b51388b58
+2026-01-09 13:42:35,391 - INFO - __main__ - WebSocket 连接建立: gmMlAF1BF95BFQbQAAAD
+2026-01-09 13:42:35,405 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 13:42:35,415 - INFO - root - 用户 2 的连接 1767937320016-ej3bfusnc 已创建
+2026-01-09 13:42:35,416 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767937320016-ej3bfusnc (socket: gmMlAF1BF95BFQbQAAAD)
+2026-01-09 13:42:35,419 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767937320016-ej3bfusnc
+2026-01-09 13:42:39,964 - WARNING - root - 更新消息 229 状态失败：消息不存在或已删除
+2026-01-09 13:42:39,964 - WARNING - backend.websocket.websocket_manager - 更新消息 229 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:42:45,836 - WARNING - root - 更新消息 230 状态失败：消息不存在或已删除
+2026-01-09 13:42:45,837 - WARNING - backend.websocket.websocket_manager - 更新消息 230 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:42:45,925 - WARNING - root - 更新消息 230 状态失败：消息不存在或已删除
+2026-01-09 13:42:45,926 - WARNING - backend.websocket.websocket_manager - 更新消息 230 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:42:47,771 - WARNING - root - 更新消息 231 状态失败：消息不存在或已删除
+2026-01-09 13:42:47,771 - WARNING - backend.websocket.websocket_manager - 更新消息 231 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:42:53,049 - WARNING - root - 更新消息 232 状态失败：消息不存在或已删除
+2026-01-09 13:42:53,049 - WARNING - backend.websocket.websocket_manager - 更新消息 232 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:42:53,130 - WARNING - root - 更新消息 232 状态失败：消息不存在或已删除
+2026-01-09 13:42:53,131 - WARNING - backend.websocket.websocket_manager - 更新消息 232 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:44:04,365 - INFO - __main__ - WebSocket 连接断开: HD_8G8GsZZHjTOdPAAAB
+2026-01-09 13:44:04,374 - INFO - root - 连接 ecf4b29d-b194-49cf-a00c-cb0b51388b58 已断开
+2026-01-09 13:44:04,375 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: ecf4b29d-b194-49cf-a00c-cb0b51388b58
+2026-01-09 13:49:40,613 - INFO - __main__ - WebSocket 连接断开: gmMlAF1BF95BFQbQAAAD
+2026-01-09 13:49:40,636 - INFO - root - 连接 1767937320016-ej3bfusnc 已断开
+2026-01-09 13:49:40,637 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767937320016-ej3bfusnc
+2026-01-09 13:49:47,103 - INFO - root - 数据库连接成功
+2026-01-09 13:49:47,180 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 13:49:47,212 - INFO - root - user_connections 表创建成功
+2026-01-09 13:49:47,219 - INFO - root - offline_messages 表创建成功
+2026-01-09 13:49:47,226 - INFO - root - user_devices 表创建成功
+2026-01-09 13:49:47,234 - INFO - root - message_queue 表创建成功
+2026-01-09 13:49:47,234 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 13:49:47,235 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 13:51:11,405 - INFO - __main__ - WebSocket 连接建立: yJi4-oq4VLx-0DoeAAAB
+2026-01-09 13:51:11,442 - INFO - root - 用户 1 的设备 a9042635-94c4-4dcf-a621-c472eb71acf9 已注册
+2026-01-09 13:51:11,469 - INFO - root - 用户 1 的连接 cdb559da-96d8-4401-aeee-162f628b4bbe 已创建
+2026-01-09 13:51:11,470 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: cdb559da-96d8-4401-aeee-162f628b4bbe (socket: yJi4-oq4VLx-0DoeAAAB)
+2026-01-09 13:51:11,496 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: cdb559da-96d8-4401-aeee-162f628b4bbe
+2026-01-09 13:51:20,696 - INFO - __main__ - WebSocket 连接建立: LRy2qM4ubF_-CAKLAAAD
+2026-01-09 13:51:20,711 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 13:51:20,720 - INFO - root - 用户 2 的连接 1767937788473-9jg8huq4x 已创建
+2026-01-09 13:51:20,720 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767937788473-9jg8huq4x (socket: LRy2qM4ubF_-CAKLAAAD)
+2026-01-09 13:51:20,724 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767937788473-9jg8huq4x
+2026-01-09 13:51:32,761 - WARNING - root - 更新消息 234 状态失败：消息不存在或已删除
+2026-01-09 13:51:32,762 - WARNING - backend.websocket.websocket_manager - 更新消息 234 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:51:39,436 - WARNING - root - 更新消息 235 状态失败：消息不存在或已删除
+2026-01-09 13:51:39,438 - WARNING - backend.websocket.websocket_manager - 更新消息 235 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:51:39,729 - WARNING - root - 更新消息 235 状态失败：消息不存在或已删除
+2026-01-09 13:51:39,730 - WARNING - backend.websocket.websocket_manager - 更新消息 235 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:51:44,267 - WARNING - root - 更新消息 236 状态失败：消息不存在或已删除
+2026-01-09 13:51:44,268 - WARNING - backend.websocket.websocket_manager - 更新消息 236 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:51:44,566 - WARNING - root - 更新消息 236 状态失败：消息不存在或已删除
+2026-01-09 13:51:44,567 - WARNING - backend.websocket.websocket_manager - 更新消息 236 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:51:46,468 - INFO - root - 消息 234 已被用户 2 撤回
+2026-01-09 13:51:53,055 - WARNING - root - 更新消息 237 状态失败：消息不存在或已删除
+2026-01-09 13:51:53,055 - WARNING - backend.websocket.websocket_manager - 更新消息 237 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:51:56,744 - WARNING - root - 更新消息 238 状态失败：消息不存在或已删除
+2026-01-09 13:51:56,744 - WARNING - backend.websocket.websocket_manager - 更新消息 238 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:52:02,243 - WARNING - root - 更新消息 239 状态失败：消息不存在或已删除
+2026-01-09 13:52:02,244 - WARNING - backend.websocket.websocket_manager - 更新消息 239 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:52:05,318 - INFO - root - 消息 237 已被用户 1 撤回
+2026-01-09 13:52:05,340 - INFO - __main__ - 消息 237 已被用户 1 撤回，已推送事件
+2026-01-09 13:52:13,986 - WARNING - root - 更新消息 240 状态失败：消息不存在或已删除
+2026-01-09 13:52:13,987 - WARNING - backend.websocket.websocket_manager - 更新消息 240 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:52:13,999 - WARNING - root - 更新消息 240 状态失败：消息不存在或已删除
+2026-01-09 13:52:14,000 - WARNING - backend.websocket.websocket_manager - 更新消息 240 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:52:24,585 - WARNING - root - 更新消息 241 状态失败：消息不存在或已删除
+2026-01-09 13:52:24,586 - WARNING - backend.websocket.websocket_manager - 更新消息 241 状态失败（可能消息不存在或字段未创建）
+2026-01-09 13:52:32,768 - INFO - __main__ - WebSocket 连接断开: yJi4-oq4VLx-0DoeAAAB
+2026-01-09 13:52:32,776 - INFO - root - 连接 cdb559da-96d8-4401-aeee-162f628b4bbe 已断开
+2026-01-09 13:52:32,779 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: cdb559da-96d8-4401-aeee-162f628b4bbe
+2026-01-09 14:10:28,946 - INFO - __main__ - WebSocket 连接断开: LRy2qM4ubF_-CAKLAAAD
+2026-01-09 14:10:28,956 - INFO - root - 连接 1767937788473-9jg8huq4x 已断开
+2026-01-09 14:10:28,957 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767937788473-9jg8huq4x
+2026-01-09 14:20:19,616 - INFO - __main__ - WebSocket 连接建立: Uyap7SWv9vlTaPC6AAAF
+2026-01-09 14:20:19,654 - INFO - root - 用户 1 的设备 97537a2a-9474-47b3-b863-b62bff4b6eb6 已注册
+2026-01-09 14:20:19,668 - INFO - root - 用户 1 的连接 f1209b31-2d9c-435c-acbf-11e75f5ee499 已创建
+2026-01-09 14:20:19,669 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: f1209b31-2d9c-435c-acbf-11e75f5ee499 (socket: Uyap7SWv9vlTaPC6AAAF)
+2026-01-09 14:20:19,673 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: f1209b31-2d9c-435c-acbf-11e75f5ee499
+2026-01-09 14:20:25,137 - INFO - __main__ - WebSocket 连接建立: ulWNQ2Na-A8dTd-bAAAH
+2026-01-09 14:20:25,149 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 14:20:25,158 - INFO - root - 用户 2 的连接 1767939029000-v09fgerbx 已创建
+2026-01-09 14:20:25,159 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767939029000-v09fgerbx (socket: ulWNQ2Na-A8dTd-bAAAH)
+2026-01-09 14:20:25,167 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767939029000-v09fgerbx
+2026-01-09 14:20:33,973 - WARNING - root - 更新消息 242 状态失败：消息不存在或已删除
+2026-01-09 14:20:33,974 - WARNING - backend.websocket.websocket_manager - 更新消息 242 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:20:39,037 - WARNING - root - 更新消息 243 状态失败：消息不存在或已删除
+2026-01-09 14:20:39,038 - WARNING - backend.websocket.websocket_manager - 更新消息 243 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:20:48,225 - WARNING - root - 更新消息 244 状态失败：消息不存在或已删除
+2026-01-09 14:20:48,226 - WARNING - backend.websocket.websocket_manager - 更新消息 244 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:20:59,922 - INFO - __main__ - WebSocket 连接断开: Uyap7SWv9vlTaPC6AAAF
+2026-01-09 14:20:59,942 - INFO - root - 连接 f1209b31-2d9c-435c-acbf-11e75f5ee499 已断开
+2026-01-09 14:20:59,943 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: f1209b31-2d9c-435c-acbf-11e75f5ee499
+2026-01-09 14:31:00,992 - INFO - __main__ - WebSocket 连接断开: ulWNQ2Na-A8dTd-bAAAH
+2026-01-09 14:31:01,019 - INFO - root - 连接 1767939029000-v09fgerbx 已断开
+2026-01-09 14:31:01,021 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767939029000-v09fgerbx
+2026-01-09 14:31:18,777 - INFO - __main__ - WebSocket 连接建立: JAWUquK0Gr5yEFnFAAAJ
+2026-01-09 14:31:18,815 - INFO - root - 用户 1 的设备 aef9296c-03b8-47b7-85c9-fba208e62657 已注册
+2026-01-09 14:31:18,829 - INFO - root - 用户 1 的连接 1d2dfb05-2cb7-4fb2-808f-1be3b2d476ed 已创建
+2026-01-09 14:31:18,829 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 1d2dfb05-2cb7-4fb2-808f-1be3b2d476ed (socket: JAWUquK0Gr5yEFnFAAAJ)
+2026-01-09 14:31:18,837 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 1d2dfb05-2cb7-4fb2-808f-1be3b2d476ed
+2026-01-09 14:31:23,353 - INFO - __main__ - WebSocket 连接建立: gC1xizs-6ofs9TwlAAAL
+2026-01-09 14:31:23,394 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 14:31:23,423 - INFO - root - 用户 2 的连接 1767940261047-6tabnyuja 已创建
+2026-01-09 14:31:23,424 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767940261047-6tabnyuja (socket: gC1xizs-6ofs9TwlAAAL)
+2026-01-09 14:31:23,428 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767940261047-6tabnyuja
+2026-01-09 14:31:26,310 - WARNING - root - 更新消息 245 状态失败：消息不存在或已删除
+2026-01-09 14:31:26,311 - WARNING - backend.websocket.websocket_manager - 更新消息 245 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:31:32,955 - WARNING - root - 更新消息 246 状态失败：消息不存在或已删除
+2026-01-09 14:31:32,955 - WARNING - backend.websocket.websocket_manager - 更新消息 246 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:40:06,477 - INFO - __main__ - WebSocket 连接断开: gC1xizs-6ofs9TwlAAAL
+2026-01-09 14:40:06,487 - INFO - root - 连接 1767940261047-6tabnyuja 已断开
+2026-01-09 14:40:06,487 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767940261047-6tabnyuja
+2026-01-09 14:40:12,656 - INFO - __main__ - WebSocket 连接断开: JAWUquK0Gr5yEFnFAAAJ
+2026-01-09 14:40:12,665 - INFO - root - 连接 1d2dfb05-2cb7-4fb2-808f-1be3b2d476ed 已断开
+2026-01-09 14:40:12,666 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 1d2dfb05-2cb7-4fb2-808f-1be3b2d476ed
+2026-01-09 14:40:20,611 - INFO - root - 数据库连接成功
+2026-01-09 14:40:20,658 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 14:40:20,668 - INFO - root - user_connections 表创建成功
+2026-01-09 14:40:20,670 - INFO - root - user_devices 表创建成功
+2026-01-09 14:40:20,673 - INFO - root - message_queue 表创建成功
+2026-01-09 14:40:20,674 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 14:40:20,674 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 14:42:02,406 - INFO - __main__ - WebSocket 连接建立: N_Ax6m3k8KZCpIyhAAAB
+2026-01-09 14:42:02,456 - INFO - root - 用户 1 的设备 98fab5a2-538e-4232-be4f-438b1d0916ad 已注册
+2026-01-09 14:42:02,467 - INFO - root - 用户 1 的连接 c0403dd4-1174-4d72-9e13-15cd842886cf 已创建
+2026-01-09 14:42:02,468 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: c0403dd4-1174-4d72-9e13-15cd842886cf (socket: N_Ax6m3k8KZCpIyhAAAB)
+2026-01-09 14:42:02,468 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: c0403dd4-1174-4d72-9e13-15cd842886cf
+2026-01-09 14:42:08,704 - INFO - __main__ - WebSocket 连接建立: BC-RTAYcdXjItCZBAAAD
+2026-01-09 14:42:08,715 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 14:42:08,724 - INFO - root - 用户 2 的连接 1767940809908-y70k42qy4 已创建
+2026-01-09 14:42:08,724 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767940809908-y70k42qy4 (socket: BC-RTAYcdXjItCZBAAAD)
+2026-01-09 14:42:08,725 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767940809908-y70k42qy4
+2026-01-09 14:42:17,592 - INFO - __main__ - WebSocket 连接断开: N_Ax6m3k8KZCpIyhAAAB
+2026-01-09 14:42:17,601 - INFO - root - 连接 c0403dd4-1174-4d72-9e13-15cd842886cf 已断开
+2026-01-09 14:42:17,602 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: c0403dd4-1174-4d72-9e13-15cd842886cf
+2026-01-09 14:46:17,921 - INFO - __main__ - WebSocket 连接断开: BC-RTAYcdXjItCZBAAAD
+2026-01-09 14:46:17,928 - INFO - root - 连接 1767940809908-y70k42qy4 已断开
+2026-01-09 14:46:17,928 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767940809908-y70k42qy4
+2026-01-09 14:46:25,369 - INFO - root - 数据库连接成功
+2026-01-09 14:46:25,410 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 14:46:25,422 - INFO - root - user_connections 表创建成功
+2026-01-09 14:46:25,425 - INFO - root - user_devices 表创建成功
+2026-01-09 14:46:25,429 - INFO - root - message_queue 表创建成功
+2026-01-09 14:46:25,430 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 14:46:25,430 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 14:46:27,336 - INFO - __main__ - WebSocket 连接建立: 10AzHkEOL9METNiLAAAB
+2026-01-09 14:46:27,351 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 14:46:27,359 - INFO - root - 用户 2 的连接 1767940809908-y70k42qy4 已创建
+2026-01-09 14:46:27,360 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767940809908-y70k42qy4 (socket: 10AzHkEOL9METNiLAAAB)
+2026-01-09 14:46:27,361 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767940809908-y70k42qy4
+2026-01-09 14:46:38,886 - INFO - __main__ - WebSocket 连接建立: SL2TvaupcpJ8U7_PAAAD
+2026-01-09 14:46:38,904 - INFO - root - 用户 1 的设备 9dc88363-336e-40b2-906a-58bd42d63fd9 已注册
+2026-01-09 14:46:38,913 - INFO - root - 用户 1 的连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已创建
+2026-01-09 14:46:38,914 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5 (socket: SL2TvaupcpJ8U7_PAAAD)
+2026-01-09 14:46:38,914 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:46:44,031 - INFO - __main__ - WebSocket 连接建立: ZboJXYDScMxCTEhWAAAF
+2026-01-09 14:46:44,045 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 14:46:44,052 - INFO - root - 用户 2 的连接 1767941130931-t4gnc82gi 已创建
+2026-01-09 14:46:44,053 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767941130931-t4gnc82gi (socket: ZboJXYDScMxCTEhWAAAF)
+2026-01-09 14:46:44,053 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767941130931-t4gnc82gi
+2026-01-09 14:46:46,638 - WARNING - root - 更新消息 248 状态失败：消息不存在或已删除
+2026-01-09 14:46:46,639 - WARNING - backend.websocket.websocket_manager - 更新消息 248 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:46:46,865 - WARNING - root - 更新消息 248 状态失败：消息不存在或已删除
+2026-01-09 14:46:46,865 - WARNING - backend.websocket.websocket_manager - 更新消息 248 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:46:53,243 - WARNING - root - 更新消息 249 状态失败：消息不存在或已删除
+2026-01-09 14:46:53,243 - WARNING - backend.websocket.websocket_manager - 更新消息 249 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:46:56,884 - INFO - root - 消息 248 已被用户 1 撤回
+2026-01-09 14:46:56,887 - INFO - __main__ - 消息 248 已被用户 1 撤回，已推送事件
+2026-01-09 14:47:02,623 - WARNING - root - 更新消息 250 状态失败：消息不存在或已删除
+2026-01-09 14:47:02,624 - WARNING - backend.websocket.websocket_manager - 更新消息 250 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:47:07,586 - WARNING - root - 更新消息 251 状态失败：消息不存在或已删除
+2026-01-09 14:47:07,587 - WARNING - backend.websocket.websocket_manager - 更新消息 251 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:47:07,865 - WARNING - root - 更新消息 251 状态失败：消息不存在或已删除
+2026-01-09 14:47:07,866 - WARNING - backend.websocket.websocket_manager - 更新消息 251 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:47:10,245 - INFO - root - 消息 250 已被用户 2 撤回
+2026-01-09 14:47:15,065 - WARNING - root - 更新消息 252 状态失败：消息不存在或已删除
+2026-01-09 14:47:15,066 - WARNING - backend.websocket.websocket_manager - 更新消息 252 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:47:22,987 - WARNING - root - 更新消息 253 状态失败：消息不存在或已删除
+2026-01-09 14:47:22,987 - WARNING - backend.websocket.websocket_manager - 更新消息 253 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:47:32,975 - WARNING - root - 更新消息 254 状态失败：消息不存在或已删除
+2026-01-09 14:47:32,976 - WARNING - backend.websocket.websocket_manager - 更新消息 254 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:47:32,993 - WARNING - root - 更新消息 254 状态失败：消息不存在或已删除
+2026-01-09 14:47:32,994 - WARNING - backend.websocket.websocket_manager - 更新消息 254 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:47:37,887 - INFO - __main__ - WebSocket 连接断开: SL2TvaupcpJ8U7_PAAAD
+2026-01-09 14:47:37,916 - INFO - root - 连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已断开
+2026-01-09 14:47:37,917 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:47:40,035 - INFO - __main__ - WebSocket 连接建立: iN7igqaEdQEVCtjSAAAH
+2026-01-09 14:47:40,070 - INFO - root - 用户 1 的设备 9dc88363-336e-40b2-906a-58bd42d63fd9 已注册
+2026-01-09 14:47:40,088 - INFO - root - 用户 1 的连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已创建
+2026-01-09 14:47:40,089 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5 (socket: iN7igqaEdQEVCtjSAAAH)
+2026-01-09 14:47:40,090 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:47:42,911 - INFO - __main__ - WebSocket 连接断开: iN7igqaEdQEVCtjSAAAH
+2026-01-09 14:47:42,941 - INFO - root - 连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已断开
+2026-01-09 14:47:42,942 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:47:49,203 - INFO - __main__ - WebSocket 连接建立: TPe3oxqemIAi-_7DAAAJ
+2026-01-09 14:47:49,225 - INFO - root - 用户 1 的设备 9dc88363-336e-40b2-906a-58bd42d63fd9 已注册
+2026-01-09 14:47:49,236 - INFO - root - 用户 1 的连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已创建
+2026-01-09 14:47:49,237 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5 (socket: TPe3oxqemIAi-_7DAAAJ)
+2026-01-09 14:47:49,237 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:47:53,057 - INFO - __main__ - WebSocket 连接断开: TPe3oxqemIAi-_7DAAAJ
+2026-01-09 14:47:53,070 - INFO - root - 连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已断开
+2026-01-09 14:47:53,070 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:47:59,071 - INFO - __main__ - WebSocket 连接建立: g0TJOSUw2kgJPtRwAAAL
+2026-01-09 14:47:59,107 - INFO - root - 用户 1 的设备 9dc88363-336e-40b2-906a-58bd42d63fd9 已注册
+2026-01-09 14:47:59,120 - INFO - root - 用户 1 的连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已创建
+2026-01-09 14:47:59,120 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5 (socket: g0TJOSUw2kgJPtRwAAAL)
+2026-01-09 14:47:59,121 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:51:07,630 - INFO - __main__ - WebSocket 连接断开: g0TJOSUw2kgJPtRwAAAL
+2026-01-09 14:51:07,639 - INFO - root - 连接 5f57042c-09b2-4ad2-a776-71ecc356aba5 已断开
+2026-01-09 14:51:07,639 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 5f57042c-09b2-4ad2-a776-71ecc356aba5
+2026-01-09 14:51:20,636 - INFO - __main__ - WebSocket 连接建立: Sz88SWF_QT2cQMHUAAAN
+2026-01-09 14:51:20,693 - INFO - root - 用户 1 的设备 11e7e17f-c729-413d-890a-37f322d34319 已注册
+2026-01-09 14:51:20,707 - INFO - root - 用户 1 的连接 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 已创建
+2026-01-09 14:51:20,709 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 (socket: Sz88SWF_QT2cQMHUAAAN)
+2026-01-09 14:51:20,709 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466
+2026-01-09 14:51:27,841 - WARNING - root - 更新消息 255 状态失败：消息不存在或已删除
+2026-01-09 14:51:27,841 - WARNING - backend.websocket.websocket_manager - 更新消息 255 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:51:51,150 - INFO - __main__ - WebSocket 连接断开: Sz88SWF_QT2cQMHUAAAN
+2026-01-09 14:51:51,184 - INFO - root - 连接 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 已断开
+2026-01-09 14:51:51,185 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466
+2026-01-09 14:51:56,705 - INFO - __main__ - WebSocket 连接建立: H1ocZ-LOdR7gqZbhAAAP
+2026-01-09 14:51:56,763 - INFO - root - 用户 1 的设备 11e7e17f-c729-413d-890a-37f322d34319 已注册
+2026-01-09 14:51:56,778 - INFO - root - 用户 1 的连接 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 已创建
+2026-01-09 14:51:56,779 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 (socket: H1ocZ-LOdR7gqZbhAAAP)
+2026-01-09 14:51:56,780 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466
+2026-01-09 14:52:04,744 - WARNING - root - 更新消息 256 状态失败：消息不存在或已删除
+2026-01-09 14:52:04,745 - WARNING - backend.websocket.websocket_manager - 更新消息 256 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:52:04,935 - WARNING - root - 更新消息 256 状态失败：消息不存在或已删除
+2026-01-09 14:52:04,935 - WARNING - backend.websocket.websocket_manager - 更新消息 256 状态失败（可能消息不存在或字段未创建）
+2026-01-09 14:52:14,528 - INFO - __main__ - WebSocket 连接断开: H1ocZ-LOdR7gqZbhAAAP
+2026-01-09 14:52:14,553 - INFO - root - 连接 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 已断开
+2026-01-09 14:52:14,554 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466
+2026-01-09 14:52:20,535 - INFO - __main__ - WebSocket 连接建立: rHoP7RG8uR5jXjuqAAAR
+2026-01-09 14:52:20,561 - INFO - root - 用户 1 的设备 11e7e17f-c729-413d-890a-37f322d34319 已注册
+2026-01-09 14:52:20,571 - INFO - root - 用户 1 的连接 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 已创建
+2026-01-09 14:52:20,573 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 (socket: rHoP7RG8uR5jXjuqAAAR)
+2026-01-09 14:52:20,573 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466
+2026-01-09 14:53:44,865 - INFO - __main__ - WebSocket 连接断开: rHoP7RG8uR5jXjuqAAAR
+2026-01-09 14:53:44,874 - INFO - root - 连接 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466 已断开
+2026-01-09 14:53:44,875 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 527da06d-cd4a-49c9-a5c0-c5ba6e0bb466
+2026-01-09 15:02:37,803 - INFO - __main__ - WebSocket 连接断开: ZboJXYDScMxCTEhWAAAF
+2026-01-09 15:02:37,806 - INFO - __main__ - WebSocket 连接断开: 10AzHkEOL9METNiLAAAB
+2026-01-09 15:02:37,818 - INFO - root - 连接 1767940809908-y70k42qy4 已断开
+2026-01-09 15:02:37,819 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767940809908-y70k42qy4
+2026-01-09 15:02:37,820 - INFO - root - 连接 1767941130931-t4gnc82gi 已断开
+2026-01-09 15:02:37,821 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767941130931-t4gnc82gi
+2026-01-09 15:02:44,056 - INFO - root - 数据库连接成功
+2026-01-09 15:02:44,108 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 15:02:44,122 - INFO - root - user_connections 表创建成功
+2026-01-09 15:02:44,126 - INFO - root - user_devices 表创建成功
+2026-01-09 15:02:44,130 - INFO - root - message_queue 表创建成功
+2026-01-09 15:02:44,131 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 15:02:44,131 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 15:02:44,398 - INFO - __main__ - WebSocket 连接建立: YiT2ft1sj7jAWXfQAAAB
+2026-01-09 15:02:44,415 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 15:02:44,422 - INFO - root - 用户 2 的连接 1767941130931-t4gnc82gi 已创建
+2026-01-09 15:02:44,423 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767941130931-t4gnc82gi (socket: YiT2ft1sj7jAWXfQAAAB)
+2026-01-09 15:02:44,423 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767941130931-t4gnc82gi
+2026-01-09 15:02:44,881 - INFO - __main__ - WebSocket 连接建立: lcCtH7-ig26YA6t9AAAD
+2026-01-09 15:02:44,914 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 15:02:44,922 - INFO - root - 用户 2 的连接 1767940809908-y70k42qy4 已创建
+2026-01-09 15:02:44,923 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767940809908-y70k42qy4 (socket: lcCtH7-ig26YA6t9AAAD)
+2026-01-09 15:02:44,923 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767940809908-y70k42qy4
+2026-01-09 15:02:57,167 - INFO - __main__ - WebSocket 连接建立: iYBDprmE-vkMmkExAAAF
+2026-01-09 15:02:57,177 - INFO - root - 用户 1 的设备 198b7924-c768-48b1-a166-062f7d9b10c3 已注册
+2026-01-09 15:02:57,188 - INFO - root - 用户 1 的连接 34d118a0-39d0-4fb4-92e8-38a0e6b8ccab 已创建
+2026-01-09 15:02:57,189 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 34d118a0-39d0-4fb4-92e8-38a0e6b8ccab (socket: iYBDprmE-vkMmkExAAAF)
+2026-01-09 15:02:57,189 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 34d118a0-39d0-4fb4-92e8-38a0e6b8ccab
+2026-01-09 15:03:02,531 - WARNING - root - 更新消息 257 状态失败：消息不存在或已删除
+2026-01-09 15:03:02,532 - WARNING - backend.websocket.websocket_manager - 更新消息 257 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:03:02,777 - WARNING - root - 更新消息 257 状态失败：消息不存在或已删除
+2026-01-09 15:03:02,778 - WARNING - backend.websocket.websocket_manager - 更新消息 257 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:03:08,343 - WARNING - root - 更新消息 258 状态失败：消息不存在或已删除
+2026-01-09 15:03:08,343 - WARNING - backend.websocket.websocket_manager - 更新消息 258 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:03:08,344 - WARNING - root - 更新消息 258 状态失败：消息不存在或已删除
+2026-01-09 15:03:08,344 - WARNING - backend.websocket.websocket_manager - 更新消息 258 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:03:16,890 - WARNING - root - 更新消息 259 状态失败：消息不存在或已删除
+2026-01-09 15:03:16,891 - WARNING - backend.websocket.websocket_manager - 更新消息 259 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:03:24,207 - WARNING - root - 更新消息 260 状态失败：消息不存在或已删除
+2026-01-09 15:03:24,208 - WARNING - backend.websocket.websocket_manager - 更新消息 260 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:09:53,580 - INFO - __main__ - WebSocket 连接断开: iYBDprmE-vkMmkExAAAF
+2026-01-09 15:09:53,590 - INFO - root - 连接 34d118a0-39d0-4fb4-92e8-38a0e6b8ccab 已断开
+2026-01-09 15:09:53,591 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 34d118a0-39d0-4fb4-92e8-38a0e6b8ccab
+2026-01-09 15:09:55,174 - INFO - __main__ - WebSocket 连接断开: lcCtH7-ig26YA6t9AAAD
+2026-01-09 15:09:55,175 - INFO - __main__ - WebSocket 连接断开: YiT2ft1sj7jAWXfQAAAB
+2026-01-09 15:09:55,184 - INFO - root - 连接 1767941130931-t4gnc82gi 已断开
+2026-01-09 15:09:55,185 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767941130931-t4gnc82gi
+2026-01-09 15:09:55,187 - INFO - root - 连接 1767940809908-y70k42qy4 已断开
+2026-01-09 15:09:55,187 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767940809908-y70k42qy4
+2026-01-09 15:10:02,275 - INFO - root - 数据库连接成功
+2026-01-09 15:10:02,316 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 15:10:02,327 - INFO - root - user_connections 表创建成功
+2026-01-09 15:10:02,329 - INFO - root - user_devices 表创建成功
+2026-01-09 15:10:02,333 - INFO - root - message_queue 表创建成功
+2026-01-09 15:10:02,333 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 15:10:02,333 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 15:10:02,389 - INFO - __main__ - WebSocket 连接建立: y9fP7BF5T-bRJptcAAAB
+2026-01-09 15:10:02,407 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 15:10:02,415 - INFO - root - 用户 2 的连接 1767940809908-y70k42qy4 已创建
+2026-01-09 15:10:02,415 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767940809908-y70k42qy4 (socket: y9fP7BF5T-bRJptcAAAB)
+2026-01-09 15:10:02,415 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767940809908-y70k42qy4
+2026-01-09 15:10:02,887 - INFO - __main__ - WebSocket 连接建立: iFhE5_OhRutGqAzcAAAD
+2026-01-09 15:10:02,927 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 15:10:02,935 - INFO - root - 用户 2 的连接 1767941130931-t4gnc82gi 已创建
+2026-01-09 15:10:02,935 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767941130931-t4gnc82gi (socket: iFhE5_OhRutGqAzcAAAD)
+2026-01-09 15:10:02,935 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767941130931-t4gnc82gi
+2026-01-09 15:10:15,346 - INFO - __main__ - WebSocket 连接建立: aoChoBdauPl--HO1AAAF
+2026-01-09 15:10:15,360 - INFO - root - 用户 1 的设备 a9839563-44db-4936-bed8-26425f8a1a06 已注册
+2026-01-09 15:10:15,370 - INFO - root - 用户 1 的连接 b4d01c49-fab2-45f8-b485-d495cfbb865c 已创建
+2026-01-09 15:10:15,371 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: b4d01c49-fab2-45f8-b485-d495cfbb865c (socket: aoChoBdauPl--HO1AAAF)
+2026-01-09 15:10:15,371 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: b4d01c49-fab2-45f8-b485-d495cfbb865c
+2026-01-09 15:10:20,750 - WARNING - root - 更新消息 261 状态失败：消息不存在或已删除
+2026-01-09 15:10:20,751 - WARNING - backend.websocket.websocket_manager - 更新消息 261 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:10:24,082 - WARNING - root - 更新消息 262 状态失败：消息不存在或已删除
+2026-01-09 15:10:24,083 - WARNING - backend.websocket.websocket_manager - 更新消息 262 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:10:53,913 - WARNING - root - 更新消息 263 状态失败：消息不存在或已删除
+2026-01-09 15:10:53,914 - WARNING - backend.websocket.websocket_manager - 更新消息 263 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:11:05,332 - INFO - __main__ - WebSocket 连接断开: aoChoBdauPl--HO1AAAF
+2026-01-09 15:11:05,345 - INFO - root - 连接 b4d01c49-fab2-45f8-b485-d495cfbb865c 已断开
+2026-01-09 15:11:05,346 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: b4d01c49-fab2-45f8-b485-d495cfbb865c
+2026-01-09 15:11:26,879 - INFO - __main__ - WebSocket 连接断开: y9fP7BF5T-bRJptcAAAB
+2026-01-09 15:11:26,881 - INFO - __main__ - WebSocket 连接断开: iFhE5_OhRutGqAzcAAAD
+2026-01-09 15:11:26,914 - INFO - root - 连接 1767941130931-t4gnc82gi 已断开
+2026-01-09 15:11:26,915 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767941130931-t4gnc82gi
+2026-01-09 15:11:26,916 - INFO - root - 连接 1767940809908-y70k42qy4 已断开
+2026-01-09 15:11:26,916 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767940809908-y70k42qy4
+2026-01-09 15:18:25,212 - INFO - root - 数据库连接成功
+2026-01-09 15:18:25,253 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 15:18:25,271 - INFO - root - user_connections 表创建成功
+2026-01-09 15:18:25,275 - INFO - root - user_devices 表创建成功
+2026-01-09 15:18:25,279 - INFO - root - message_queue 表创建成功
+2026-01-09 15:18:25,279 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 15:18:25,279 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 15:18:25,650 - INFO - __main__ - WebSocket 连接建立: nhEYt9D-Bnvd07DJAAAB
+2026-01-09 15:18:25,683 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 15:18:25,714 - INFO - root - 用户 2 的连接 1767940809908-y70k42qy4 已创建
+2026-01-09 15:18:25,714 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767940809908-y70k42qy4 (socket: nhEYt9D-Bnvd07DJAAAB)
+2026-01-09 15:18:25,714 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767940809908-y70k42qy4
+2026-01-09 15:18:30,912 - INFO - __main__ - WebSocket 连接建立: w54JJ0OsD-ZFzCuTAAAD
+2026-01-09 15:18:30,957 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 15:18:30,966 - INFO - root - 用户 2 的连接 1767941130931-t4gnc82gi 已创建
+2026-01-09 15:18:30,967 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767941130931-t4gnc82gi (socket: w54JJ0OsD-ZFzCuTAAAD)
+2026-01-09 15:18:30,967 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767941130931-t4gnc82gi
+2026-01-09 15:18:47,968 - INFO - __main__ - WebSocket 连接建立: nXc5d8MbIBv4Eq6BAAAF
+2026-01-09 15:18:47,983 - INFO - root - 用户 1 的设备 c8dd3a17-eb9b-43c9-9f57-21be24fb3e60 已注册
+2026-01-09 15:18:48,012 - INFO - root - 用户 1 的连接 d0ed2e0f-bc4d-469e-a577-ee87486642b0 已创建
+2026-01-09 15:18:48,013 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: d0ed2e0f-bc4d-469e-a577-ee87486642b0 (socket: nXc5d8MbIBv4Eq6BAAAF)
+2026-01-09 15:18:48,013 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: d0ed2e0f-bc4d-469e-a577-ee87486642b0
+2026-01-09 15:18:53,676 - WARNING - root - 更新消息 264 状态失败：消息不存在或已删除
+2026-01-09 15:18:53,676 - WARNING - backend.websocket.websocket_manager - 更新消息 264 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:18:53,910 - WARNING - root - 更新消息 264 状态失败：消息不存在或已删除
+2026-01-09 15:18:53,911 - WARNING - backend.websocket.websocket_manager - 更新消息 264 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:18:58,277 - WARNING - root - 更新消息 265 状态失败：消息不存在或已删除
+2026-01-09 15:18:58,278 - WARNING - backend.websocket.websocket_manager - 更新消息 265 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:18:58,293 - WARNING - root - 更新消息 265 状态失败：消息不存在或已删除
+2026-01-09 15:18:58,293 - WARNING - backend.websocket.websocket_manager - 更新消息 265 状态失败（可能消息不存在或字段未创建）
+2026-01-09 15:19:01,420 - INFO - __main__ - WebSocket 连接断开: nXc5d8MbIBv4Eq6BAAAF
+2026-01-09 15:19:01,428 - INFO - root - 连接 d0ed2e0f-bc4d-469e-a577-ee87486642b0 已断开
+2026-01-09 15:19:01,428 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: d0ed2e0f-bc4d-469e-a577-ee87486642b0
+2026-01-09 15:28:59,937 - INFO - __main__ - WebSocket 连接断开: w54JJ0OsD-ZFzCuTAAAD
+2026-01-09 15:28:59,939 - INFO - __main__ - WebSocket 连接断开: nhEYt9D-Bnvd07DJAAAB
+2026-01-09 15:28:59,952 - INFO - root - 连接 1767941130931-t4gnc82gi 已断开
+2026-01-09 15:28:59,952 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767941130931-t4gnc82gi
+2026-01-09 15:28:59,952 - INFO - root - 连接 1767940809908-y70k42qy4 已断开
+2026-01-09 15:28:59,954 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767940809908-y70k42qy4
+2026-01-09 16:00:34,961 - INFO - __main__ - WebSocket 连接建立: ye5HR5To6rPTsSrNAAAH
+2026-01-09 16:00:34,976 - INFO - root - 用户 1 的设备 152442d1-1dbe-470a-b6ed-f5d25e61be74 已注册
+2026-01-09 16:00:35,018 - INFO - root - 用户 1 的连接 875b1d99-2f59-4cb2-90b0-a1ce508ed4d2 已创建
+2026-01-09 16:00:35,019 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 875b1d99-2f59-4cb2-90b0-a1ce508ed4d2 (socket: ye5HR5To6rPTsSrNAAAH)
+2026-01-09 16:00:35,019 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 875b1d99-2f59-4cb2-90b0-a1ce508ed4d2
+2026-01-09 16:00:37,415 - INFO - __main__ - WebSocket 连接建立: 8NosOR1byY4rQL15AAAJ
+2026-01-09 16:00:37,429 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 16:00:37,439 - INFO - root - 用户 2 的连接 1767944615493-323caszti 已创建
+2026-01-09 16:00:37,439 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767944615493-323caszti (socket: 8NosOR1byY4rQL15AAAJ)
+2026-01-09 16:00:37,440 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767944615493-323caszti
+2026-01-09 16:00:45,449 - WARNING - root - 更新消息 268 状态失败：消息不存在或已删除
+2026-01-09 16:00:45,450 - WARNING - backend.websocket.websocket_manager - 更新消息 268 状态失败（可能消息不存在或字段未创建）
+2026-01-09 16:00:50,675 - WARNING - root - 更新消息 269 状态失败：消息不存在或已删除
+2026-01-09 16:00:50,675 - WARNING - backend.websocket.websocket_manager - 更新消息 269 状态失败（可能消息不存在或字段未创建）
+2026-01-09 16:01:01,359 - WARNING - root - 更新消息 272 状态失败：消息不存在或已删除
+2026-01-09 16:01:01,360 - WARNING - backend.websocket.websocket_manager - 更新消息 272 状态失败（可能消息不存在或字段未创建）
+2026-01-09 16:01:05,881 - WARNING - root - 更新消息 273 状态失败：消息不存在或已删除
+2026-01-09 16:01:05,882 - WARNING - backend.websocket.websocket_manager - 更新消息 273 状态失败（可能消息不存在或字段未创建）
+2026-01-09 16:01:48,561 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_75c3cd37
+2026-01-09 16:01:59,292 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_75c3cd37
+2026-01-09 16:02:08,287 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_75c3cd37
+2026-01-09 16:02:28,734 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_75c3cd37
+2026-01-09 16:02:31,173 - WARNING - root - 消息 1 不存在
+2026-01-09 16:02:34,247 - WARNING - root - 消息 1 不存在
+2026-01-09 16:02:38,314 - WARNING - root - 消息 1 不存在
+2026-01-09 16:02:40,695 - WARNING - root - 消息 1 不存在
+2026-01-09 16:02:42,603 - WARNING - root - 消息 1 不存在
+2026-01-09 16:02:44,991 - WARNING - root - 消息 1 不存在
+2026-01-09 16:03:46,632 - INFO - root - 消息 275 已被用户 2 撤回
+2026-01-09 16:09:51,197 - INFO - __main__ - WebSocket 连接断开: ye5HR5To6rPTsSrNAAAH
+2026-01-09 16:09:51,210 - INFO - root - 连接 875b1d99-2f59-4cb2-90b0-a1ce508ed4d2 已断开
+2026-01-09 16:09:51,211 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 875b1d99-2f59-4cb2-90b0-a1ce508ed4d2
+2026-01-09 16:09:52,975 - INFO - __main__ - WebSocket 连接断开: 8NosOR1byY4rQL15AAAJ
+2026-01-09 16:09:52,985 - INFO - root - 连接 1767944615493-323caszti 已断开
+2026-01-09 16:09:52,985 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767944615493-323caszti
+2026-01-09 16:10:02,680 - INFO - root - 数据库连接成功
+2026-01-09 16:10:02,723 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 16:10:02,736 - INFO - root - user_connections 表创建成功
+2026-01-09 16:10:02,738 - INFO - root - user_devices 表创建成功
+2026-01-09 16:10:02,741 - INFO - root - message_queue 表创建成功
+2026-01-09 16:10:02,741 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 16:10:02,741 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 16:10:04,887 - INFO - __main__ - WebSocket 连接建立: 8haor4hdkTxc75QgAAAB
+2026-01-09 16:10:04,920 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 16:10:04,948 - INFO - root - 用户 2 的连接 1767944615493-323caszti 已创建
+2026-01-09 16:10:04,950 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767944615493-323caszti (socket: 8haor4hdkTxc75QgAAAB)
+2026-01-09 16:10:04,951 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767944615493-323caszti
+2026-01-09 16:11:42,352 - INFO - __main__ - WebSocket 连接建立: xRyzczkYx5PxvBPeAAAD
+2026-01-09 16:11:42,367 - INFO - root - 用户 1 的设备 60e03f70-64ab-4785-8a20-55c6072b7b89 已注册
+2026-01-09 16:11:42,375 - INFO - root - 用户 1 的连接 b5a9155e-2a57-4c90-a2e9-4e84151a3666 已创建
+2026-01-09 16:11:42,376 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: b5a9155e-2a57-4c90-a2e9-4e84151a3666 (socket: xRyzczkYx5PxvBPeAAAD)
+2026-01-09 16:11:42,376 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: b5a9155e-2a57-4c90-a2e9-4e84151a3666
+2026-01-09 16:12:00,032 - INFO - root - 消息 277 已被用户 2 撤回
+2026-01-09 16:12:21,695 - INFO - root - 消息 279 已被用户 1 撤回
+2026-01-09 16:12:21,711 - INFO - __main__ - 消息 279 已被用户 1 撤回，已推送事件
+2026-01-09 16:35:14,463 - INFO - __main__ - WebSocket 连接断开: xRyzczkYx5PxvBPeAAAD
+2026-01-09 16:35:14,475 - INFO - root - 连接 b5a9155e-2a57-4c90-a2e9-4e84151a3666 已断开
+2026-01-09 16:35:14,475 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: b5a9155e-2a57-4c90-a2e9-4e84151a3666
+2026-01-09 16:35:16,905 - INFO - __main__ - WebSocket 连接断开: 8haor4hdkTxc75QgAAAB
+2026-01-09 16:35:16,923 - INFO - root - 连接 1767944615493-323caszti 已断开
+2026-01-09 16:35:16,923 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767944615493-323caszti
+2026-01-09 16:35:29,093 - INFO - root - 数据库连接成功
+2026-01-09 16:35:29,148 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 16:35:29,161 - INFO - root - user_connections 表创建成功
+2026-01-09 16:35:29,164 - INFO - root - user_devices 表创建成功
+2026-01-09 16:35:29,168 - INFO - root - message_queue 表创建成功
+2026-01-09 16:35:29,168 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 16:35:29,168 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 16:35:30,885 - INFO - __main__ - WebSocket 连接建立: TOpqqrKuDfLrLZp6AAAB
+2026-01-09 16:35:30,934 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 16:35:30,966 - INFO - root - 用户 2 的连接 1767944615493-323caszti 已创建
+2026-01-09 16:35:30,967 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767944615493-323caszti (socket: TOpqqrKuDfLrLZp6AAAB)
+2026-01-09 16:35:30,967 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767944615493-323caszti
+2026-01-09 16:35:56,376 - INFO - __main__ - WebSocket 连接建立: iYp6woctFg7hjlk1AAAD
+2026-01-09 16:35:56,427 - INFO - root - 用户 1 的设备 5397cba8-7cdb-4492-b298-a5abf92d7bf5 已注册
+2026-01-09 16:35:56,460 - INFO - root - 用户 1 的连接 0a2412b9-af2f-4e7c-8b63-ff5daee46fd5 已创建
+2026-01-09 16:35:56,461 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 0a2412b9-af2f-4e7c-8b63-ff5daee46fd5 (socket: iYp6woctFg7hjlk1AAAD)
+2026-01-09 16:35:56,461 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 0a2412b9-af2f-4e7c-8b63-ff5daee46fd5
+2026-01-09 16:36:21,466 - INFO - root - 消息 282 已被用户 2 撤回
+2026-01-09 16:37:50,023 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_29cacb8d，已按普通消息处理
+2026-01-09 18:09:34,501 - INFO - __main__ - WebSocket 连接断开: iYp6woctFg7hjlk1AAAD
+2026-01-09 18:09:34,502 - INFO - __main__ - WebSocket 连接断开: TOpqqrKuDfLrLZp6AAAB
+2026-01-09 18:09:34,511 - INFO - root - 连接 0a2412b9-af2f-4e7c-8b63-ff5daee46fd5 已断开
+2026-01-09 18:09:34,511 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 0a2412b9-af2f-4e7c-8b63-ff5daee46fd5
+2026-01-09 18:09:34,513 - INFO - root - 连接 1767944615493-323caszti 已断开
+2026-01-09 18:09:34,513 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767944615493-323caszti
+2026-01-09 18:12:03,001 - INFO - root - 数据库连接成功
+2026-01-09 18:12:03,042 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 18:12:03,053 - INFO - root - user_connections 表创建成功
+2026-01-09 18:12:03,057 - INFO - root - user_devices 表创建成功
+2026-01-09 18:12:03,061 - INFO - root - message_queue 表创建成功
+2026-01-09 18:12:03,061 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 18:12:03,061 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 18:12:09,012 - INFO - __main__ - WebSocket 连接建立: B2OBbjy4ksiDBT6hAAAB
+2026-01-09 18:12:09,038 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 18:12:09,051 - INFO - root - 用户 2 的连接 1767944615493-323caszti 已创建
+2026-01-09 18:12:09,053 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767944615493-323caszti (socket: B2OBbjy4ksiDBT6hAAAB)
+2026-01-09 18:12:09,053 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767944615493-323caszti
+2026-01-09 18:12:25,075 - INFO - __main__ - WebSocket 连接建立: tP65MVS9P50C7fdvAAAD
+2026-01-09 18:12:25,090 - INFO - root - 用户 1 的设备 7203ad9e-ec49-4a0d-9f35-875f6c45a93a 已注册
+2026-01-09 18:12:25,110 - INFO - root - 用户 1 的连接 b09f5c5d-d203-41d7-a2b6-a13375808724 已创建
+2026-01-09 18:12:25,112 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: b09f5c5d-d203-41d7-a2b6-a13375808724 (socket: tP65MVS9P50C7fdvAAAD)
+2026-01-09 18:12:25,112 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: b09f5c5d-d203-41d7-a2b6-a13375808724
+2026-01-09 18:12:30,995 - INFO - __main__ - WebSocket 连接建立: Pa4CiHKoLMJPrRgdAAAF
+2026-01-09 18:12:31,015 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 18:12:31,046 - INFO - root - 用户 2 的连接 1767948181127-9vszarn7b 已创建
+2026-01-09 18:12:31,047 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767948181127-9vszarn7b (socket: Pa4CiHKoLMJPrRgdAAAF)
+2026-01-09 18:12:31,047 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767948181127-9vszarn7b
+2026-01-09 18:12:42,746 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_1a9a2258，已按普通消息处理
+2026-01-09 18:13:41,015 - INFO - root - 消息 290 已被用户 2 撤回
+2026-01-09 18:16:43,422 - INFO - __main__ - WebSocket 连接断开: tP65MVS9P50C7fdvAAAD
+2026-01-09 18:16:43,432 - INFO - root - 连接 b09f5c5d-d203-41d7-a2b6-a13375808724 已断开
+2026-01-09 18:16:43,434 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: b09f5c5d-d203-41d7-a2b6-a13375808724
+2026-01-09 18:16:44,496 - INFO - __main__ - WebSocket 连接断开: B2OBbjy4ksiDBT6hAAAB
+2026-01-09 18:16:44,497 - INFO - __main__ - WebSocket 连接断开: Pa4CiHKoLMJPrRgdAAAF
+2026-01-09 18:16:44,507 - INFO - root - 连接 1767944615493-323caszti 已断开
+2026-01-09 18:16:44,507 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767944615493-323caszti
+2026-01-09 18:16:44,507 - INFO - root - 连接 1767948181127-9vszarn7b 已断开
+2026-01-09 18:16:44,508 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767948181127-9vszarn7b
+2026-01-09 18:16:56,641 - INFO - root - 数据库连接成功
+2026-01-09 18:16:56,691 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 18:16:56,704 - INFO - root - user_connections 表创建成功
+2026-01-09 18:16:56,706 - INFO - root - user_devices 表创建成功
+2026-01-09 18:16:56,711 - INFO - root - message_queue 表创建成功
+2026-01-09 18:16:56,711 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 18:16:56,711 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 18:16:57,028 - INFO - __main__ - WebSocket 连接建立: YdItuYKKjZD13YFAAAAB
+2026-01-09 18:16:57,059 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 18:16:57,074 - INFO - root - 用户 2 的连接 1767944615493-323caszti 已创建
+2026-01-09 18:16:57,075 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767944615493-323caszti (socket: YdItuYKKjZD13YFAAAAB)
+2026-01-09 18:16:57,075 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767944615493-323caszti
+2026-01-09 18:17:02,987 - INFO - __main__ - WebSocket 连接断开: YdItuYKKjZD13YFAAAAB
+2026-01-09 18:17:02,995 - INFO - root - 连接 1767944615493-323caszti 已断开
+2026-01-09 18:17:02,995 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767944615493-323caszti
+2026-01-09 18:17:09,206 - INFO - root - 数据库连接成功
+2026-01-09 18:17:09,249 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 18:17:09,263 - INFO - root - user_connections 表创建成功
+2026-01-09 18:17:09,266 - INFO - root - user_devices 表创建成功
+2026-01-09 18:17:09,269 - INFO - root - message_queue 表创建成功
+2026-01-09 18:17:09,269 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 18:17:09,269 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 18:17:09,522 - INFO - __main__ - WebSocket 连接建立: mwzesyQ5q065K0VwAAAB
+2026-01-09 18:17:09,545 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 18:17:09,555 - INFO - root - 用户 2 的连接 1767944615493-323caszti 已创建
+2026-01-09 18:17:09,556 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767944615493-323caszti (socket: mwzesyQ5q065K0VwAAAB)
+2026-01-09 18:17:09,556 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767944615493-323caszti
+2026-01-09 18:20:29,975 - INFO - __main__ - WebSocket 连接断开: mwzesyQ5q065K0VwAAAB
+2026-01-09 18:20:29,986 - INFO - root - 连接 1767944615493-323caszti 已断开
+2026-01-09 18:20:29,986 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767944615493-323caszti
+2026-01-09 18:23:46,415 - INFO - root - 数据库连接成功
+2026-01-09 18:23:46,457 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 18:23:46,470 - INFO - root - user_connections 表创建成功
+2026-01-09 18:23:46,473 - INFO - root - user_devices 表创建成功
+2026-01-09 18:23:46,478 - INFO - root - message_queue 表创建成功
+2026-01-09 18:23:46,478 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 18:23:46,478 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 18:23:56,642 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 18:24:11,266 - INFO - __main__ - WebSocket 连接建立: VyIMOLQyBiiISeOPAAAB
+2026-01-09 18:24:11,281 - INFO - root - 用户 1 的设备 6456f728-6e8a-451a-b7b3-a0a73a612e27 已注册
+2026-01-09 18:24:11,301 - INFO - root - 用户 1 的连接 446b5c9f-d4b7-42af-921d-bd1d03c369ef 已创建
+2026-01-09 18:24:11,303 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 446b5c9f-d4b7-42af-921d-bd1d03c369ef (socket: VyIMOLQyBiiISeOPAAAB)
+2026-01-09 18:24:11,303 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 446b5c9f-d4b7-42af-921d-bd1d03c369ef
+2026-01-09 18:24:16,068 - INFO - __main__ - WebSocket 连接建立: XcupB_GkP9ZF8PYyAAAD
+2026-01-09 18:24:16,104 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 18:24:16,115 - INFO - root - 用户 2 的连接 1767954204363-y4v7afh1v 已创建
+2026-01-09 18:24:16,115 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767954204363-y4v7afh1v (socket: XcupB_GkP9ZF8PYyAAAD)
+2026-01-09 18:24:16,115 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767954204363-y4v7afh1v
+2026-01-09 18:24:40,674 - INFO - root - 消息 293 已被用户 2 撤回
+2026-01-09 18:25:09,614 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_d8053a14，已按普通消息处理
+2026-01-09 18:37:43,443 - INFO - __main__ - WebSocket 连接断开: XcupB_GkP9ZF8PYyAAAD
+2026-01-09 18:37:43,444 - INFO - __main__ - WebSocket 连接断开: VyIMOLQyBiiISeOPAAAB
+2026-01-09 18:37:43,452 - INFO - root - 连接 1767954204363-y4v7afh1v 已断开
+2026-01-09 18:37:43,453 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767954204363-y4v7afh1v
+2026-01-09 18:37:43,455 - INFO - root - 连接 446b5c9f-d4b7-42af-921d-bd1d03c369ef 已断开
+2026-01-09 18:37:43,455 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 446b5c9f-d4b7-42af-921d-bd1d03c369ef
+2026-01-09 18:37:54,567 - INFO - root - 数据库连接成功
+2026-01-09 18:37:54,645 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 18:37:54,663 - INFO - root - user_connections 表创建成功
+2026-01-09 18:37:54,666 - INFO - root - user_devices 表创建成功
+2026-01-09 18:37:54,670 - INFO - root - message_queue 表创建成功
+2026-01-09 18:37:54,671 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 18:37:54,671 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 18:37:54,904 - INFO - __main__ - WebSocket 连接建立: AP9dO-6GfLhDvYnFAAAB
+2026-01-09 18:37:54,943 - INFO - root - 用户 1 的设备 6456f728-6e8a-451a-b7b3-a0a73a612e27 已注册
+2026-01-09 18:37:54,972 - INFO - root - 用户 1 的连接 446b5c9f-d4b7-42af-921d-bd1d03c369ef 已创建
+2026-01-09 18:37:54,972 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 446b5c9f-d4b7-42af-921d-bd1d03c369ef (socket: AP9dO-6GfLhDvYnFAAAB)
+2026-01-09 18:37:54,972 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 446b5c9f-d4b7-42af-921d-bd1d03c369ef
+2026-01-09 18:37:58,883 - INFO - __main__ - WebSocket 连接建立: JlnLtNP96Wk2ijtAAAAD
+2026-01-09 18:37:58,916 - INFO - root - 用户 2 的设备 1767926230080-gbkn8k30v 已注册
+2026-01-09 18:37:58,945 - INFO - root - 用户 2 的连接 1767954204363-y4v7afh1v 已创建
+2026-01-09 18:37:58,945 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767954204363-y4v7afh1v (socket: JlnLtNP96Wk2ijtAAAAD)
+2026-01-09 18:37:58,945 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767954204363-y4v7afh1v
+2026-01-09 18:38:02,697 - INFO - __main__ - WebSocket 连接断开: AP9dO-6GfLhDvYnFAAAB
+2026-01-09 18:38:02,707 - INFO - root - 连接 446b5c9f-d4b7-42af-921d-bd1d03c369ef 已断开
+2026-01-09 18:38:02,707 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 446b5c9f-d4b7-42af-921d-bd1d03c369ef
+2026-01-09 18:38:35,170 - INFO - __main__ - WebSocket 连接建立: 5YmaI2rv2VRr1QogAAAF
+2026-01-09 18:38:35,191 - INFO - root - 用户 1 的设备 bec47a28-93d4-446a-8dc8-bc60720a5fcd 已注册
+2026-01-09 18:38:35,206 - INFO - root - 用户 1 的连接 56575fdb-7b42-44d6-a21f-57d98be908ab 已创建
+2026-01-09 18:38:35,206 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 56575fdb-7b42-44d6-a21f-57d98be908ab (socket: 5YmaI2rv2VRr1QogAAAF)
+2026-01-09 18:38:35,207 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 56575fdb-7b42-44d6-a21f-57d98be908ab
+2026-01-09 18:38:53,998 - INFO - root - 消息 301 已被用户 2 撤回
+2026-01-09 18:39:11,107 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_3f8e9b21，已按普通消息处理
+2026-01-09 18:39:56,887 - INFO - __main__ - WebSocket 连接断开: 5YmaI2rv2VRr1QogAAAF
+2026-01-09 18:39:56,902 - INFO - root - 连接 56575fdb-7b42-44d6-a21f-57d98be908ab 已断开
+2026-01-09 18:39:56,902 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 56575fdb-7b42-44d6-a21f-57d98be908ab
+2026-01-09 18:45:29,054 - INFO - __main__ - WebSocket 连接断开: JlnLtNP96Wk2ijtAAAAD
+2026-01-09 18:45:29,064 - INFO - root - 连接 1767954204363-y4v7afh1v 已断开
+2026-01-09 18:45:29,064 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767954204363-y4v7afh1v
+2026-01-09 18:45:50,445 - INFO - root - 数据库连接成功
+2026-01-09 18:45:50,483 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 18:45:50,497 - INFO - root - user_connections 表创建成功
+2026-01-09 18:45:50,501 - INFO - root - user_devices 表创建成功
+2026-01-09 18:45:50,508 - INFO - root - message_queue 表创建成功
+2026-01-09 18:45:50,508 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 18:45:50,509 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 18:46:02,447 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 18:46:14,999 - INFO - __main__ - WebSocket 连接建立: axAgcOB3Jtxie_eQAAAB
+2026-01-09 18:46:15,050 - INFO - root - 用户 1 的设备 08c0b35a-d084-45b1-a318-37127a8cf878 已注册
+2026-01-09 18:46:15,081 - INFO - root - 用户 1 的连接 b91e1fd1-4fd5-4c7e-a0ec-3fd48ebdb245 已创建
+2026-01-09 18:46:15,081 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: b91e1fd1-4fd5-4c7e-a0ec-3fd48ebdb245 (socket: axAgcOB3Jtxie_eQAAAB)
+2026-01-09 18:46:15,082 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: b91e1fd1-4fd5-4c7e-a0ec-3fd48ebdb245
+2026-01-09 18:46:19,668 - INFO - __main__ - WebSocket 连接建立: q0syI9mDOalPWHGiAAAD
+2026-01-09 18:46:19,707 - INFO - root - 用户 2 的设备 1767955579671-iibc82i3q 已注册
+2026-01-09 18:46:19,739 - INFO - root - 用户 2 的连接 1767955534877-gqff0gtk9 已创建
+2026-01-09 18:46:19,740 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767955534877-gqff0gtk9 (socket: q0syI9mDOalPWHGiAAAD)
+2026-01-09 18:46:19,740 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767955534877-gqff0gtk9
+2026-01-09 18:47:32,996 - INFO - root - 消息 314 已被用户 2 撤回
+2026-01-09 18:47:55,679 - INFO - root - 消息 316 已被用户 2 撤回
+2026-01-09 18:48:09,521 - INFO - root - 消息 317 已被用户 2 撤回
+2026-01-09 18:51:14,147 - INFO - __main__ - WebSocket 连接断开: axAgcOB3Jtxie_eQAAAB
+2026-01-09 18:51:14,168 - INFO - root - 连接 b91e1fd1-4fd5-4c7e-a0ec-3fd48ebdb245 已断开
+2026-01-09 18:51:14,169 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: b91e1fd1-4fd5-4c7e-a0ec-3fd48ebdb245
+2026-01-09 19:02:30,059 - INFO - __main__ - WebSocket 连接断开: q0syI9mDOalPWHGiAAAD
+2026-01-09 19:02:30,067 - INFO - root - 连接 1767955534877-gqff0gtk9 已断开
+2026-01-09 19:02:30,067 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767955534877-gqff0gtk9
+2026-01-09 19:02:41,479 - INFO - root - 数据库连接成功
+2026-01-09 19:02:41,529 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 19:02:41,541 - INFO - root - user_connections 表创建成功
+2026-01-09 19:02:41,544 - INFO - root - user_devices 表创建成功
+2026-01-09 19:02:41,547 - INFO - root - message_queue 表创建成功
+2026-01-09 19:02:41,548 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 19:02:41,548 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 19:02:43,895 - INFO - __main__ - WebSocket 连接建立: 0eMA9IbyjpD4OarzAAAB
+2026-01-09 19:02:43,928 - INFO - root - 用户 2 的设备 1767955579671-iibc82i3q 已注册
+2026-01-09 19:02:43,936 - INFO - root - 用户 2 的连接 1767955534877-gqff0gtk9 已创建
+2026-01-09 19:02:43,936 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767955534877-gqff0gtk9 (socket: 0eMA9IbyjpD4OarzAAAB)
+2026-01-09 19:02:43,936 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767955534877-gqff0gtk9
+2026-01-09 19:02:59,563 - INFO - __main__ - WebSocket 连接建立: jbXpNqZk-7ReB7fTAAAD
+2026-01-09 19:02:59,615 - INFO - root - 用户 1 的设备 d9b1da88-1e54-4ee3-991e-441737c09355 已注册
+2026-01-09 19:02:59,643 - INFO - root - 用户 1 的连接 21e7fb66-cfb0-4982-91dd-7a6c86c2ddc7 已创建
+2026-01-09 19:02:59,644 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 21e7fb66-cfb0-4982-91dd-7a6c86c2ddc7 (socket: jbXpNqZk-7ReB7fTAAAD)
+2026-01-09 19:02:59,644 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 21e7fb66-cfb0-4982-91dd-7a6c86c2ddc7
+2026-01-09 19:03:18,507 - INFO - root - 消息 325 已被用户 2 撤回
+2026-01-09 19:03:50,873 - INFO - root - 消息 330 已被用户 1 撤回
+2026-01-09 19:03:50,890 - INFO - __main__ - 消息 330 已被用户 1 撤回，已推送事件
+2026-01-09 19:04:45,966 - INFO - __main__ - WebSocket 连接断开: jbXpNqZk-7ReB7fTAAAD
+2026-01-09 19:04:45,995 - INFO - root - 连接 21e7fb66-cfb0-4982-91dd-7a6c86c2ddc7 已断开
+2026-01-09 19:04:45,996 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 21e7fb66-cfb0-4982-91dd-7a6c86c2ddc7
+2026-01-09 19:10:09,224 - INFO - __main__ - WebSocket 连接建立: bTAmk2iu2p9MCpLCAAAF
+2026-01-09 19:10:09,238 - INFO - root - 用户 1 的设备 23a08a6a-8787-4751-910a-debd1fda1d91 已注册
+2026-01-09 19:10:09,245 - INFO - root - 用户 1 的连接 f246ed05-d0ee-4a50-98fa-880e5962864e 已创建
+2026-01-09 19:10:09,246 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: f246ed05-d0ee-4a50-98fa-880e5962864e (socket: bTAmk2iu2p9MCpLCAAAF)
+2026-01-09 19:10:09,246 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: f246ed05-d0ee-4a50-98fa-880e5962864e
+2026-01-09 19:10:38,760 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_8229f3b8，已按普通消息处理
+2026-01-09 19:11:02,242 - INFO - root - 消息 343 已被用户 2 撤回
+2026-01-09 19:11:36,066 - INFO - root - 消息 347 已被用户 2 撤回
+2026-01-09 19:12:03,924 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_8229f3b8，已按普通消息处理
+2026-01-09 19:15:49,262 - INFO - __main__ - WebSocket 连接断开: bTAmk2iu2p9MCpLCAAAF
+2026-01-09 19:15:49,272 - INFO - root - 连接 f246ed05-d0ee-4a50-98fa-880e5962864e 已断开
+2026-01-09 19:15:49,273 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: f246ed05-d0ee-4a50-98fa-880e5962864e
+2026-01-09 19:18:51,910 - INFO - __main__ - WebSocket 连接断开: 0eMA9IbyjpD4OarzAAAB
+2026-01-09 19:18:51,919 - INFO - root - 连接 1767955534877-gqff0gtk9 已断开
+2026-01-09 19:18:51,919 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767955534877-gqff0gtk9
+2026-01-09 19:19:00,284 - INFO - root - 数据库连接成功
+2026-01-09 19:19:00,327 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 19:19:00,336 - INFO - root - user_connections 表创建成功
+2026-01-09 19:19:00,341 - INFO - root - user_devices 表创建成功
+2026-01-09 19:19:00,346 - INFO - root - message_queue 表创建成功
+2026-01-09 19:19:00,346 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 19:19:00,347 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 19:19:04,894 - INFO - __main__ - WebSocket 连接建立: 6hfnEHD8adQ3LliTAAAB
+2026-01-09 19:19:04,909 - INFO - root - 用户 2 的设备 1767955579671-iibc82i3q 已注册
+2026-01-09 19:19:04,942 - INFO - root - 用户 2 的连接 1767955534877-gqff0gtk9 已创建
+2026-01-09 19:19:04,944 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767955534877-gqff0gtk9 (socket: 6hfnEHD8adQ3LliTAAAB)
+2026-01-09 19:19:04,944 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767955534877-gqff0gtk9
+2026-01-09 19:19:10,288 - INFO - __main__ - WebSocket 连接断开: 6hfnEHD8adQ3LliTAAAB
+2026-01-09 19:19:10,308 - INFO - root - 连接 1767955534877-gqff0gtk9 已断开
+2026-01-09 19:19:10,308 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767955534877-gqff0gtk9
+2026-01-09 19:19:16,774 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 19:19:21,721 - INFO - __main__ - WebSocket 连接建立: h8VJ3gwkl58FG6vqAAAD
+2026-01-09 19:19:21,739 - INFO - root - 用户 1 的设备 8a5b7b3b-ae95-48ac-a763-a6fca3663d6d 已注册
+2026-01-09 19:19:21,750 - INFO - root - 用户 1 的连接 9535b860-1114-4462-b10d-b2af15aa3fe1 已创建
+2026-01-09 19:19:21,750 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 9535b860-1114-4462-b10d-b2af15aa3fe1 (socket: h8VJ3gwkl58FG6vqAAAD)
+2026-01-09 19:19:21,751 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 9535b860-1114-4462-b10d-b2af15aa3fe1
+2026-01-09 19:19:25,327 - INFO - __main__ - WebSocket 连接建立: UcbCecnG-jURsX2VAAAF
+2026-01-09 19:19:25,365 - INFO - root - 用户 2 的设备 1767957565330-okv6xt0p0 已注册
+2026-01-09 19:19:25,374 - INFO - root - 用户 2 的连接 1767957550728-jqj7kb55f 已创建
+2026-01-09 19:19:25,375 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767957550728-jqj7kb55f (socket: UcbCecnG-jURsX2VAAAF)
+2026-01-09 19:19:25,375 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767957550728-jqj7kb55f
+2026-01-09 19:19:41,291 - INFO - root - 消息 356 已被用户 2 撤回
+2026-01-09 19:19:46,109 - INFO - root - 消息 357 已被用户 2 撤回
+2026-01-09 19:22:00,724 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_a239dd39，已按普通消息处理
+2026-01-09 19:23:38,112 - INFO - __main__ - WebSocket 连接断开: h8VJ3gwkl58FG6vqAAAD
+2026-01-09 19:23:38,120 - INFO - root - 连接 9535b860-1114-4462-b10d-b2af15aa3fe1 已断开
+2026-01-09 19:23:38,120 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 9535b860-1114-4462-b10d-b2af15aa3fe1
+2026-01-09 19:26:51,916 - INFO - __main__ - WebSocket 连接断开: UcbCecnG-jURsX2VAAAF
+2026-01-09 19:26:51,925 - INFO - root - 连接 1767957550728-jqj7kb55f 已断开
+2026-01-09 19:26:51,926 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767957550728-jqj7kb55f
+2026-01-09 19:27:02,216 - INFO - root - 数据库连接成功
+2026-01-09 19:27:02,267 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 19:27:02,279 - INFO - root - user_connections 表创建成功
+2026-01-09 19:27:02,283 - INFO - root - user_devices 表创建成功
+2026-01-09 19:27:02,286 - INFO - root - message_queue 表创建成功
+2026-01-09 19:27:02,287 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 19:27:02,287 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 19:27:04,887 - INFO - __main__ - WebSocket 连接建立: CK-wZKEhpmEBBSaTAAAB
+2026-01-09 19:27:04,919 - INFO - root - 用户 2 的设备 1767957565330-okv6xt0p0 已注册
+2026-01-09 19:27:04,947 - INFO - root - 用户 2 的连接 1767957550728-jqj7kb55f 已创建
+2026-01-09 19:27:04,948 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767957550728-jqj7kb55f (socket: CK-wZKEhpmEBBSaTAAAB)
+2026-01-09 19:27:04,948 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767957550728-jqj7kb55f
+2026-01-09 19:27:08,160 - INFO - __main__ - WebSocket 连接断开: CK-wZKEhpmEBBSaTAAAB
+2026-01-09 19:27:08,169 - INFO - root - 连接 1767957550728-jqj7kb55f 已断开
+2026-01-09 19:27:08,170 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767957550728-jqj7kb55f
+2026-01-09 19:27:13,946 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 19:27:24,267 - INFO - __main__ - WebSocket 连接建立: VIaKOc4w8hJ4ax1UAAAD
+2026-01-09 19:27:24,281 - INFO - root - 用户 1 的设备 e1f10740-2007-4c53-9590-985122884acf 已注册
+2026-01-09 19:27:24,288 - INFO - root - 用户 1 的连接 1192a886-80a9-43d9-b3d5-4a67626fc8f5 已创建
+2026-01-09 19:27:24,289 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 1192a886-80a9-43d9-b3d5-4a67626fc8f5 (socket: VIaKOc4w8hJ4ax1UAAAD)
+2026-01-09 19:27:24,289 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 1192a886-80a9-43d9-b3d5-4a67626fc8f5
+2026-01-09 19:27:30,919 - INFO - __main__ - WebSocket 连接建立: ykk6rXorXXEPRG4dAAAF
+2026-01-09 19:27:30,957 - INFO - root - 用户 2 的设备 1767958050921-vj7stzmnq 已注册
+2026-01-09 19:27:30,969 - INFO - root - 用户 2 的连接 1767958028576-3qg7bsqla 已创建
+2026-01-09 19:27:30,970 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767958028576-3qg7bsqla (socket: ykk6rXorXXEPRG4dAAAF)
+2026-01-09 19:27:30,971 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767958028576-3qg7bsqla
+2026-01-09 19:27:46,278 - INFO - root - 消息 369 已被用户 2 撤回
+2026-01-09 19:28:03,733 - INFO - root - 消息 372 已被用户 2 撤回
+2026-01-09 19:28:17,592 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_6b882ebf，已按普通消息处理
+2026-01-09 19:29:06,828 - INFO - root - 消息 380 已被用户 2 撤回
+2026-01-09 19:31:27,069 - INFO - __main__ - WebSocket 连接断开: VIaKOc4w8hJ4ax1UAAAD
+2026-01-09 19:31:27,084 - INFO - root - 连接 1192a886-80a9-43d9-b3d5-4a67626fc8f5 已断开
+2026-01-09 19:31:27,085 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 1192a886-80a9-43d9-b3d5-4a67626fc8f5
+2026-01-09 19:36:32,415 - INFO - __main__ - WebSocket 连接断开: ykk6rXorXXEPRG4dAAAF
+2026-01-09 19:36:32,436 - INFO - root - 连接 1767958028576-3qg7bsqla 已断开
+2026-01-09 19:36:32,437 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767958028576-3qg7bsqla
+2026-01-09 19:36:44,663 - INFO - root - 数据库连接成功
+2026-01-09 19:36:44,702 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 19:36:44,712 - INFO - root - user_connections 表创建成功
+2026-01-09 19:36:44,718 - INFO - root - user_devices 表创建成功
+2026-01-09 19:36:44,721 - INFO - root - message_queue 表创建成功
+2026-01-09 19:36:44,721 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 19:36:44,721 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 19:36:45,890 - INFO - __main__ - WebSocket 连接建立: ncWCdD9zMd83YMduAAAB
+2026-01-09 19:36:45,902 - INFO - root - 用户 2 的设备 1767958050921-vj7stzmnq 已注册
+2026-01-09 19:36:45,923 - INFO - root - 用户 2 的连接 1767958028576-3qg7bsqla 已创建
+2026-01-09 19:36:45,923 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767958028576-3qg7bsqla (socket: ncWCdD9zMd83YMduAAAB)
+2026-01-09 19:36:45,923 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767958028576-3qg7bsqla
+2026-01-09 19:36:56,991 - INFO - __main__ - WebSocket 连接建立: JVFUjgijk3fmUwH_AAAD
+2026-01-09 19:36:57,008 - INFO - root - 用户 1 的设备 0ce46327-331d-4e8e-9802-8552bd55094f 已注册
+2026-01-09 19:36:57,018 - INFO - root - 用户 1 的连接 d85fbc7e-5837-4755-827f-a433c982ee39 已创建
+2026-01-09 19:36:57,020 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: d85fbc7e-5837-4755-827f-a433c982ee39 (socket: JVFUjgijk3fmUwH_AAAD)
+2026-01-09 19:36:57,020 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: d85fbc7e-5837-4755-827f-a433c982ee39
+2026-01-09 19:37:13,266 - INFO - root - 消息 385 已被用户 2 撤回
+2026-01-09 19:37:58,735 - INFO - __main__ - WebSocket 连接断开: JVFUjgijk3fmUwH_AAAD
+2026-01-09 19:37:58,745 - INFO - root - 连接 d85fbc7e-5837-4755-827f-a433c982ee39 已断开
+2026-01-09 19:37:58,746 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: d85fbc7e-5837-4755-827f-a433c982ee39
+2026-01-09 19:38:00,884 - INFO - __main__ - WebSocket 连接断开: ncWCdD9zMd83YMduAAAB
+2026-01-09 19:38:00,892 - INFO - root - 连接 1767958028576-3qg7bsqla 已断开
+2026-01-09 19:38:00,893 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767958028576-3qg7bsqla
+2026-01-09 19:41:32,130 - INFO - root - 数据库连接成功
+2026-01-09 19:41:32,178 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 19:41:32,191 - INFO - root - user_connections 表创建成功
+2026-01-09 19:41:32,194 - INFO - root - user_devices 表创建成功
+2026-01-09 19:41:32,199 - INFO - root - message_queue 表创建成功
+2026-01-09 19:41:32,199 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 19:41:32,200 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 19:41:50,626 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 19:42:03,274 - INFO - __main__ - WebSocket 连接建立: u3Lj236tujJ9bAPhAAAB
+2026-01-09 19:42:03,312 - INFO - root - 用户 1 的设备 c614bd46-ec72-4349-9d2d-4eafa89dad19 已注册
+2026-01-09 19:42:03,320 - INFO - root - 用户 1 的连接 dc02d9aa-f162-4a80-842d-958459a01845 已创建
+2026-01-09 19:42:03,321 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: dc02d9aa-f162-4a80-842d-958459a01845 (socket: u3Lj236tujJ9bAPhAAAB)
+2026-01-09 19:42:03,321 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: dc02d9aa-f162-4a80-842d-958459a01845
+2026-01-09 19:42:08,220 - INFO - __main__ - WebSocket 连接建立: VXrqK1ZbcWrn7FW1AAAD
+2026-01-09 19:42:08,252 - INFO - root - 用户 2 的设备 1767958928222-pvarckbyc 已注册
+2026-01-09 19:42:08,263 - INFO - root - 用户 2 的连接 1767958684724-ont9ciocd 已创建
+2026-01-09 19:42:08,264 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767958684724-ont9ciocd (socket: VXrqK1ZbcWrn7FW1AAAD)
+2026-01-09 19:42:08,265 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767958684724-ont9ciocd
+2026-01-09 19:43:00,552 - INFO - root - 消息 393 已被用户 2 撤回
+2026-01-09 19:43:34,265 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_d28e3e21，已按普通消息处理
+2026-01-09 19:55:48,000 - INFO - __main__ - WebSocket 连接断开: u3Lj236tujJ9bAPhAAAB
+2026-01-09 19:55:48,009 - INFO - root - 连接 dc02d9aa-f162-4a80-842d-958459a01845 已断开
+2026-01-09 19:55:48,009 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: dc02d9aa-f162-4a80-842d-958459a01845
+2026-01-09 19:55:49,418 - INFO - __main__ - WebSocket 连接断开: VXrqK1ZbcWrn7FW1AAAD
+2026-01-09 19:55:49,440 - INFO - root - 连接 1767958684724-ont9ciocd 已断开
+2026-01-09 19:55:49,441 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767958684724-ont9ciocd
+2026-01-09 19:56:01,701 - INFO - root - 数据库连接成功
+2026-01-09 19:56:01,743 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 19:56:01,761 - INFO - root - user_connections 表创建成功
+2026-01-09 19:56:01,764 - INFO - root - user_devices 表创建成功
+2026-01-09 19:56:01,768 - INFO - root - message_queue 表创建成功
+2026-01-09 19:56:01,769 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 19:56:01,769 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 19:56:10,155 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 19:56:22,880 - INFO - __main__ - WebSocket 连接建立: qDvNlpNxHz3SePKZAAAB
+2026-01-09 19:56:22,926 - INFO - root - 用户 1 的设备 20a2f6f0-f680-41f6-b7ca-c0c216baf968 已注册
+2026-01-09 19:56:22,957 - INFO - root - 用户 1 的连接 b0ef992b-b441-448a-8574-084f3727a80f 已创建
+2026-01-09 19:56:22,958 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: b0ef992b-b441-448a-8574-084f3727a80f (socket: qDvNlpNxHz3SePKZAAAB)
+2026-01-09 19:56:22,958 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: b0ef992b-b441-448a-8574-084f3727a80f
+2026-01-09 19:56:27,094 - INFO - __main__ - WebSocket 连接建立: YPDa4tmPuiWA3DhKAAAD
+2026-01-09 19:56:27,112 - INFO - root - 用户 2 的设备 1767959787097-w7gz0kj4z 已注册
+2026-01-09 19:56:27,122 - INFO - root - 用户 2 的连接 1767959756072-7k7s4u923 已创建
+2026-01-09 19:56:27,123 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767959756072-7k7s4u923 (socket: YPDa4tmPuiWA3DhKAAAD)
+2026-01-09 19:56:27,123 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767959756072-7k7s4u923
+2026-01-09 19:56:36,552 - INFO - root - 消息 404 已被用户 2 撤回
+2026-01-09 19:58:31,610 - INFO - __main__ - WebSocket 连接断开: qDvNlpNxHz3SePKZAAAB
+2026-01-09 19:58:31,622 - INFO - root - 连接 b0ef992b-b441-448a-8574-084f3727a80f 已断开
+2026-01-09 19:58:31,622 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: b0ef992b-b441-448a-8574-084f3727a80f
+2026-01-09 20:08:19,139 - INFO - __main__ - WebSocket 连接断开: YPDa4tmPuiWA3DhKAAAD
+2026-01-09 20:08:19,147 - INFO - root - 连接 1767959756072-7k7s4u923 已断开
+2026-01-09 20:08:19,147 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767959756072-7k7s4u923
+2026-01-09 20:08:25,790 - INFO - root - 数据库连接成功
+2026-01-09 20:08:25,834 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 20:08:25,845 - INFO - root - user_connections 表创建成功
+2026-01-09 20:08:25,847 - INFO - root - user_devices 表创建成功
+2026-01-09 20:08:25,852 - INFO - root - message_queue 表创建成功
+2026-01-09 20:08:25,852 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 20:08:25,852 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 20:08:31,599 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 20:08:46,498 - INFO - __main__ - WebSocket 连接建立: PiWnLFnyNZRSmS_sAAAB
+2026-01-09 20:08:46,516 - INFO - root - 用户 1 的设备 b6f33dcf-3399-4792-bf31-86d7e59cbcb3 已注册
+2026-01-09 20:08:46,526 - INFO - root - 用户 1 的连接 c860fdaa-8bfd-4fed-b5fe-50e1dbb6483b 已创建
+2026-01-09 20:08:46,527 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: c860fdaa-8bfd-4fed-b5fe-50e1dbb6483b (socket: PiWnLFnyNZRSmS_sAAAB)
+2026-01-09 20:08:46,528 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: c860fdaa-8bfd-4fed-b5fe-50e1dbb6483b
+2026-01-09 20:08:48,935 - INFO - __main__ - WebSocket 连接建立: jSqZzfKkSWiLlNN8AAAD
+2026-01-09 20:08:48,949 - INFO - root - 用户 2 的设备 1767960528937-mpx30ppgb 已注册
+2026-01-09 20:08:48,958 - INFO - root - 用户 2 的连接 1767960504278-zghq5e76m 已创建
+2026-01-09 20:08:48,958 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767960504278-zghq5e76m (socket: jSqZzfKkSWiLlNN8AAAD)
+2026-01-09 20:08:48,959 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767960504278-zghq5e76m
+2026-01-09 20:10:13,116 - INFO - __main__ - WebSocket 连接断开: PiWnLFnyNZRSmS_sAAAB
+2026-01-09 20:10:13,127 - INFO - root - 连接 c860fdaa-8bfd-4fed-b5fe-50e1dbb6483b 已断开
+2026-01-09 20:10:13,128 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: c860fdaa-8bfd-4fed-b5fe-50e1dbb6483b
+2026-01-09 20:10:19,960 - INFO - __main__ - WebSocket 连接断开: jSqZzfKkSWiLlNN8AAAD
+2026-01-09 20:10:19,968 - INFO - root - 连接 1767960504278-zghq5e76m 已断开
+2026-01-09 20:10:19,969 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767960504278-zghq5e76m
+2026-01-09 20:14:25,158 - INFO - root - 数据库连接成功
+2026-01-09 20:14:25,203 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 20:14:25,214 - INFO - root - user_connections 表创建成功
+2026-01-09 20:14:25,217 - INFO - root - user_devices 表创建成功
+2026-01-09 20:14:25,221 - INFO - root - message_queue 表创建成功
+2026-01-09 20:14:25,221 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 20:14:25,221 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 20:14:29,325 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 20:14:42,207 - INFO - __main__ - WebSocket 连接建立: Ebw9KG2MA7dm8tLnAAAB
+2026-01-09 20:14:42,219 - INFO - root - 用户 1 的设备 19d16ba3-f455-4c74-adac-9fee5295f22c 已注册
+2026-01-09 20:14:42,229 - INFO - root - 用户 1 的连接 b89521c1-77c2-4abd-ac4f-dc5883fbb85d 已创建
+2026-01-09 20:14:42,231 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: b89521c1-77c2-4abd-ac4f-dc5883fbb85d (socket: Ebw9KG2MA7dm8tLnAAAB)
+2026-01-09 20:14:42,231 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: b89521c1-77c2-4abd-ac4f-dc5883fbb85d
+2026-01-09 20:14:45,962 - INFO - __main__ - WebSocket 连接建立: oQBQC9ss7YTK9FIHAAAD
+2026-01-09 20:14:46,001 - INFO - root - 用户 2 的设备 1767960885964-18mpuhvks 已注册
+2026-01-09 20:14:46,013 - INFO - root - 用户 2 的连接 1767960649667-r1zta4wpr 已创建
+2026-01-09 20:14:46,013 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767960649667-r1zta4wpr (socket: oQBQC9ss7YTK9FIHAAAD)
+2026-01-09 20:14:46,013 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767960649667-r1zta4wpr
+2026-01-09 20:15:08,530 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_49add3ba，已按普通消息处理
+2026-01-09 20:22:44,021 - INFO - __main__ - WebSocket 连接断开: Ebw9KG2MA7dm8tLnAAAB
+2026-01-09 20:22:44,023 - INFO - __main__ - WebSocket 连接断开: oQBQC9ss7YTK9FIHAAAD
+2026-01-09 20:22:44,030 - INFO - root - 连接 b89521c1-77c2-4abd-ac4f-dc5883fbb85d 已断开
+2026-01-09 20:22:44,030 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: b89521c1-77c2-4abd-ac4f-dc5883fbb85d
+2026-01-09 20:22:44,033 - INFO - root - 连接 1767960649667-r1zta4wpr 已断开
+2026-01-09 20:22:44,034 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767960649667-r1zta4wpr
+2026-01-09 20:22:50,892 - INFO - root - 数据库连接成功
+2026-01-09 20:22:50,946 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 20:22:50,958 - INFO - root - user_connections 表创建成功
+2026-01-09 20:22:50,962 - INFO - root - user_devices 表创建成功
+2026-01-09 20:22:50,967 - INFO - root - message_queue 表创建成功
+2026-01-09 20:22:50,967 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 20:22:50,967 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 20:22:54,678 - INFO - __main__ - WebSocket 连接建立: WRhIAbfjRG6pdPldAAAB
+2026-01-09 20:22:54,691 - INFO - root - 用户 2 的设备 1767960885964-18mpuhvks 已注册
+2026-01-09 20:22:54,714 - INFO - root - 用户 2 的连接 1767960649667-r1zta4wpr 已创建
+2026-01-09 20:22:54,715 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767960649667-r1zta4wpr (socket: WRhIAbfjRG6pdPldAAAB)
+2026-01-09 20:22:54,715 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767960649667-r1zta4wpr
+2026-01-09 20:25:29,228 - INFO - __main__ - WebSocket 连接建立: rsr4u6mTOlyZL2khAAAD
+2026-01-09 20:25:29,266 - INFO - root - 用户 1 的设备 be80bb51-c01b-4a48-9227-5903078b6e01 已注册
+2026-01-09 20:25:29,277 - INFO - root - 用户 1 的连接 e9a21066-a937-4271-be29-8a3807b7f8e2 已创建
+2026-01-09 20:25:29,280 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: e9a21066-a937-4271-be29-8a3807b7f8e2 (socket: rsr4u6mTOlyZL2khAAAD)
+2026-01-09 20:25:29,280 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: e9a21066-a937-4271-be29-8a3807b7f8e2
+2026-01-09 20:28:14,415 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_2a8f5b4c，已按普通消息处理
+2026-01-09 20:28:34,572 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_2a8f5b4c，已按普通消息处理
+2026-01-09 20:29:22,674 - INFO - __main__ - WebSocket 连接断开: rsr4u6mTOlyZL2khAAAD
+2026-01-09 20:29:22,685 - INFO - root - 连接 e9a21066-a937-4271-be29-8a3807b7f8e2 已断开
+2026-01-09 20:29:22,686 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: e9a21066-a937-4271-be29-8a3807b7f8e2
+2026-01-09 20:33:05,234 - INFO - __main__ - WebSocket 连接断开: WRhIAbfjRG6pdPldAAAB
+2026-01-09 20:33:05,244 - INFO - root - 连接 1767960649667-r1zta4wpr 已断开
+2026-01-09 20:33:05,244 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767960649667-r1zta4wpr
+2026-01-09 20:33:11,590 - INFO - root - 数据库连接成功
+2026-01-09 20:33:11,648 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 20:33:11,669 - INFO - root - user_connections 表创建成功
+2026-01-09 20:33:11,673 - INFO - root - user_devices 表创建成功
+2026-01-09 20:33:11,677 - INFO - root - message_queue 表创建成功
+2026-01-09 20:33:11,678 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 20:33:11,679 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 20:33:27,609 - INFO - root - 数据库连接成功
+2026-01-09 20:33:27,658 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 20:33:27,679 - INFO - root - user_connections 表创建成功
+2026-01-09 20:33:27,684 - INFO - root - user_devices 表创建成功
+2026-01-09 20:33:27,689 - INFO - root - message_queue 表创建成功
+2026-01-09 20:33:27,689 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 20:33:27,690 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 20:33:35,722 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 20:33:50,235 - INFO - __main__ - WebSocket 连接建立: OzxUVXrNzFuGM5BBAAAB
+2026-01-09 20:33:50,276 - INFO - root - 用户 1 的设备 15cfac3b-b10d-451b-82df-2b656b0ab553 已注册
+2026-01-09 20:33:50,307 - INFO - root - 用户 1 的连接 5d85a4e6-32d8-40ec-842c-af3e951d6369 已创建
+2026-01-09 20:33:50,307 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 5d85a4e6-32d8-40ec-842c-af3e951d6369 (socket: OzxUVXrNzFuGM5BBAAAB)
+2026-01-09 20:33:50,308 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 5d85a4e6-32d8-40ec-842c-af3e951d6369
+2026-01-09 20:33:53,898 - INFO - __main__ - WebSocket 连接建立: PJM3PdV6SmKlhYrtAAAD
+2026-01-09 20:33:53,930 - INFO - root - 用户 2 的设备 1767962033900-3jerasno8 已注册
+2026-01-09 20:33:53,941 - INFO - root - 用户 2 的连接 1767961991988-lacgsmk58 已创建
+2026-01-09 20:33:53,942 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767961991988-lacgsmk58 (socket: PJM3PdV6SmKlhYrtAAAD)
+2026-01-09 20:33:53,942 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767961991988-lacgsmk58
+2026-01-09 20:34:10,810 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_6a22c59c，已按普通消息处理
+2026-01-09 20:34:24,083 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_6a22c59c，已按普通消息处理
+2026-01-09 20:38:19,956 - INFO - __main__ - WebSocket 连接断开: OzxUVXrNzFuGM5BBAAAB
+2026-01-09 20:38:19,958 - INFO - __main__ - WebSocket 连接断开: PJM3PdV6SmKlhYrtAAAD
+2026-01-09 20:38:19,966 - INFO - root - 连接 5d85a4e6-32d8-40ec-842c-af3e951d6369 已断开
+2026-01-09 20:38:19,966 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 5d85a4e6-32d8-40ec-842c-af3e951d6369
+2026-01-09 20:38:19,969 - INFO - root - 连接 1767961991988-lacgsmk58 已断开
+2026-01-09 20:38:19,970 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767961991988-lacgsmk58
+2026-01-09 20:38:27,116 - INFO - root - 数据库连接成功
+2026-01-09 20:38:27,167 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 20:38:27,183 - INFO - root - user_connections 表创建成功
+2026-01-09 20:38:27,185 - INFO - root - user_devices 表创建成功
+2026-01-09 20:38:27,189 - INFO - root - message_queue 表创建成功
+2026-01-09 20:38:27,190 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 20:38:27,190 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 20:38:31,772 - INFO - __main__ - WebSocket 连接建立: aQfRil-FnV6PpvLpAAAB
+2026-01-09 20:38:31,783 - INFO - root - 用户 2 的设备 1767962033900-3jerasno8 已注册
+2026-01-09 20:38:31,790 - INFO - root - 用户 2 的连接 1767961991988-lacgsmk58 已创建
+2026-01-09 20:38:31,791 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767961991988-lacgsmk58 (socket: aQfRil-FnV6PpvLpAAAB)
+2026-01-09 20:38:31,791 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767961991988-lacgsmk58
+2026-01-09 20:38:46,588 - INFO - __main__ - WebSocket 连接建立: 1uPBLzXty1ezVgHwAAAD
+2026-01-09 20:38:46,622 - INFO - root - 用户 1 的设备 e0502ecf-88da-459d-9982-921cd96148dc 已注册
+2026-01-09 20:38:46,629 - INFO - root - 用户 1 的连接 09bd3181-0b07-4f95-9c5c-7dabe19f28fe 已创建
+2026-01-09 20:38:46,629 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 09bd3181-0b07-4f95-9c5c-7dabe19f28fe (socket: 1uPBLzXty1ezVgHwAAAD)
+2026-01-09 20:38:46,630 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 09bd3181-0b07-4f95-9c5c-7dabe19f28fe
+2026-01-09 20:39:02,400 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_a9361ffa，已按普通消息处理
+2026-01-09 20:39:07,123 - INFO - __main__ - WebSocket 连接断开: 1uPBLzXty1ezVgHwAAAD
+2026-01-09 20:39:07,133 - INFO - root - 连接 09bd3181-0b07-4f95-9c5c-7dabe19f28fe 已断开
+2026-01-09 20:39:07,134 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 09bd3181-0b07-4f95-9c5c-7dabe19f28fe
+2026-01-09 20:41:30,538 - INFO - __main__ - WebSocket 连接断开: aQfRil-FnV6PpvLpAAAB
+2026-01-09 20:41:30,553 - INFO - root - 连接 1767961991988-lacgsmk58 已断开
+2026-01-09 20:41:30,554 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767961991988-lacgsmk58
+2026-01-09 20:42:02,836 - INFO - root - 数据库连接成功
+2026-01-09 20:42:02,875 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-09 20:42:02,887 - INFO - root - user_connections 表创建成功
+2026-01-09 20:42:02,889 - INFO - root - user_devices 表创建成功
+2026-01-09 20:42:02,893 - INFO - root - message_queue 表创建成功
+2026-01-09 20:42:02,893 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-09 20:42:02,893 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-09 20:42:11,644 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-09 20:46:06,950 - INFO - __main__ - WebSocket 连接建立: EqUxyQyVjGH9upV6AAAB
+2026-01-09 20:46:06,964 - INFO - root - 用户 1 的设备 c791864e-fa2a-44f4-84d2-6b8dbd7e0533 已注册
+2026-01-09 20:46:06,972 - INFO - root - 用户 1 的连接 376f35d1-16ca-4ae1-b90b-4a1b82fb8299 已创建
+2026-01-09 20:46:06,973 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 376f35d1-16ca-4ae1-b90b-4a1b82fb8299 (socket: EqUxyQyVjGH9upV6AAAB)
+2026-01-09 20:46:06,973 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 376f35d1-16ca-4ae1-b90b-4a1b82fb8299
+2026-01-09 20:46:08,514 - INFO - __main__ - WebSocket 连接建立: vYMuXEew8TjCNNStAAAD
+2026-01-09 20:46:08,530 - INFO - root - 用户 2 的设备 1767962768516-54c41nx0k 已注册
+2026-01-09 20:46:08,539 - INFO - root - 用户 2 的连接 1767962505279-ox0fzqrqc 已创建
+2026-01-09 20:46:08,540 - INFO - backend.websocket.websocket_manager - 用户 2 建立连接: 1767962505279-ox0fzqrqc (socket: vYMuXEew8TjCNNStAAAD)
+2026-01-09 20:46:08,540 - INFO - __main__ - 用户 2 注册 WebSocket 连接成功: 1767962505279-ox0fzqrqc
+2026-01-09 20:47:08,417 - INFO - __main__ - WebSocket 连接断开: EqUxyQyVjGH9upV6AAAB
+2026-01-09 20:47:08,425 - INFO - root - 连接 376f35d1-16ca-4ae1-b90b-4a1b82fb8299 已断开
+2026-01-09 20:47:08,426 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 376f35d1-16ca-4ae1-b90b-4a1b82fb8299
+2026-01-09 20:52:21,105 - INFO - __main__ - WebSocket 连接建立: BNH7KwyLuGAB1iF2AAAF
+2026-01-09 20:52:21,124 - INFO - root - 用户 1 的设备 e66d1fb5-2906-47d8-87a6-9cf7ef63b4b1 已注册
+2026-01-09 20:52:21,133 - INFO - root - 用户 1 的连接 a9836a1b-0a0e-40b0-b265-9c6de5913313 已创建
+2026-01-09 20:52:21,133 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: a9836a1b-0a0e-40b0-b265-9c6de5913313 (socket: BNH7KwyLuGAB1iF2AAAF)
+2026-01-09 20:52:21,133 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: a9836a1b-0a0e-40b0-b265-9c6de5913313
+2026-01-09 20:52:49,250 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_998a2f5e，已按普通消息处理
+2026-01-09 20:55:13,405 - INFO - __main__ - WebSocket 连接断开: BNH7KwyLuGAB1iF2AAAF
+2026-01-09 20:55:13,415 - INFO - root - 连接 a9836a1b-0a0e-40b0-b265-9c6de5913313 已断开
+2026-01-09 20:55:13,416 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: a9836a1b-0a0e-40b0-b265-9c6de5913313
+2026-01-09 20:55:25,458 - INFO - __main__ - WebSocket 连接建立: eqT8o-yCa9zCOa3hAAAH
+2026-01-09 20:55:25,493 - INFO - root - 用户 1 的设备 0b262ce5-6b64-475c-b14b-600c89df240f 已注册
+2026-01-09 20:55:25,504 - INFO - root - 用户 1 的连接 a9a23c1a-49a0-44c2-a6ec-56ab16429f1b 已创建
+2026-01-09 20:55:25,505 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: a9a23c1a-49a0-44c2-a6ec-56ab16429f1b (socket: eqT8o-yCa9zCOa3hAAAH)
+2026-01-09 20:55:25,506 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: a9a23c1a-49a0-44c2-a6ec-56ab16429f1b
+2026-01-09 20:57:47,728 - INFO - __main__ - WebSocket 连接断开: eqT8o-yCa9zCOa3hAAAH
+2026-01-09 20:57:47,735 - INFO - root - 连接 a9a23c1a-49a0-44c2-a6ec-56ab16429f1b 已断开
+2026-01-09 20:57:47,736 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: a9a23c1a-49a0-44c2-a6ec-56ab16429f1b
+2026-01-09 21:01:20,553 - INFO - __main__ - WebSocket 连接建立: _t8V_oO2T15Eanr6AAAJ
+2026-01-09 21:01:20,570 - INFO - root - 用户 1 的设备 bbdfba21-2f5e-4fac-b056-c7bde6a6f12e 已注册
+2026-01-09 21:01:20,581 - INFO - root - 用户 1 的连接 04c6cedb-ac94-4dd8-a34d-13fe2654d2cb 已创建
+2026-01-09 21:01:20,582 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 04c6cedb-ac94-4dd8-a34d-13fe2654d2cb (socket: _t8V_oO2T15Eanr6AAAJ)
+2026-01-09 21:01:20,583 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 04c6cedb-ac94-4dd8-a34d-13fe2654d2cb
+2026-01-09 21:01:55,250 - INFO - __main__ - WebSocket 连接断开: _t8V_oO2T15Eanr6AAAJ
+2026-01-09 21:01:55,258 - INFO - root - 连接 04c6cedb-ac94-4dd8-a34d-13fe2654d2cb 已断开
+2026-01-09 21:01:55,258 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 04c6cedb-ac94-4dd8-a34d-13fe2654d2cb
+2026-01-09 21:08:00,794 - INFO - __main__ - WebSocket 连接建立: q6Bg_7s6TxFD2yMoAAAL
+2026-01-09 21:08:00,843 - INFO - root - 用户 1 的设备 e7a54e30-910f-4f6c-b9d6-b6e5b0fdde9a 已注册
+2026-01-09 21:08:00,852 - INFO - root - 用户 1 的连接 40041912-62d0-4c6e-b0a0-6322e3f916a8 已创建
+2026-01-09 21:08:00,853 - INFO - backend.websocket.websocket_manager - 用户 1 建立连接: 40041912-62d0-4c6e-b0a0-6322e3f916a8 (socket: q6Bg_7s6TxFD2yMoAAAL)
+2026-01-09 21:08:00,854 - INFO - __main__ - 用户 1 注册 WebSocket 连接成功: 40041912-62d0-4c6e-b0a0-6322e3f916a8
+2026-01-09 21:08:19,368 - INFO - __main__ - WebSocket 连接断开: q6Bg_7s6TxFD2yMoAAAL
+2026-01-09 21:08:19,377 - INFO - root - 连接 40041912-62d0-4c6e-b0a0-6322e3f916a8 已断开
+2026-01-09 21:08:19,377 - INFO - backend.websocket.websocket_manager - 用户 1 断开连接: 40041912-62d0-4c6e-b0a0-6322e3f916a8
+2026-01-09 21:08:41,768 - INFO - __main__ - WebSocket 连接断开: vYMuXEew8TjCNNStAAAD
+2026-01-09 21:08:41,777 - INFO - root - 连接 1767962505279-ox0fzqrqc 已断开
+2026-01-09 21:08:41,778 - INFO - backend.websocket.websocket_manager - 用户 2 断开连接: 1767962505279-ox0fzqrqc

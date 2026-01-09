@@ -107,6 +107,9 @@ def check_auto_login(main_window: "MainWindow") -> None:
             avatar_bytes, username, is_vip, diamonds, user_id
         )
 
+        # 不再在登录时自动连接 WebSocket
+        # WebSocket 连接将在用户匹配上客服后才建立
+
         # 隐藏蒙版
         if loading_overlay:
             try:

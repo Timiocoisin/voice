@@ -139,9 +139,13 @@ class DatabaseManager:
         self.create_announcement_table()
         self.create_chat_messages_table()
         self._ensure_message_recall_fields()  # 确保消息撤回字段存在
+        self._ensure_message_status_fields()  # 确保消息状态字段存在
         self.create_password_reset_tokens_table()
         self.create_chat_sessions_table()
         self.create_agent_status_table()
+        self.create_user_connections_table()  # WebSocket 连接管理表
+        self.create_user_devices_table()  # 设备管理表
+        self.create_message_queue_table()  # 消息队列表
 
     def create_user_table(self):
         """创建用户表（如果不存在）。
@@ -338,6 +342,66 @@ class DatabaseManager:
                 logging.info("chat_messages 表字段升级完成")
         except pymysql.Error as e:
             logging.error(f"确保消息撤回字段存在时出错: {e}")
+
+    def _ensure_message_status_fields(self):
+        """确保 chat_messages 表中存在消息状态相关字段（迁移方法）"""
+        try:
+            cursor = self.connection.cursor()
+            # 检查 status 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'status'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 status 列，正在自动添加...")
+                cursor.execute("""
+                    ALTER TABLE chat_messages 
+                    ADD COLUMN status ENUM('pending', 'sent', 'delivered', 'read', 'failed') 
+                    DEFAULT 'sent' AFTER message_type
+                """)
+                self.connection.commit()
+            
+            # 检查 sent_at 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'sent_at'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 sent_at 列，正在自动添加...")
+                cursor.execute("""
+                    ALTER TABLE chat_messages 
+                    ADD COLUMN sent_at TIMESTAMP NULL AFTER status
+                """)
+                self.connection.commit()
+            
+            # 检查 delivered_at 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'delivered_at'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 delivered_at 列，正在自动添加...")
+                cursor.execute("""
+                    ALTER TABLE chat_messages 
+                    ADD COLUMN delivered_at TIMESTAMP NULL AFTER sent_at
+                """)
+                self.connection.commit()
+            
+            # 检查 read_at 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'read_at'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 read_at 列，正在自动添加...")
+                cursor.execute("""
+                    ALTER TABLE chat_messages 
+                    ADD COLUMN read_at TIMESTAMP NULL AFTER delivered_at
+                """)
+                self.connection.commit()
+            
+            # 检查 sequence_number 字段（用于消息顺序保证）
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'sequence_number'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 sequence_number 列，正在自动添加...")
+                cursor.execute("""
+                    ALTER TABLE chat_messages 
+                    ADD COLUMN sequence_number BIGINT NULL AFTER id,
+                    ADD INDEX idx_sequence (session_id, sequence_number)
+                """)
+                self.connection.commit()
+            
+            logging.info("chat_messages 表消息状态字段升级完成")
+        except pymysql.Error as e:
+            logging.error(f"确保消息状态字段存在时出错: {e}")
 
     def create_password_reset_tokens_table(self):
         """创建密码重置token表（如果不存在）"""
@@ -540,7 +604,8 @@ class DatabaseManager:
             message = cursor.fetchone()
             
             if not message:
-                logging.warning(f"消息 {message_id} 不存在")
+                # 消息在数据库中不存在时，视为已被删除或历史数据被清理，返回 False 但不抛异常
+                logging.debug(f"撤回消息时未找到消息 {message_id}，可能已被删除或历史清理")
                 return False
             
             if message.get("from_user_id") != user_id:
@@ -993,6 +1058,101 @@ class DatabaseManager:
         except pymysql.Error as e:
             logging.error(f"创建客服在线状态表失败: {e}")
 
+    def create_user_connections_table(self):
+        """创建用户连接管理表（WebSocket 连接管理）"""
+        try:
+            cursor = self.connection.cursor()
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS user_connections (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                connection_id VARCHAR(255) NOT NULL UNIQUE,
+                socket_id VARCHAR(255),
+                device_id VARCHAR(255),
+                status ENUM('connected', 'disconnected') DEFAULT 'connected',
+                last_heartbeat TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                connected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                disconnected_at TIMESTAMP NULL,
+                ip_address VARCHAR(45),
+                user_agent TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                INDEX idx_user (user_id),
+                INDEX idx_connection (connection_id),
+                INDEX idx_device (device_id),
+                INDEX idx_status (status),
+                INDEX idx_heartbeat (last_heartbeat)
+            )
+            """
+            cursor.execute(create_table_query)
+            self.connection.commit()
+            logging.info("user_connections 表创建成功")
+        except pymysql.Error as e:
+            logging.error(f"创建用户连接管理表失败: {e}")
+
+
+    def create_user_devices_table(self):
+        """创建用户设备管理表（多设备登录管理）"""
+        try:
+            cursor = self.connection.cursor()
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS user_devices (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                device_id VARCHAR(255) NOT NULL,
+                device_name VARCHAR(255),
+                device_type ENUM('desktop', 'mobile', 'web', 'other') DEFAULT 'other',
+                platform VARCHAR(100),
+                browser VARCHAR(100),
+                os_version VARCHAR(100),
+                app_version VARCHAR(50),
+                push_token VARCHAR(255),
+                is_active BOOLEAN DEFAULT TRUE,
+                last_login TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_user_device (user_id, device_id),
+                INDEX idx_user (user_id),
+                INDEX idx_device (device_id),
+                INDEX idx_active (is_active),
+                INDEX idx_last_login (last_login)
+            )
+            """
+            cursor.execute(create_table_query)
+            self.connection.commit()
+            logging.info("user_devices 表创建成功")
+        except pymysql.Error as e:
+            logging.error(f"创建用户设备管理表失败: {e}")
+
+    def create_message_queue_table(self):
+        """创建消息队列表（消息发送失败重试队列）"""
+        try:
+            cursor = self.connection.cursor()
+            create_table_query = """
+            CREATE TABLE IF NOT EXISTS message_queue (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                message_id INT NOT NULL,
+                session_id VARCHAR(255) NOT NULL,
+                from_user_id INT NOT NULL,
+                to_user_id INT,
+                retry_count INT DEFAULT 0,
+                max_retries INT DEFAULT 3,
+                status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'pending',
+                error_message TEXT,
+                next_retry_at TIMESTAMP NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (message_id) REFERENCES chat_messages(id) ON DELETE CASCADE,
+                INDEX idx_status (status),
+                INDEX idx_next_retry (next_retry_at),
+                INDEX idx_message (message_id)
+            )
+            """
+            cursor.execute(create_table_query)
+            self.connection.commit()
+            logging.info("message_queue 表创建成功")
+        except pymysql.Error as e:
+            logging.error(f"创建消息队列表失败: {e}")
+
     def get_online_agents(self) -> list:
         """获取所有在线的客服列表（独立连接）"""
         conn = None
@@ -1234,3 +1394,434 @@ class DatabaseManager:
         if self.connection:
             self.connection.close()
             logging.info("数据库连接已关闭")
+
+    # ==================== WebSocket 连接管理方法 ====================
+
+    def create_user_connection(self, user_id: int, connection_id: str, socket_id: str = None, 
+                              device_id: str = None, ip_address: str = None, user_agent: str = None) -> bool:
+        """创建用户连接记录"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            insert_query = """
+            INSERT INTO user_connections 
+            (user_id, connection_id, socket_id, device_id, status, ip_address, user_agent)
+            VALUES (%s, %s, %s, %s, 'connected', %s, %s)
+            ON DUPLICATE KEY UPDATE 
+                socket_id = VALUES(socket_id),
+                status = 'connected',
+                last_heartbeat = CURRENT_TIMESTAMP,
+                connected_at = CURRENT_TIMESTAMP,
+                disconnected_at = NULL
+            """
+            cursor.execute(insert_query, (user_id, connection_id, socket_id, device_id, ip_address, user_agent))
+            conn.commit()
+            logging.info(f"用户 {user_id} 的连接 {connection_id} 已创建")
+            return True
+        except pymysql.Error as e:
+            logging.error(f"创建用户连接失败: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def update_connection_heartbeat(self, connection_id: str) -> bool:
+        """更新连接心跳时间"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            update_query = """
+            UPDATE user_connections
+            SET last_heartbeat = CURRENT_TIMESTAMP
+            WHERE connection_id = %s AND status = 'connected'
+            """
+            cursor.execute(update_query, (connection_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except pymysql.Error as e:
+            logging.error(f"更新连接心跳失败: {e}")
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def disconnect_user_connection(self, connection_id: str) -> bool:
+        """断开用户连接"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            update_query = """
+            UPDATE user_connections
+            SET status = 'disconnected', disconnected_at = CURRENT_TIMESTAMP
+            WHERE connection_id = %s
+            """
+            cursor.execute(update_query, (connection_id,))
+            conn.commit()
+            logging.info(f"连接 {connection_id} 已断开")
+            return True
+        except pymysql.Error as e:
+            logging.error(f"断开用户连接失败: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def get_user_connections(self, user_id: int, active_only: bool = True) -> list:
+        """获取用户的所有连接"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            if active_only:
+                query = """
+                SELECT * FROM user_connections
+                WHERE user_id = %s AND status = 'connected'
+                AND last_heartbeat > DATE_SUB(NOW(), INTERVAL 2 MINUTE)
+                ORDER BY connected_at DESC
+                """
+            else:
+                query = """
+                SELECT * FROM user_connections
+                WHERE user_id = %s
+                ORDER BY connected_at DESC
+                """
+            cursor.execute(query, (user_id,))
+            return cursor.fetchall()
+        except pymysql.Error as e:
+            logging.error(f"获取用户连接失败: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def cleanup_stale_connections(self, timeout_minutes: int = 5) -> int:
+        """清理过期的连接（超过指定分钟数没有心跳）"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            update_query = """
+            UPDATE user_connections
+            SET status = 'disconnected', disconnected_at = CURRENT_TIMESTAMP
+            WHERE status = 'connected'
+            AND last_heartbeat < DATE_SUB(NOW(), INTERVAL %s MINUTE)
+            """
+            cursor.execute(update_query, (timeout_minutes,))
+            conn.commit()
+            cleaned = cursor.rowcount
+            if cleaned > 0:
+                logging.info(f"清理了 {cleaned} 个过期连接")
+            return cleaned
+        except pymysql.Error as e:
+            logging.error(f"清理过期连接失败: {e}")
+            return 0
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    # ==================== 设备管理方法 ====================
+
+    def register_user_device(self, user_id: int, device_id: str, device_name: str = None,
+                            device_type: str = 'other', platform: str = None, browser: str = None,
+                            os_version: str = None, app_version: str = None, push_token: str = None) -> bool:
+        """注册用户设备"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            insert_query = """
+            INSERT INTO user_devices 
+            (user_id, device_id, device_name, device_type, platform, browser, os_version, app_version, push_token, is_active)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, TRUE)
+            ON DUPLICATE KEY UPDATE
+                device_name = VALUES(device_name),
+                device_type = VALUES(device_type),
+                platform = VALUES(platform),
+                browser = VALUES(browser),
+                os_version = VALUES(os_version),
+                app_version = VALUES(app_version),
+                push_token = VALUES(push_token),
+                is_active = TRUE,
+                last_login = CURRENT_TIMESTAMP
+            """
+            cursor.execute(insert_query, (user_id, device_id, device_name, device_type, 
+                                         platform, browser, os_version, app_version, push_token))
+            conn.commit()
+            logging.info(f"用户 {user_id} 的设备 {device_id} 已注册")
+            return True
+        except pymysql.Error as e:
+            logging.error(f"注册用户设备失败: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def get_user_devices(self, user_id: int, active_only: bool = True) -> list:
+        """获取用户的所有设备"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            if active_only:
+                query = """
+                SELECT * FROM user_devices
+                WHERE user_id = %s AND is_active = TRUE
+                ORDER BY last_login DESC
+                """
+            else:
+                query = """
+                SELECT * FROM user_devices
+                WHERE user_id = %s
+                ORDER BY last_login DESC
+                """
+            cursor.execute(query, (user_id,))
+            return cursor.fetchall()
+        except pymysql.Error as e:
+            logging.error(f"获取用户设备失败: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def deactivate_user_device(self, user_id: int, device_id: str) -> bool:
+        """停用用户设备"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            update_query = """
+            UPDATE user_devices
+            SET is_active = FALSE
+            WHERE user_id = %s AND device_id = %s
+            """
+            cursor.execute(update_query, (user_id, device_id))
+            conn.commit()
+            logging.info(f"用户 {user_id} 的设备 {device_id} 已停用")
+            return True
+        except pymysql.Error as e:
+            logging.error(f"停用用户设备失败: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    # ==================== 消息状态管理方法 ====================
+
+    def update_message_status(self, message_id: int, status: str) -> bool:
+        """更新消息状态"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            
+            # 根据状态设置相应的时间戳
+            if status == 'sent':
+                update_query = """
+                UPDATE chat_messages
+                SET status = %s, sent_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """
+            elif status == 'delivered':
+                update_query = """
+                UPDATE chat_messages
+                SET status = %s, delivered_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """
+            elif status == 'read':
+                update_query = """
+                UPDATE chat_messages
+                SET status = %s, read_at = CURRENT_TIMESTAMP, is_read = TRUE
+                WHERE id = %s
+                """
+            else:
+                update_query = """
+                UPDATE chat_messages
+                SET status = %s
+                WHERE id = %s
+                """
+            
+            cursor.execute(update_query, (status, message_id))
+            conn.commit()
+            updated = cursor.rowcount > 0
+            if not updated:
+                # 消息可能不存在或已被清理，这在某些场景下是允许的，这里仅记录调试日志避免刷警告
+                logging.debug(f"更新消息 {message_id} 状态失败：消息不存在或已删除（可忽略）")
+            return updated
+        except pymysql.Error as e:
+            # 检查是否是字段不存在的错误
+            error_msg = str(e).lower()
+            if 'unknown column' in error_msg or 'doesn\'t exist' in error_msg:
+                # 字段不存在，尝试确保字段存在
+                logging.warning(f"消息状态字段不存在，尝试创建: {e}")
+                try:
+                    self._ensure_message_status_fields()
+                    # 重试更新
+                    cursor.execute(update_query, (status, message_id))
+                    conn.commit()
+                    return cursor.rowcount > 0
+                except Exception as retry_error:
+                    logging.error(f"重试更新消息状态失败: {retry_error}")
+            else:
+                logging.error(f"更新消息状态失败: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def get_undelivered_messages(self, user_id: int, limit: int = 100) -> list:
+        """获取未送达的消息"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT * FROM chat_messages
+            WHERE to_user_id = %s 
+            AND status IN ('pending', 'sent')
+            AND is_recalled = FALSE
+            ORDER BY created_at ASC
+            LIMIT %s
+            """
+            cursor.execute(query, (user_id, limit))
+            return cursor.fetchall()
+        except pymysql.Error as e:
+            logging.error(f"获取未送达消息失败: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    # ==================== 消息队列管理方法 ====================
+
+    def add_message_to_queue(self, message_id: int, session_id: str, from_user_id: int, 
+                            to_user_id: int = None, max_retries: int = 3) -> bool:
+        """将消息添加到重试队列"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            insert_query = """
+            INSERT INTO message_queue (message_id, session_id, from_user_id, to_user_id, max_retries, status)
+            VALUES (%s, %s, %s, %s, %s, 'pending')
+            """
+            cursor.execute(insert_query, (message_id, session_id, from_user_id, to_user_id, max_retries))
+            conn.commit()
+            logging.info(f"消息 {message_id} 已添加到重试队列")
+            return True
+        except pymysql.Error as e:
+            logging.error(f"添加消息到队列失败: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def get_pending_queue_messages(self, limit: int = 50) -> list:
+        """获取待重试的消息"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor(pymysql.cursors.DictCursor)
+            query = """
+            SELECT mq.*, cm.message, cm.message_type
+            FROM message_queue mq
+            JOIN chat_messages cm ON mq.message_id = cm.id
+            WHERE mq.status = 'pending'
+            AND (mq.next_retry_at IS NULL OR mq.next_retry_at <= CURRENT_TIMESTAMP)
+            AND mq.retry_count < mq.max_retries
+            ORDER BY mq.created_at ASC
+            LIMIT %s
+            """
+            cursor.execute(query, (limit,))
+            return cursor.fetchall()
+        except pymysql.Error as e:
+            logging.error(f"获取待重试消息失败: {e}")
+            return []
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()
+
+    def update_queue_message_status(self, queue_id: int, status: str, error_message: str = None) -> bool:
+        """更新队列中消息的状态"""
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            if status == 'failed' and error_message:
+                update_query = """
+                UPDATE message_queue
+                SET status = %s, error_message = %s, retry_count = retry_count + 1,
+                    next_retry_at = DATE_ADD(CURRENT_TIMESTAMP, INTERVAL POWER(2, retry_count) MINUTE)
+                WHERE id = %s
+                """
+                cursor.execute(update_query, (status, error_message, queue_id))
+            else:
+                update_query = """
+                UPDATE message_queue
+                SET status = %s
+                WHERE id = %s
+                """
+                cursor.execute(update_query, (status, queue_id))
+            conn.commit()
+            return cursor.rowcount > 0
+        except pymysql.Error as e:
+            logging.error(f"更新队列消息状态失败: {e}")
+            if conn:
+                conn.rollback()
+            return False
+        finally:
+            if cursor:
+                cursor.close()
+            if conn:
+                conn.close()

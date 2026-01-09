@@ -324,16 +324,6 @@ class ChatPanel:
             alignment=Qt.AlignmentFlag.AlignLeft
         )
 
-        self.main_window.file_button = QPushButton()
-        self.main_window._set_icon_button(
-            self.main_window.file_button, 16, "发送文件（≤100MB）"
-        )
-        self.main_window.file_button.clicked.connect(self.main_window.send_file)
-        tools_row.addWidget(
-            self.main_window.file_button,
-            alignment=Qt.AlignmentFlag.AlignLeft
-        )
-
         tools_row.addStretch()
         input_layout.addLayout(tools_row)
 
