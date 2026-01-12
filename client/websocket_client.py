@@ -6,10 +6,10 @@ WebSocket 客户端
 
 import logging
 import threading
-import time
 import uuid
 from typing import Callable, Optional, Dict, Any
 from enum import Enum
+from PyQt6.QtCore import QTimer
 
 try:
     import socketio
@@ -64,11 +64,9 @@ class WebSocketClient:
         self.status = ConnectionStatus.DISCONNECTED
         self.socket_id: Optional[str] = None
         
-        # 心跳（延迟创建 QTimer，确保在主线程中创建）
+        # 心跳（使用 QTimer，运行在主线程事件循环）
         self.heartbeat_interval = 30  # 秒
         self.heartbeat_timer: Optional[QTimer] = None
-        self._heartbeat_running = False
-        self.heartbeat_thread: Optional[threading.Thread] = None
         
         # 消息队列（发送失败时重试）
         self.message_queue = []
@@ -76,8 +74,6 @@ class WebSocketClient:
         self.max_queue_size = 100
         self.retry_interval = 5  # 秒
         self.retry_timer: Optional[QTimer] = None
-        self._retry_running = False
-        self.retry_thread: Optional[threading.Thread] = None
         
         # 回调函数
         self.on_connect_callback: Optional[Callable] = None
@@ -98,6 +94,13 @@ class WebSocketClient:
     
     def _register_event_handlers(self):
         """注册 Socket.IO 事件处理器"""
+        
+        # 添加通用事件监听器，用于调试
+        @self.sio.on('*')
+        def catch_all(event, *args):
+            """捕获所有事件，用于调试"""
+            if event not in ['connect', 'disconnect', 'connect_error', 'heartbeat']:
+                logging.info(f"WebSocketClient 收到事件: {event}, args_count={len(args)}, args={args[:1] if args else None}")
         
         @self.sio.event
         def connect():
@@ -154,11 +157,12 @@ class WebSocketClient:
         def on_new_message(data):
             """收到新消息"""
             try:
-                message_id = data.get("id")
+                message_id = data.get("id") if isinstance(data, dict) else (data.id if hasattr(data, 'id') else None)
+                from_user_id = data.get("from_user_id") if isinstance(data, dict) else (data.from_user_id if hasattr(data, 'from_user_id') else None)
+                to_user_id = data.get("to_user_id") if isinstance(data, dict) else (data.to_user_id if hasattr(data, 'to_user_id') else None)
                 
                 # 消息去重
                 if message_id and message_id in self.received_message_ids:
-                    logging.debug(f"忽略重复消息: {message_id}")
                     return
                 
                 if message_id:
@@ -168,21 +172,24 @@ class WebSocketClient:
                         # 移除最旧的一半
                         self.received_message_ids = set(list(self.received_message_ids)[self.max_received_ids // 2:])
                 
-                logging.debug(f"收到新消息: {message_id}")
-                
                 # 发送已送达回执
                 if message_id and self.user_id:
-                    self.send_message_delivered(int(message_id), self.user_id)
+                    try:
+                        self.send_message_delivered(int(message_id), self.user_id)
+                    except Exception as e:
+                        logging.error(f"发送已送达回执失败: {e}", exc_info=True)
                 
                 # 调用回调
                 if self.on_message_callback:
                     try:
                         self.on_message_callback(data)
                     except Exception as e:
-                        logging.error(f"消息回调异常: {e}", exc_info=True)
+                        logging.error(f"消息回调异常: {e}, message_id={message_id}", exc_info=True)
+                else:
+                    logging.warning(f"消息回调未设置: message_id={message_id}, on_message_callback=None")
             
             except Exception as e:
-                logging.error(f"处理新消息失败: {e}", exc_info=True)
+                logging.error(f"处理新消息失败: {e}, data={data}", exc_info=True)
         
         @self.sio.on("message_status")
         def on_message_status(data):
@@ -190,7 +197,6 @@ class WebSocketClient:
             try:
                 message_id = data.get("message_id")
                 status = data.get("status")
-                logging.debug(f"消息 {message_id} 状态更新: {status}")
                 
                 # 调用回调以更新 UI
                 if self.on_message_status_callback:
@@ -206,7 +212,6 @@ class WebSocketClient:
             """收到撤回消息事件（后端通过 message_recalled 推送）"""
             try:
                 message_id = data.get("message_id")
-                logging.debug(f"收到撤回消息事件: {message_id}")
                 
                 if not message_id:
                     return
@@ -269,34 +274,37 @@ class WebSocketClient:
             logging.error(f"注册连接异常: {e}", exc_info=True)
     
     def _start_heartbeat(self):
-        """启动心跳定时器（使用线程方式，避免跨线程问题）"""
-        if self._heartbeat_running:
+        """启动心跳定时器（主线程 QTimer）"""
+        try:
+            from PyQt6.QtCore import QThread, QMetaObject, Qt
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app and QThread.currentThread() != app.thread():
+                logging.info("心跳定时器启动请求在非主线程，切到主线程执行")
+                return QMetaObject.invokeMethod(
+                    app,
+                    lambda: self._start_heartbeat(),
+                    Qt.ConnectionType.QueuedConnection,
+                )
+        except Exception:
+            # 若 Qt 不可用，直接继续，可能会触发警告
+            pass
+        if self.heartbeat_timer and self.heartbeat_timer.isActive():
             return
-        
-        self._heartbeat_running = True
-        self.heartbeat_thread = threading.Thread(target=self._heartbeat_worker, daemon=True)
-        self.heartbeat_thread.start()
-        logging.info("心跳线程已启动")
+        self.heartbeat_timer = QTimer()
+        self.heartbeat_timer.setInterval(int(self.heartbeat_interval * 1000))
+        self.heartbeat_timer.setSingleShot(False)
+        self.heartbeat_timer.timeout.connect(self._send_heartbeat)
+        self.heartbeat_timer.start()
+        logging.debug("心跳定时器已启动")
     
     def _stop_heartbeat(self):
         """停止心跳定时器"""
-        self._heartbeat_running = False
-        if hasattr(self, 'heartbeat_thread') and self.heartbeat_thread:
-            self.heartbeat_thread.join(timeout=5)
-        logging.info("心跳线程已停止")
+        if self.heartbeat_timer:
+            self.heartbeat_timer.stop()
+            self.heartbeat_timer.deleteLater()
+            self.heartbeat_timer = None
     
-    
-    def _heartbeat_worker(self):
-        """心跳工作线程（仅在无 Qt 时使用）"""
-        while getattr(self, '_heartbeat_running', False):
-            try:
-                time.sleep(self.heartbeat_interval)
-                
-                if self.status == ConnectionStatus.CONNECTED:
-                    self._send_heartbeat()
-            
-            except Exception as e:
-                logging.error(f"心跳异常: {e}", exc_info=True)
     
     def _send_heartbeat(self):
         """发送心跳（使用 emit 而不是 call）"""
@@ -309,33 +317,35 @@ class WebSocketClient:
             logging.error(f"发送心跳异常: {e}", exc_info=True)
     
     def _start_retry_worker(self):
-        """启动重试定时器（使用线程方式，避免跨线程问题）"""
-        if self._retry_running:
+        """启动重试定时器（主线程 QTimer）"""
+        try:
+            from PyQt6.QtCore import QThread, QMetaObject, Qt
+            from PyQt6.QtWidgets import QApplication
+            app = QApplication.instance()
+            if app and QThread.currentThread() != app.thread():
+                return QMetaObject.invokeMethod(
+                    app,
+                    lambda: self._start_retry_worker(),
+                    Qt.ConnectionType.QueuedConnection,
+                )
+        except Exception:
+            pass
+        if self.retry_timer and self.retry_timer.isActive():
             return
-        
-        self._retry_running = True
-        self.retry_thread = threading.Thread(target=self._retry_worker, daemon=True)
-        self.retry_thread.start()
-        logging.info("重试线程已启动")
+        self.retry_timer = QTimer()
+        self.retry_timer.setInterval(int(self.retry_interval * 1000))
+        self.retry_timer.setSingleShot(False)
+        self.retry_timer.timeout.connect(self._process_message_queue)
+        self.retry_timer.start()
+        logging.debug("重试定时器已启动")
     
     def _stop_retry_worker(self):
         """停止重试定时器"""
-        self._retry_running = False
-        if hasattr(self, 'retry_thread') and self.retry_thread:
-            self.retry_thread.join(timeout=5)
-        logging.info("重试线程已停止")
-    
-    def _retry_worker(self):
-        """重试工作线程（仅在无 Qt 时使用）"""
-        while getattr(self, '_retry_running', False):
-            try:
-                time.sleep(self.retry_interval)
-                
-                if self.status == ConnectionStatus.CONNECTED:
-                    self._process_message_queue()
-            
-            except Exception as e:
-                logging.error(f"重试异常: {e}", exc_info=True)
+        if self.retry_timer:
+            self.retry_timer.stop()
+            self.retry_timer.deleteLater()
+            self.retry_timer = None
+        logging.info("重试定时器已停止")
     
     def _process_message_queue(self):
         """处理消息队列"""
@@ -450,9 +460,20 @@ class WebSocketClient:
         try:
             logging.info("正在断开连接...")
             
-            # 停止心跳和重试线程
-            self._stop_heartbeat()
-            self._stop_retry_worker()
+            # 停止心跳和重试线程（确保在主线程执行）
+            try:
+                from PyQt6.QtCore import QMetaObject, Qt, QThread
+                from PyQt6.QtWidgets import QApplication
+                app = QApplication.instance()
+                if app and QThread.currentThread() != app.thread():
+                    QMetaObject.invokeMethod(app, self._stop_heartbeat, Qt.ConnectionType.QueuedConnection)
+                    QMetaObject.invokeMethod(app, self._stop_retry_worker, Qt.ConnectionType.QueuedConnection)
+                else:
+                    self._stop_heartbeat()
+                    self._stop_retry_worker()
+            except Exception:
+                self._stop_heartbeat()
+                self._stop_retry_worker()
             
             # 断开连接
             if self.sio.connected:

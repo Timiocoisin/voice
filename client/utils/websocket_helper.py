@@ -7,9 +7,40 @@ WebSocket 辅助函数
 import logging
 import platform
 from typing import Optional, Dict, Any
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QObject, pyqtSignal
+from PyQt6.QtWidgets import QApplication
 
 logger = logging.getLogger(__name__)
+
+# 全局 UI 调度器，确保从任意线程切换到主线程执行 UI 更新
+class _UIDispatcher(QObject):
+    trigger = pyqtSignal(object)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        # 使用 QueuedConnection 确保信号槽回调在主线程执行
+        self.trigger.connect(self._execute, Qt.ConnectionType.QueuedConnection)
+
+    def _execute(self, fn):
+        try:
+            fn()
+        except Exception as e:
+            logger.error(f"[UIDispatcher] 执行 UI 更新失败: {e}", exc_info=True)
+
+
+_ui_dispatcher: Optional[_UIDispatcher] = None
+
+
+def _get_ui_dispatcher(main_window) -> Optional[_UIDispatcher]:
+    """获取（或创建）UI 调度器，放在主线程（使用 main_window 作为 parent）"""
+    global _ui_dispatcher
+    if _ui_dispatcher is None:
+        app = QApplication.instance()
+        if not app:
+            logger.warning("[UIDispatcher] QApplication 不存在，无法创建调度器")
+            return None
+        # 使用 main_window 作为 parent，确保调度器在主线程中
+    return _ui_dispatcher
 
 
 def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.0.1:8000"):
@@ -38,9 +69,12 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
         # 创建新的客户端
         ws_client = WebSocketClient(server_url=server_url)
         
+        # 初始化 UI 调度器（确保在主线程中创建）
+        _get_ui_dispatcher(main_window)
+        
         # 注册回调
         def on_connect():
-            logger.info("WebSocket 连接成功")
+            logger.debug("WebSocket 连接成功")
         
         def on_disconnect():
             logger.warning("WebSocket 连接断开")
@@ -53,7 +87,18 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                 
                 # 在主线程中执行 UI 更新
                 def update_ui():
+                    message_id_log = data.get('id') if isinstance(data, dict) else 'unknown'
+                    # 验证是否在主线程中
                     try:
+                        from PyQt6.QtCore import QThread
+                        from PyQt6.QtWidgets import QApplication
+                        app = QApplication.instance()
+                        if app:
+                            is_main_thread = QThread.currentThread() == app.thread()
+                    except Exception as e:
+                        logger.debug(f"[update_ui] 线程检查失败: {e}")
+                    try:
+                        logger.debug(f"[update_ui] 进入 try 块: message_id={message_id_log}")
                         message_id = data.get('id')
                         text = data.get('text', '')
                         from_user_id = data.get('from_user_id')
@@ -63,8 +108,6 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         reply_to_message_id = data.get('reply_to_message_id')
                         is_recalled = data.get('is_recalled', False)
                         offline = data.get('offline', False)
-                        
-                        logger.debug(f"收到 WebSocket 消息: message_id={message_id}, from_user_id={from_user_id}, message_type={message_type}, text_length={len(text) if text else 0}")
                         
                         # 使用服务端提供的 is_from_self 标记（优先使用，更可靠）
                         # 如果没有提供，则回退到通过 user_id 比较判断
@@ -79,8 +122,6 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                     is_from_self = (from_user_id == current_user_id)
                             else:
                                 is_from_self = (from_user_id == current_user_id)
-                        
-                        logger.debug(f"消息判断: is_from_self={is_from_self}, current_user_id={getattr(main_window, 'user_id', None)}, from_user_id={from_user_id}")
                         
                         # 如果是自己的消息，且已经通过乐观展示显示过了，则只更新message_id，不重复显示
                         # 注意：只对文本消息和图片消息进行此检查，其他消息类型直接显示
@@ -103,7 +144,6 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                             main_window._message_widgets_map = {}
                                         main_window._message_widgets_map[int(message_id)] = (existing_widget, existing_label)
                                         updated = True
-                                        logger.debug(f"已更新图片消息的message_id: None -> {message_id}")
                                 
                                 # 如果图片消息没有在 _message_widgets_map 中找到，或者不是图片消息，查找布局中未设置 message_id 的消息
                                 if not updated:
@@ -150,18 +190,8 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                                                                     main_window._message_widgets_map[int(message_id)] = (widget, w)
                                                                                 updated = True
                                                                                 break
-                                
-                                # 只有成功更新了现有消息的message_id时，才跳过显示
-                                # 如果更新失败（找不到已显示的消息），应该继续显示消息
-                                if updated:
-                                    logger.debug(f"已更新消息的message_id: {message_id}，跳过重复显示")
-                                    return
-                                else:
-                                    # 更新失败，说明没有找到已显示的消息，需要显示新消息
-                                    logger.debug(f"未找到已显示的消息来更新message_id: {message_id}，将显示新消息")
                         
                         # 消息去重：检查是否已经显示过（只对非自己的消息进行去重检查）
-                        # 自己的消息已经在上面处理过了
                         # 注意：对于图片和表情消息，即使消息ID已经在_displayed_message_ids中，
                         # 也要检查是否真的已经显示（可能HTTP轮询获取了消息但显示失败）
                         if not is_from_self:
@@ -182,26 +212,28 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                             msg_id_int = int(message_id)
                                         except (ValueError, TypeError):
                                             pass
-                                        
                                         if msg_id_int and msg_id_int in main_window._message_widgets_map:
-                                            # 消息已经显示，跳过
-                                            logger.debug(f"忽略重复的 WebSocket 消息: {message_id} (已显示)")
                                             return
                                         else:
                                             # 消息ID在列表中但未显示，可能是HTTP轮询获取失败，继续处理
-                                            logger.debug(f"消息ID {message_id} 在列表中但未显示，继续处理")
                                             # 从列表中移除，允许重新处理
                                             main_window._displayed_message_ids.discard(msg_id_str)
+                                    else:
+                                        main_window._displayed_message_ids.discard(msg_id_str)
                                 
                                 main_window._displayed_message_ids.add(msg_id_str)
                             else:
                                 # 如果没有message_id，记录日志但继续处理（可能是系统消息）
-                                logger.debug(f"收到没有message_id的消息，继续处理")
+                                logger.warning(f"收到没有message_id的消息，继续处理")
                         
                         # 导入消息处理函数
                         from gui.handlers.chat_handlers import append_chat_message, append_image_message
                         from PyQt6.QtGui import QPixmap, QImage
                         import base64
+                        
+                        # 检查 chat_layout 是否存在
+                        if not hasattr(main_window, "chat_layout"):
+                            return
                         
                         # 如果是撤回的消息
                         if is_recalled:
@@ -243,7 +275,6 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                     if pixmap.width() > 360:
                                         pixmap = pixmap.scaledToWidth(360, Qt.TransformationMode.SmoothTransformation)
                                     # 图片消息支持引用显示
-                                    logger.info(f"准备显示图片消息: message_id={message_id}, is_from_self={is_from_self}, from_user_id={from_user_id}")
                                     try:
                                         append_image_message(
                                             main_window,
@@ -259,7 +290,6 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                             reply_to_message_type=reply_to_message_type,
                                             is_recalled=is_recalled
                                         )
-                                        logger.info(f"图片消息已成功显示: message_id={message_id}, is_from_self={is_from_self}")
                                     except Exception as e:
                                         logger.error(f"显示图片消息失败: message_id={message_id}, error={e}", exc_info=True)
                                     # 确保消息ID已添加到已显示列表（避免轮询重复显示）
@@ -328,7 +358,13 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                 except Exception as e:
                                     logger.debug(f"获取引用消息失败: {e}")
                             
-                            logger.info(f"准备显示消息: message_id={message_id}, text={text[:50] if text else None}, is_from_self={is_from_self}, from_user_id={from_user_id}, from_username={from_username}")
+                            # 检查是否在主线程中
+                            from PyQt6.QtCore import QThread
+                            from PyQt6.QtWidgets import QApplication
+                            app = QApplication.instance()
+                            if app:
+                                is_main_thread = QThread.currentThread() == app.thread()
+                            
                             try:
                                 append_chat_message(
                                     main_window,
@@ -347,7 +383,10 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                     from_username=from_username,
                                     message_created_time=message_time
                                 )
-                                logger.info(f"消息已成功显示: message_id={message_id}, is_from_self={is_from_self}")
+                                
+                                # 验证消息是否真的被添加到布局中
+                                if hasattr(main_window, "chat_layout"):
+                                    layout_count = main_window.chat_layout.count()
                             except Exception as e:
                                 logger.error(f"显示消息失败: message_id={message_id}, error={e}", exc_info=True)
                             # 确保消息ID已添加到已显示列表（避免轮询重复显示）
@@ -355,19 +394,31 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                 if not hasattr(main_window, "_displayed_message_ids"):
                                     main_window._displayed_message_ids = set()
                                 main_window._displayed_message_ids.add(str(message_id))
-                        
-                        # 如果是离线消息，记录日志
-                        if offline:
-                            logger.info(f"收到离线消息: {message_id}")
                     
                     except Exception as e:
-                        logger.error(f"处理 WebSocket 消息失败: {e}", exc_info=True)
+                        logger.error(f"[update_ui] 处理 WebSocket 消息失败: {e}", exc_info=True)
                 
-                # 使用 QTimer.singleShot 确保在主线程中执行
-                QTimer.singleShot(0, update_ui)
+                # 在主线程中执行 update_ui：统一用 UI 调度器（信号）或 QTimer 兜底
+                try:
+                    from PyQt6.QtCore import QThread, QTimer
+                    app = QApplication.instance()
+                    if app:
+                        is_main_thread = QThread.currentThread() == app.thread()
+                        if is_main_thread:
+                            update_ui()
+                        else:
+                            dispatcher = _get_ui_dispatcher(main_window)
+                            if dispatcher:
+                                dispatcher.trigger.emit(update_ui)
+                            else:
+                                QTimer.singleShot(0, update_ui)
+                    else:
+                        update_ui()
+                except Exception as e:
+                    logger.error(f"执行 update_ui 失败: {e}", exc_info=True)
             
             except Exception as e:
-                logger.error(f"处理 WebSocket 消息失败: {e}", exc_info=True)
+                logger.error(f"on_message 回调外层异常: {e}, message_id={data.get('id') if isinstance(data, dict) else 'unknown'}", exc_info=True)
             
             # 如果存在自定义处理函数，也调用它
             if hasattr(main_window, '_on_websocket_message'):
@@ -564,7 +615,7 @@ def disconnect_websocket(main_window):
         if hasattr(main_window, '_ws_client') and main_window._ws_client:
             main_window._ws_client.disconnect()
             main_window._ws_client = None
-            logger.info("WebSocket 已断开")
+            logger.debug("WebSocket 已断开")
     except Exception as e:
         logger.error(f"断开 WebSocket 失败: {e}", exc_info=True)
 

@@ -1582,7 +1582,7 @@ def handle_connect():
     try:
         from flask import request as flask_request
         socket_id = flask_request.sid
-        logger.info(f"WebSocket 连接建立: {socket_id}")
+        logger.debug(f"WebSocket 连接建立: {socket_id}")
         return {"success": True, "socket_id": socket_id}
     except Exception as e:
         logger.error(f"处理连接事件失败: {e}", exc_info=True)
@@ -1595,7 +1595,7 @@ def handle_disconnect():
     try:
         from flask import request as flask_request
         socket_id = flask_request.sid
-        logger.info(f"WebSocket 连接断开: {socket_id}")
+        logger.debug(f"WebSocket 连接断开: {socket_id}")
         
         # 断开连接
         ws_manager.disconnect(socket_id=socket_id)
@@ -1672,7 +1672,7 @@ def handle_register(data):
         )
         
         if success:
-            logger.info(f"用户 {user_id} 注册 WebSocket 连接成功: {connection_id}")
+            logger.debug(f"用户 {user_id} 注册 WebSocket 连接成功: {connection_id}")
             return {
                 "success": True,
                 "connection_id": connection_id,
@@ -1827,7 +1827,7 @@ def handle_recall_message(data):
                     # 发送给发送方（多设备同步）
                     ws_manager.send_message_to_user(from_user_id, "message_recalled", recall_data)
                     
-                    logger.info(f"消息 {message_id} 已被用户 {user_id} 撤回，已推送事件")
+                    logger.debug(f"消息 {message_id} 已被用户 {user_id} 撤回，已推送事件")
                 
                 return {"success": True, "message": "消息已撤回"}
             else:
@@ -1892,6 +1892,17 @@ def handle_send_message(data):
             to_user_id = chat_session.get("agent_id")
         else:
             to_user_id = to_user_id or chat_session.get("user_id")
+
+        # 统一将用户ID转换为整数，避免类型不一致导致在线状态判断失败
+        try:
+            from_user_id = int(from_user_id)
+        except (TypeError, ValueError):
+            return {"success": False, "message": "发送者ID无效"}
+        try:
+            to_user_id = int(to_user_id) if to_user_id is not None else None
+        except (TypeError, ValueError):
+            logger.warning(f"无法解析接收方用户ID: {to_user_id}，将不推送实时消息")
+            to_user_id = None
 
         if message_type not in ["text", "image", "file"]:
             message_type = "text"
@@ -1993,35 +2004,36 @@ def handle_send_message(data):
         
         # 记录日志，便于调试
         if reply_to_id:
-            logger.info(f"消息 {message_id} 包含引用消息ID: {reply_to_id}, 会话: {session_id}")
+            logger.debug(f"消息 {message_id} 包含引用消息ID: {reply_to_id}, 会话: {session_id}")
         else:
             logger.debug(f"消息 {message_id} 不包含引用消息，会话: {session_id}")
 
         # 使用 WebSocket 管理器推送消息
         if to_user_id:
-            # 检查接收方是否在线
-            if ws_manager.is_user_online(to_user_id):
-                # 在线，直接推送
-                ws_manager.send_message_to_user(to_user_id, "new_message", payload_data)
-                # 更新消息状态为已送达（基于数据库事务确认，使用重试机制）
-                import threading
-                def update_delivered_status():
-                    # 使用重试机制，最多重试3次，每次间隔100ms
-                    max_retries = 3
-                    retry_interval = 0.1  # 100ms
-                    for attempt in range(max_retries):
-                        msg = db.get_message_by_id(message_id)
-                        if msg:
-                            # 消息已确认存在，更新状态
-                            ws_manager.handle_message_status(message_id, 'delivered')
-                            return
-                        if attempt < max_retries - 1:
-                            import time
-                            time.sleep(retry_interval)
-                    # 所有重试都失败，记录警告但不中断流程
-                    logger.warning(f"消息 {message_id} 在更新已送达状态时未找到（已重试{max_retries}次）")
-                threading.Thread(target=update_delivered_status, daemon=True).start()
-            # 如果用户离线，消息不会推送，用户上线后可以通过轮询获取
+            # 尝试推送给接收方，无论在线检测结果如何都尝试一次，避免误判导致漏推
+            logger.debug(f"准备向用户 {to_user_id} 推送消息: message_id={message_id}, session_id={session_id}, from_user_id={from_user_id}")
+            delivered_count = ws_manager.send_message_to_user(to_user_id, "new_message", payload_data)
+            logger.debug(f"消息推送完成: message_id={message_id}, to_user_id={to_user_id}, delivered_count={delivered_count}")
+            if delivered_count == 0:
+                logger.warning(f"发送给用户 {to_user_id} 的实时消息未送达（delivered_count=0），可能离线或房间未正确加入")
+            # 更新消息状态为已送达（基于数据库事务确认，使用重试机制）
+            import threading
+            def update_delivered_status():
+                # 使用重试机制，最多重试3次，每次间隔100ms
+                max_retries = 3
+                retry_interval = 0.1  # 100ms
+                for attempt in range(max_retries):
+                    msg = db.get_message_by_id(message_id)
+                    if msg:
+                        # 消息已确认存在，更新状态
+                        ws_manager.handle_message_status(message_id, 'delivered')
+                        return
+                    if attempt < max_retries - 1:
+                        import time
+                        time.sleep(retry_interval)
+                # 所有重试都失败，记录警告但不中断流程
+                logger.warning(f"消息 {message_id} 在更新已送达状态时未找到（已重试{max_retries}次）")
+            threading.Thread(target=update_delivered_status, daemon=True).start()
         
         # 也广播给发送者（多设备同步）
         # 添加 is_from_self 标记，方便客户端判断

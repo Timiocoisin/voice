@@ -141,9 +141,15 @@ class WebSocketManager:
             )
             
             # 加入用户房间（用于广播）
-            join_room(f"user_{user_id}")
+            # 使用 SocketIO.server.enter_room 显式指定 socket_id，避免依赖请求上下文
+            try:
+                room_name = f"user_{user_id}"
+                self.socketio.server.enter_room(socket_id, room_name, namespace="/")
+                logger.debug(f"成功将 socket {socket_id} 加入房间 {room_name}")
+            except Exception as e:
+                logger.error(f"将 socket {socket_id} 加入房间 user_{user_id} 失败: {e}", exc_info=True)
             
-            logger.info(f"用户 {user_id} 建立连接: {connection_id} (socket: {socket_id})")
+            logger.debug(f"用户 {user_id} 建立连接: {connection_id} (socket: {socket_id})")
             
             return True
         except Exception as e:
@@ -195,9 +201,13 @@ class WebSocketManager:
             self.db.disconnect_user_connection(connection_id)
             
             # 离开用户房间
-            leave_room(f"user_{user_id}")
+            # 使用 SocketIO.server.leave_room 显式指定 socket_id，避免依赖请求上下文
+            try:
+                self.socketio.server.leave_room(socket_id, f"user_{user_id}", namespace="/")
+            except Exception as e:
+                logger.error(f"将 socket {socket_id} 从房间 user_{user_id} 移除失败: {e}", exc_info=True)
             
-            logger.info(f"用户 {user_id} 断开连接: {connection_id}")
+            logger.debug(f"用户 {user_id} 断开连接: {connection_id}")
             return True
         except Exception as e:
             logger.error(f"断开连接失败: {e}", exc_info=True)
@@ -281,17 +291,28 @@ class WebSocketManager:
         """
         try:
             connections = self.get_user_connections(user_id)
-            if not connections:
-                logger.debug(f"用户 {user_id} 不在线，无法发送消息")
-                return 0
+            message_id = data.get("id", "unknown")
             
+            # 即使 connections 为空，也尝试发送一次（因为房间可能已经加入了）
             # 使用房间广播（更高效）
-            self.socketio.emit(event, data, room=f"user_{user_id}", namespace="/")
-            
-            logger.debug(f"向用户 {user_id} 的 {len(connections)} 个连接发送消息: {event}")
-            return len(connections)
+            try:
+                room_name = f"user_{user_id}"
+                logger.debug(f"准备发送消息到房间: {room_name}, event={event}, message_id={message_id}, namespace=/")
+                self.socketio.emit(event, data, room=room_name, namespace="/")
+                logger.debug(f"消息已发送到房间: {room_name}, event={event}, message_id={message_id}")
+                
+                if connections:
+                    logger.debug(f"向用户 {user_id} 的 {len(connections)} 个连接发送消息: {event}, message_id={message_id}")
+                else:
+                    logger.debug(f"向用户 {user_id} 发送消息（房间广播，连接记录为空）: {event}, message_id={message_id}")
+                
+                # 返回连接数，如果没有记录则返回1（假设至少有一个连接在房间中）
+                return len(connections) if connections else 1
+            except Exception as emit_error:
+                logger.error(f"发送消息到房间 user_{user_id} 失败: {emit_error}, message_id={message_id}", exc_info=True)
+                return 0
         except Exception as e:
-            logger.error(f"发送消息失败: {e}", exc_info=True)
+            logger.error(f"发送消息失败: {e}, user_id={user_id}, event={event}", exc_info=True)
             return 0
     
     def send_message_to_connection(self, connection_id: str, event: str, data: dict) -> bool:

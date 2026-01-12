@@ -1869,28 +1869,22 @@ def match_human_service(main_window: "MainWindow"):
             main_window._human_service_connected = True
             main_window._matched_agent_id = response.get("agent_id")
             
-            # 匹配成功后，连接 WebSocket 进行实时通信
+            # 匹配成功后，连接 WebSocket 进行实时通信（主线程直接执行）
             try:
                 from client.utils.websocket_helper import connect_websocket
-                import threading
-                # 在后台线程中连接，避免阻塞 UI
-                def connect_websocket_thread():
-                    if connect_websocket(main_window, main_window.user_id, token):
-                        logging.info("WebSocket 连接成功")
-                    else:
-                        logging.error("WebSocket 连接失败")
-                        # WebSocket 连接失败时显示提示
-                        from PyQt6.QtCore import QTimer
-                        QTimer.singleShot(0, lambda: append_chat_message(
-                            main_window,
-                            "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
-                            from_self=False,
-                            is_html=False,
-                            streaming=False
-                        ))
-                
-                threading.Thread(target=connect_websocket_thread, daemon=True).start()
-                logging.info("正在连接 WebSocket 以进行实时通信...")
+                if connect_websocket(main_window, main_window.user_id, token):
+                    logging.info("WebSocket 连接成功")
+                else:
+                    logging.error("WebSocket 连接失败")
+                    # WebSocket 连接失败时显示提示
+                    from PyQt6.QtCore import QTimer
+                    QTimer.singleShot(0, lambda: append_chat_message(
+                        main_window,
+                        "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
+                        from_self=False,
+                        is_html=False,
+                        streaming=False
+                    ))
             except Exception as e:
                 logging.error(f"连接 WebSocket 失败: {e}", exc_info=True)
                 # WebSocket 连接失败时显示提示

@@ -107,8 +107,17 @@ def check_auto_login(main_window: "MainWindow") -> None:
             avatar_bytes, username, is_vip, diamonds, user_id
         )
 
-        # 不再在登录时自动连接 WebSocket
-        # WebSocket 连接将在用户匹配上客服后才建立
+        # 自动登录成功后，自动建立 WebSocket 长连接（主线程直接执行）
+        if user_id:
+            try:
+                from client.utils.websocket_helper import connect_websocket
+                if token:
+                    if connect_websocket(main_window, user_id, token):
+                        logging.info(f"用户 {username} (ID: {user_id}) WebSocket 连接成功（自动登录）")
+                    else:
+                        logging.error(f"用户 {username} (ID: {user_id}) WebSocket 连接失败（自动登录）")
+            except Exception as e:
+                logging.error(f"建立 WebSocket 连接失败（自动登录）: {e}", exc_info=True)
 
         # 隐藏蒙版
         if loading_overlay:

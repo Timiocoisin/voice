@@ -896,6 +896,17 @@ class LoginDialog(QDialog):
 
         self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
 
+        # 注册成功后，自动建立 WebSocket 长连接（主线程直接执行）
+        if self.parent() and user_id and token:
+            try:
+                from client.utils.websocket_helper import connect_websocket
+                if connect_websocket(self.parent(), user_id, token):
+                    logging.info(f"用户 {username} (ID: {user_id}) WebSocket 连接成功（注册后）")
+                else:
+                    logging.error(f"用户 {username} (ID: {user_id}) WebSocket 连接失败（注册后）")
+            except Exception as e:
+                logging.error(f"建立 WebSocket 连接失败（注册后）: {e}", exc_info=True)
+
         # 隐藏蒙版
         if self.parent():
             self.parent().mask_widget.setVisible(False)
@@ -948,9 +959,6 @@ class LoginDialog(QDialog):
 
         is_vip = bool(vip_info.get("is_vip", False))
         diamonds = vip_info.get("diamonds", 0)
-        
-        # 不再在登录时自动连接 WebSocket
-        # WebSocket 连接将在用户匹配上客服后才建立
 
         # 通过用户资料接口获取最新头像，确保使用用户上传的头像
         from client.api_client import get_user_profile
@@ -962,6 +970,17 @@ class LoginDialog(QDialog):
         diamonds = p_vip.get("diamonds", 0)
 
         self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
+
+        # 登录成功后，自动建立 WebSocket 长连接（主线程直接执行）
+        if self.parent() and user_id and token:
+            try:
+                from client.utils.websocket_helper import connect_websocket
+                if connect_websocket(self.parent(), user_id, token):
+                    logging.info(f"用户 {username} (ID: {user_id}) WebSocket 连接成功")
+                else:
+                    logging.error(f"用户 {username} (ID: {user_id}) WebSocket 连接失败")
+            except Exception as e:
+                logging.error(f"建立 WebSocket 连接失败: {e}", exc_info=True)
 
         # 隐藏蒙版
         if self.parent():
@@ -1017,6 +1036,17 @@ class LoginDialog(QDialog):
             diamonds = p_vip.get("diamonds", 0)
 
             self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
+
+            # 自动登录成功后，自动建立 WebSocket 长连接（主线程直接执行）
+            if self.parent() and user_id and new_token:
+                try:
+                    from client.utils.websocket_helper import connect_websocket
+                    if connect_websocket(self.parent(), user_id, new_token):
+                        logging.info(f"用户 {username} (ID: {user_id}) WebSocket 连接成功（自动登录）")
+                    else:
+                        logging.error(f"用户 {username} (ID: {user_id}) WebSocket 连接失败（自动登录）")
+                except Exception as e:
+                    logging.error(f"建立 WebSocket 连接失败（自动登录）: {e}", exc_info=True)
 
             if self.parent():
                 self.parent().mask_widget.setVisible(False)
