@@ -1879,13 +1879,10 @@ def handle_recall_message(data):
             if success:
                 # 获取消息详情
                 message = db.get_message_by_id(int(message_id))
-                logger.info(f"获取消息详情: message_id={message_id}, message={message}")
                 if message:
                     session_id = message.get("session_id")
                     from_user_id = message.get("from_user_id")
                     to_user_id = message.get("to_user_id")
-                    
-                    logger.info(f"消息详情: session_id={session_id}, from_user_id={from_user_id}, to_user_id={to_user_id}")
                     
                     # 如果数据库中的 to_user_id 为空，但会话已经有客服/用户绑定，尝试补全接收方，确保 Web 端也能收到撤回事件
                     if not to_user_id and session_id:

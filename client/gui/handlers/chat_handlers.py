@@ -899,6 +899,7 @@ def append_chat_message(
                                                     }
                                                 """)
                                                 new_reply_label.setWordWrap(True)
+                                                new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                                 reply_content_layout.insertWidget(layout_index, new_reply_label)
                                                 
                                                 # 更新 reply_label 属性
@@ -921,6 +922,7 @@ def append_chat_message(
                                                         }
                                                     """)
                                                     new_reply_label.setWordWrap(True)
+                                                    new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                                     reply_content_layout.addWidget(new_reply_label)
                                                     reply_container.setProperty("reply_label", new_reply_label)
                                                     reply_label = new_reply_label
@@ -1193,6 +1195,7 @@ def append_chat_message(
                                                             }
                                                         """)
                                                         new_reply_label.setWordWrap(True)
+                                                        new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                                         reply_content_layout.insertWidget(layout_index, new_reply_label)
                                                         
                                                         # 更新 reply_label 属性
@@ -1215,6 +1218,7 @@ def append_chat_message(
                                                                 }
                                                             """)
                                                             new_reply_label.setWordWrap(True)
+                                                            new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                                             reply_content_layout.addWidget(new_reply_label)
                                                             reply_container.setProperty("reply_label", new_reply_label)
                                                             reply_label = new_reply_label
@@ -1420,6 +1424,7 @@ def append_chat_message(
                                         }
                                     """)
                                     new_reply_label.setWordWrap(True)
+                                    new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                     reply_content_layout.insertWidget(layout_index, new_reply_label)
                                     
                                     # 更新 reply_label 属性
@@ -1442,6 +1447,7 @@ def append_chat_message(
                                             }
                                         """)
                                         new_reply_label.setWordWrap(True)
+                                        new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                         reply_content_layout.addWidget(new_reply_label)
                                         reply_container.setProperty("reply_label", new_reply_label)
                                         reply_label = new_reply_label
@@ -1641,7 +1647,7 @@ def append_chat_message(
                     reply_container.setProperty("reply_thumbnail_label", thumbnail_label)
                     
                     # 创建文本标签（显示发送者名称），这个标签也作为 reply_label 用于撤回时更新
-                    # 样式参考你给的示例：仅显示 “用户名:”，不再额外加“图片”文字
+                    # 样式参考你给的示例：仅显示 "用户名:"，不再额外加"图片"文字
                     sender_label = QLabel(f"{reply_sender_name}:")
                     sender_label.setStyleSheet("""
                         QLabel {
@@ -1652,6 +1658,7 @@ def append_chat_message(
                         }
                     """)
                     sender_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
+                    sender_label.setMaximumWidth(200)  # 限制发送者名称的最大宽度
                     reply_label = sender_label  # 使用 sender_label 作为 reply_label
                     
                     # 水平布局：发送者名称 + 缩略图（紧凑排列，中间不要太大空白）
@@ -1690,6 +1697,7 @@ def append_chat_message(
                     }
                 """)
                 reply_label.setWordWrap(True)
+                reply_label.setMaximumWidth(300)  # 限制最大宽度
                 reply_content_layout.addWidget(reply_label)
         else:
             # 文本消息，显示文本内容
@@ -1706,6 +1714,8 @@ def append_chat_message(
                 }
             """)
             reply_label.setWordWrap(True)
+            # 设置文本标签的最大宽度，确保表情符号等宽内容不会导致气泡过长
+            reply_label.setMaximumWidth(300)  # 限制最大宽度为300px
             reply_content_layout.addWidget(reply_label)
 
         # 把引用信息存到容器属性里，方便后续在被引用消息撤回时更新文案/缩略图
@@ -1717,10 +1727,14 @@ def append_chat_message(
         reply_layout.addLayout(reply_content_layout)
 
         # 让引用卡片宽度自适应内容（但不超过正文气泡最大宽度）
+        # 对于包含表情符号的内容，限制最大宽度避免气泡过长
         reply_container.adjustSize()
         content_width = reply_container.sizeHint().width()
-        desired_width = max(120, min(content_width, 420))  # 保底宽度 120，封顶 420
+        # 降低最大宽度限制，从420改为300，避免表情符号导致气泡过长
+        desired_width = max(120, min(content_width, 300))  # 保底宽度 120，封顶 300
         reply_container.setFixedWidth(desired_width)
+        # 确保容器不会超出最大宽度
+        reply_container.setMaximumWidth(300)
 
         # 引用块单独占一行，与消息气泡左对齐（放在正文气泡下方）
         reply_row = QHBoxLayout()
@@ -2344,6 +2358,20 @@ def request_human_service(main_window: "MainWindow"):
         )
         return
     
+    # 用户点击匹配客服时，立即建立 WebSocket 连接
+    # 这样即使匹配失败（加入等待队列），客服接入后也能立即通信
+    from client.login.token_storage import read_token
+    token = read_token()
+    if token:
+        try:
+            from client.utils.websocket_helper import connect_websocket
+            if connect_websocket(main_window, main_window.user_id, token):
+                logging.info("用户点击匹配客服，WebSocket 连接成功")
+            else:
+                logging.warning("用户点击匹配客服，WebSocket 连接失败，将在匹配成功后重试")
+        except Exception as e:
+            logging.error(f"建立 WebSocket 连接失败: {e}", exc_info=True)
+    
     # 显示匹配中的消息
     append_matching_message(main_window)
     
@@ -2465,32 +2493,29 @@ def match_human_service(main_window: "MainWindow"):
             main_window._human_service_connected = True
             main_window._matched_agent_id = response.get("agent_id")
             
-            # 匹配成功后，连接 WebSocket 进行实时通信（主线程直接执行）
+            # 注意：WebSocket 连接已在用户点击"匹配客服"时建立（request_human_service）
+            # 这里只需要检查连接状态，如果连接失败则提示用户
             try:
-                from client.utils.websocket_helper import connect_websocket
-                if connect_websocket(main_window, main_window.user_id, token):
-                    logging.info("WebSocket 连接成功")
+                from client.utils.websocket_helper import get_or_create_websocket_client
+                ws_client = get_or_create_websocket_client(main_window)
+                if ws_client and ws_client.status.value == "connected":
+                    logging.info("匹配成功，WebSocket 连接已就绪")
                 else:
-                    logging.error("WebSocket 连接失败")
-                    # WebSocket 连接失败时显示提示
-                    from PyQt6.QtCore import QTimer
-                    QTimer.singleShot(0, lambda: append_chat_message(
-                        main_window,
-                        "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
-                        from_self=False,
-                        is_html=False,
-                        streaming=False
-                    ))
+                    # 如果连接未建立，尝试重新连接
+                    logging.warning("匹配成功但 WebSocket 未连接，尝试重新连接")
+                    from client.utils.websocket_helper import connect_websocket
+                    if not connect_websocket(main_window, main_window.user_id, token):
+                        # WebSocket 连接失败时显示提示
+                        from PyQt6.QtCore import QTimer
+                        QTimer.singleShot(0, lambda: append_chat_message(
+                            main_window,
+                            "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
+                            from_self=False,
+                            is_html=False,
+                            streaming=False
+                        ))
             except Exception as e:
-                logging.error(f"连接 WebSocket 失败: {e}", exc_info=True)
-                # WebSocket 连接失败时显示提示
-                append_chat_message(
-                    main_window,
-                    "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
-                    from_self=False,
-                    is_html=False,
-                    streaming=False
-                )
+                logging.error(f"检查 WebSocket 连接状态失败: {e}", exc_info=True)
         else:
             # 匹配失败，加入等待队列
             wait_message = response.get("message", "暂无在线客服，您的请求已加入等待队列，客服接入后会主动联系您。")
@@ -3304,6 +3329,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                                                         }
                                                     """)
                                                     new_reply_label.setWordWrap(True)
+                                                    new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                                     reply_content_layout.insertWidget(layout_index, new_reply_label)
                                                     
                                                     # 更新 reply_label 属性
@@ -3326,6 +3352,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                                                             }
                                                         """)
                                                         new_reply_label.setWordWrap(True)
+                                                        new_reply_label.setMaximumWidth(300)  # 限制最大宽度
                                                         reply_content_layout.addWidget(new_reply_label)
                                                         reply_container.setProperty("reply_label", new_reply_label)
                                                         reply_label = new_reply_label
@@ -3489,6 +3516,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                     }
                 """)
                 reply_label.setWordWrap(True)
+                reply_label.setMaximumWidth(300)  # 限制最大宽度
                 reply_content_layout.addWidget(reply_label)
         else:
             # 文本消息，显示文本内容

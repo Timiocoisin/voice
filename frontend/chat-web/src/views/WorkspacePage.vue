@@ -155,25 +155,25 @@
                     </div>
                   </template>
                   <template v-else>
-                    <!-- 引用消息显示（微信风格：浅灰背景，左侧蓝色竖线，显示"发送者: 消息内容"，在消息内容上方） -->
+                    <!-- 引用消息显示（毛玻璃风格） -->
                     <div 
                       v-if="msg.replyToMessage" 
                       class="reply-message-preview"
-                      style="background-color: #f0f0f0; border-left: 3px solid #07c160; padding: 8px 10px; margin-bottom: 6px; border-radius: 0; max-width: 100%;"
                     >
                       <!-- 如果是图片消息，显示缩略图 -->
-                      <div v-if="msg.replyToMessageType === 'image' && msg.replyToMessage && msg.replyToMessage.startsWith('data:image')" style="display: flex; align-items: center; gap: 6px;">
-                        <span style="color: #576b95; font-size: 12px;">{{ (msg.replyToUsername || '用户') }}:</span>
+                      <div v-if="msg.replyToMessageType === 'image' && msg.replyToMessage && msg.replyToMessage.startsWith('data:image')" class="reply-image-container">
+                        <span class="reply-sender-name">{{ (msg.replyToUsername || '用户') }}:</span>
                         <img 
                           :src="msg.replyToMessage" 
                           alt="引用图片"
-                          style="width: 30px; height: 30px; object-fit: cover; border-radius: 4px;"
+                          class="reply-image-thumbnail"
                           @error="(e) => { e.target.style.display = 'none'; }"
                         />
                       </div>
                       <!-- 文本消息或其他类型 -->
-                      <div v-else class="reply-text" style="color: #576b95; font-size: 12px;">
-                        {{ (msg.replyToUsername || '用户') }}: {{ msg.replyToMessage === '该引用消息已被撤回' ? '该引用消息已被撤回' : (msg.replyToMessage.length > 50 ? msg.replyToMessage.substring(0, 50) + '...' : msg.replyToMessage) }}
+                      <div v-else class="reply-text">
+                        <span class="reply-sender-name">{{ (msg.replyToUsername || '用户') }}:</span>
+                        <span class="reply-content">{{ msg.replyToMessage === '该引用消息已被撤回' ? '该引用消息已被撤回' : (msg.replyToMessage.length > 50 ? msg.replyToMessage.substring(0, 50) + '...' : msg.replyToMessage) }}</span>
                       </div>
                     </div>
                     <!-- 消息内容 -->
@@ -2619,17 +2619,21 @@ const stopMessagePolling = () => {
   color: #0f172a;
 }
 
-/* 用户消息：白色卡片样式 */
+/* 用户消息：毛玻璃效果 */
 .from-user .msg-bubble {
-  background: #ffffff;
-  border: 1px solid rgba(226, 232, 240, 0.8);
+  background: rgba(255, 255, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 2px 8px rgba(15, 23, 42, 0.08);
 }
 
-/* 客服消息：淡蓝色背景 */
+/* 客服消息：毛玻璃效果 */
 .from-agent .msg-bubble {
-  background: rgba(229, 239, 255, 0.08);
-  border: 1px solid rgba(51, 112, 255, 0.04);
+  background: rgba(229, 239, 255, 0.12);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(51, 112, 255, 0.15);
 }
 
 .msg-text {
@@ -2731,6 +2735,62 @@ const stopMessagePolling = () => {
   font-size: 10px;
   color: rgba(15, 23, 42, 0.55);
   text-align: right;
+}
+
+/* 引用消息预览：毛玻璃效果 */
+.reply-message-preview {
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-left: 3px solid rgba(59, 130, 246, 0.6);
+  border-radius: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  max-width: 100%;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);
+}
+
+.reply-message-preview:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-left-color: rgba(59, 130, 246, 0.8);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.08);
+}
+
+.reply-text {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(15, 23, 42, 0.75);
+}
+
+.reply-sender-name {
+  color: rgba(59, 130, 246, 0.9);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.reply-content {
+  color: rgba(15, 23, 42, 0.7);
+  word-break: break-word;
+  flex: 1;
+}
+
+.reply-image-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reply-image-thumbnail {
+  width: 32px;
+  height: 32px;
+  object-fit: cover;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.1);
 }
 
 /* 富文本样式 */

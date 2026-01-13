@@ -896,16 +896,8 @@ class LoginDialog(QDialog):
 
         self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
 
-        # 注册成功后，自动建立 WebSocket 长连接（主线程直接执行）
-        if self.parent() and user_id and token:
-            try:
-                from client.utils.websocket_helper import connect_websocket
-                if connect_websocket(self.parent(), user_id, token):
-                    logging.info(f"用户 {username} (ID: {user_id}) WebSocket 连接成功（注册后）")
-                else:
-                    logging.error(f"用户 {username} (ID: {user_id}) WebSocket 连接失败（注册后）")
-            except Exception as e:
-                logging.error(f"建立 WebSocket 连接失败（注册后）: {e}", exc_info=True)
+        # 注意：WebSocket 连接将在用户点击"匹配客服"时建立，而不是在注册/登录时
+        # 这样可以避免不必要的连接，只在需要实时通信时才建立连接
 
         # 隐藏蒙版
         if self.parent():
@@ -971,16 +963,8 @@ class LoginDialog(QDialog):
 
         self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
 
-        # 登录成功后，自动建立 WebSocket 长连接（主线程直接执行）
-        if self.parent() and user_id and token:
-            try:
-                from client.utils.websocket_helper import connect_websocket
-                if connect_websocket(self.parent(), user_id, token):
-                    logging.info(f"用户 {username} (ID: {user_id}) WebSocket 连接成功")
-                else:
-                    logging.error(f"用户 {username} (ID: {user_id}) WebSocket 连接失败")
-            except Exception as e:
-                logging.error(f"建立 WebSocket 连接失败: {e}", exc_info=True)
+        # 注意：WebSocket 连接将在用户点击"匹配客服"时建立，而不是在登录时
+        # 这样可以避免不必要的连接，只在需要实时通信时才建立连接
 
         # 隐藏蒙版
         if self.parent():
@@ -1037,16 +1021,8 @@ class LoginDialog(QDialog):
 
             self.update_user_info(avatar_bytes, username, is_vip, diamonds, user_id)
 
-            # 自动登录成功后，自动建立 WebSocket 长连接（主线程直接执行）
-            if self.parent() and user_id and new_token:
-                try:
-                    from client.utils.websocket_helper import connect_websocket
-                    if connect_websocket(self.parent(), user_id, new_token):
-                        logging.info(f"用户 {username} (ID: {user_id}) WebSocket 连接成功（自动登录）")
-                    else:
-                        logging.error(f"用户 {username} (ID: {user_id}) WebSocket 连接失败（自动登录）")
-                except Exception as e:
-                    logging.error(f"建立 WebSocket 连接失败（自动登录）: {e}", exc_info=True)
+            # 注意：WebSocket 连接将在用户点击"匹配客服"时建立，而不是在自动登录时
+            # 这样可以避免不必要的连接，只在需要实时通信时才建立连接
 
             if self.parent():
                 self.parent().mask_widget.setVisible(False)
