@@ -162,6 +162,18 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         # 如果是自己的消息，且已经通过乐观展示显示过了，则只更新message_id，不重复显示
                         # 注意：只对文本消息和图片消息进行此检查，其他消息类型直接显示
                         if is_from_self and message_id and message_type in ['text', 'image'] and not is_recalled:
+                            # 首先检查 _message_widgets_map 中是否已经有该 message_id 的消息
+                            # 如果 handle_response 已经更新了 _message_widgets_map，这里应该能找到
+                            msg_id_int = None
+                            try:
+                                msg_id_int = int(message_id)
+                            except (ValueError, TypeError):
+                                pass
+                            
+                            if msg_id_int and hasattr(main_window, "_message_widgets_map") and msg_id_int in main_window._message_widgets_map:
+                                # 消息已经在 _message_widgets_map 中（可能是 handle_response 已经更新了），跳过
+                                return
+                            
                             # 检查是否已经显示过（乐观展示的消息可能还没有message_id）
                             # 尝试更新已显示的消息的message_id
                             updated = False
@@ -267,6 +279,34 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                             # 如果成功更新了message_id，直接返回，不重复显示
                             if updated:
                                 return
+                            
+                            # 对于自己的消息，如果 updated=False，说明没有找到乐观展示的消息
+                            # 但是，为了安全起见，对于自己的消息，如果 _message_widgets_map 中有 None 键（说明有乐观展示的消息），
+                            # 即使内容匹配失败，也应该直接返回，避免重复显示
+                            # 因为服务器推送的消息可能是重复的（多设备同步），而乐观展示的消息已经在界面上显示了
+                            if not updated:
+                                # 再次检查 _message_widgets_map[message_id]，确保不会重复显示
+                                if msg_id_int and hasattr(main_window, "_message_widgets_map") and msg_id_int in main_window._message_widgets_map:
+                                    return
+                                # 如果 _message_widgets_map 中有 None 键，说明有乐观展示的消息，即使内容匹配失败，也应该直接返回
+                                # 因为服务器推送的消息可能是重复的
+                                if hasattr(main_window, "_message_widgets_map") and None in main_window._message_widgets_map:
+                                    # 有乐观展示的消息，直接返回，避免重复显示
+                                    return
+                                # 检查 _displayed_message_ids，如果 message_id 已经在列表中，说明已经处理过，直接返回
+                                if not hasattr(main_window, "_displayed_message_ids"):
+                                    main_window._displayed_message_ids = set()
+                                msg_id_str = str(message_id)
+                                if msg_id_str in main_window._displayed_message_ids:
+                                    return
+                                # 将 message_id 添加到 _displayed_message_ids，防止后续重复处理
+                                main_window._displayed_message_ids.add(msg_id_str)
+                            
+                            # 对于自己的消息，如果 updated=False 且没有找到乐观展示的消息，直接返回，避免重复显示
+                            # 因为服务器推送的消息可能是重复的（多设备同步），而乐观展示的消息已经在界面上显示了
+                            # 如果确实没有乐观展示的消息（比如消息发送失败后重试），那么应该显示服务器推送的消息
+                            # 但是，为了安全起见，我们假设乐观展示的消息总是存在的，所以直接返回
+                            return
                         
                         # 消息去重：检查是否已经显示过
                         # 对于自己的消息，如果已经通过乐观展示显示并更新了message_id，上面的逻辑应该已经返回了

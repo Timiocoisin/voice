@@ -1715,7 +1715,11 @@ def append_chat_message(
         if not hasattr(main_window, "_message_widgets_map"):
             main_window._message_widgets_map = {}
         
+        # 如果 message_id 不为 None，先检查是否已经存在该 message_id 的消息（避免重复显示）
         if message_id is not None:
+            if message_id in main_window._message_widgets_map:
+                # 消息已经存在，不重复添加
+                return
             main_window._message_widgets_map[message_id] = (message_widget, bubble_label)
             message_widget.setProperty("message_id", message_id)
         else:

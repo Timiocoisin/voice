@@ -719,3 +719,30 @@
 2026-01-13 14:25:11,159 - INFO - root - 用户 1 的设备 8e38a76d-75ec-41bc-b3d7-1661fef00c2e 已注册
 2026-01-13 14:25:11,167 - INFO - root - 用户 1 的连接 c3c08495-36f0-4fb5-a213-87e4c4defc5a 已创建
 2026-01-13 14:25:24,956 - ERROR - __main__ - 无法推送消息：to_user_id为None, message_id=544, session_id=chat_1_225298ba, from_user_id=1, role=user, chat_session={'id': 135, 'session_id': 'chat_1_225298ba', 'user_id': 1, 'agent_id': None, 'status': 'pending', 'created_at': datetime.datetime(2026, 1, 13, 14, 25, 21), 'started_at': None, 'closed_at': None}
+2026-01-13 14:27:21,470 - INFO - root - 连接 c3c08495-36f0-4fb5-a213-87e4c4defc5a 已断开
+2026-01-13 14:27:24,281 - INFO - root - 用户 1 的设备 4a2b690f-60e8-48c0-8053-6b7c7ad3fee9 已注册
+2026-01-13 14:27:24,289 - INFO - root - 用户 1 的连接 c08367d6-88d4-4c04-a2c3-9a4baab24acf 已创建
+2026-01-13 14:27:37,722 - ERROR - __main__ - 无法推送消息：to_user_id为None, message_id=545, session_id=chat_1_9ac8052e, from_user_id=1, role=user, chat_session={'id': 136, 'session_id': 'chat_1_9ac8052e', 'user_id': 1, 'agent_id': None, 'status': 'pending', 'created_at': datetime.datetime(2026, 1, 13, 14, 27, 34), 'started_at': None, 'closed_at': None}
+2026-01-13 14:27:52,684 - INFO - root - 连接 c08367d6-88d4-4c04-a2c3-9a4baab24acf 已断开
+2026-01-13 14:31:13,662 - INFO - root - 用户 1 的设备 90f9bdf8-9256-4261-bcef-68429629456b 已注册
+2026-01-13 14:31:13,670 - INFO - root - 用户 1 的连接 af0a6195-d7ab-4173-86ea-90b86e4d5c03 已创建
+2026-01-13 14:31:59,314 - INFO - root - 消息 547 已被用户 2 撤回
+2026-01-13 14:31:59,340 - INFO - __main__ - [HTTP API] 准备推送撤回消息事件: recall_data={'message_id': '547', 'session_id': 'chat_1_edc420a9', 'from_user_id': 2, 'username': '小旭', 'is_recalled': True, 'time': '刚刚'}
+2026-01-13 14:31:59,341 - INFO - __main__ - [HTTP API] 准备向接收方 1 推送撤回消息事件: message_id=547
+2026-01-13 14:31:59,342 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给接收方 1: delivered_count=1
+2026-01-13 14:31:59,343 - INFO - __main__ - [HTTP API] 准备向发送方 2 推送撤回消息事件: message_id=547
+2026-01-13 14:31:59,343 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给发送方 2: delivered_count=1
+2026-01-13 14:32:16,075 - INFO - root - 消息 550 已被用户 2 撤回
+2026-01-13 14:32:16,087 - INFO - __main__ - [HTTP API] 准备推送撤回消息事件: recall_data={'message_id': '550', 'session_id': 'chat_1_edc420a9', 'from_user_id': 2, 'username': '小旭', 'is_recalled': True, 'time': '刚刚'}
+2026-01-13 14:32:16,088 - INFO - __main__ - [HTTP API] 准备向接收方 1 推送撤回消息事件: message_id=550
+2026-01-13 14:32:16,088 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给接收方 1: delivered_count=1
+2026-01-13 14:32:16,089 - INFO - __main__ - [HTTP API] 准备向发送方 2 推送撤回消息事件: message_id=550
+2026-01-13 14:32:16,089 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给发送方 2: delivered_count=1
+2026-01-13 14:32:36,724 - INFO - root - 消息 552 已被用户 2 撤回
+2026-01-13 14:32:36,743 - INFO - __main__ - [HTTP API] 准备推送撤回消息事件: recall_data={'message_id': '552', 'session_id': 'chat_1_edc420a9', 'from_user_id': 2, 'username': '小旭', 'is_recalled': True, 'time': '刚刚'}
+2026-01-13 14:32:36,743 - INFO - __main__ - [HTTP API] 准备向接收方 1 推送撤回消息事件: message_id=552
+2026-01-13 14:32:36,744 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给接收方 1: delivered_count=1
+2026-01-13 14:32:36,744 - INFO - __main__ - [HTTP API] 准备向发送方 2 推送撤回消息事件: message_id=552
+2026-01-13 14:32:36,745 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给发送方 2: delivered_count=1
+2026-01-13 14:33:38,536 - WARNING - backend.websocket.websocket_manager - 连接 af0a6195-d7ab-4173-86ea-90b86e4d5c03 心跳超时（距离上次心跳 144.9 秒），自动断开
+2026-01-13 14:33:38,701 - INFO - root - 连接 af0a6195-d7ab-4173-86ea-90b86e4d5c03 已断开
