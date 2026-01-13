@@ -311,6 +311,9 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         # 消息去重：检查是否已经显示过
                         # 对于自己的消息，如果已经通过乐观展示显示并更新了message_id，上面的逻辑应该已经返回了
                         # 这里只对未处理的消息进行去重检查
+                        # 注意：对于客服消息（is_from_self=False），updated 仍然是 False，所以也会进入这个检查
+                        # 但是，对于客服消息，我们只检查 _message_widgets_map，不检查 _displayed_message_ids
+                        # 因为客服消息没有乐观展示，所以如果 _message_widgets_map 中没有，就应该显示
                         if not updated:  # 只对未找到乐观展示的消息进行去重
                             if not hasattr(main_window, "_displayed_message_ids"):
                                 main_window._displayed_message_ids = set()
@@ -329,21 +332,24 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                     # 消息已经在 _message_widgets_map 中，说明已经显示过了，跳过
                                     return
                                 
-                                # 然后检查 _displayed_message_ids 集合
-                                if msg_id_str in main_window._displayed_message_ids:
-                                    # 检查消息是否真的已经显示（在_message_widgets_map中）
-                                    if hasattr(main_window, "_message_widgets_map"):
-                                        if msg_id_int and msg_id_int in main_window._message_widgets_map:
-                                            # 消息已显示，跳过
-                                            return
+                                # 对于自己的消息，检查 _displayed_message_ids 集合
+                                # 对于客服消息（is_from_self=False），不检查 _displayed_message_ids，因为客服消息没有乐观展示
+                                if is_from_self:
+                                    # 然后检查 _displayed_message_ids 集合
+                                    if msg_id_str in main_window._displayed_message_ids:
+                                        # 检查消息是否真的已经显示（在_message_widgets_map中）
+                                        if hasattr(main_window, "_message_widgets_map"):
+                                            if msg_id_int and msg_id_int in main_window._message_widgets_map:
+                                                # 消息已显示，跳过
+                                                return
+                                            else:
+                                                # 消息ID在列表中但未显示，可能是HTTP轮询获取失败，继续处理
+                                                # 从列表中移除，允许重新处理
+                                                main_window._displayed_message_ids.discard(msg_id_str)
                                         else:
-                                            # 消息ID在列表中但未显示，可能是HTTP轮询获取失败，继续处理
-                                            # 从列表中移除，允许重新处理
                                             main_window._displayed_message_ids.discard(msg_id_str)
-                                    else:
-                                        main_window._displayed_message_ids.discard(msg_id_str)
-                                
-                                main_window._displayed_message_ids.add(msg_id_str)
+                                    
+                                    main_window._displayed_message_ids.add(msg_id_str)
                             else:
                                 # 如果没有message_id，记录日志但继续处理（可能是系统消息）
                                 logger.warning(f"收到没有message_id的消息，继续处理")
@@ -650,8 +656,8 @@ def send_message_via_websocket(main_window, session_id: str, message: str,
                 "message": "WebSocket 未连接，请先连接"
             }
         
-        # 发送消息（现在返回 message_id）
-        message_id = ws_client.send_message(
+        # 发送消息（异步 emit，返回值仅表示是否成功提交给 Socket.IO 客户端）
+        send_ok = ws_client.send_message(
             session_id=session_id,
             message=message,
             role="user",
@@ -659,11 +665,10 @@ def send_message_via_websocket(main_window, session_id: str, message: str,
             reply_to_message_id=reply_to_message_id
         )
         
-        if message_id:
+        if send_ok:
             return {
                 "success": True,
-                "message": "消息已发送",
-                "message_id": message_id
+                "message": "消息已发送"
             }
         else:
             return {

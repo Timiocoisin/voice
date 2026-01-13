@@ -347,6 +347,16 @@ def handle_chat_send(main_window: "MainWindow"):
                 try:
                     # 检查是否有引用消息
                     reply_to_id = getattr(main_window, "_reply_to_message_id", None)
+                    # 如果之前点击引用时还没有 message_id，这里再尝试从被引用控件读取一次（可能已同步到ID）
+                    if reply_to_id is None and hasattr(main_window, "_reply_to_widget"):
+                        try:
+                            cached_widget = getattr(main_window, "_reply_to_widget", None)
+                            if cached_widget:
+                                cached_id = cached_widget.property("message_id")
+                                if cached_id:
+                                    reply_to_id = cached_id
+                        except Exception:
+                            pass
                     
                     # 验证引用消息ID是否有效（必须是大于0的正整数）
                     if reply_to_id is not None:
@@ -357,27 +367,51 @@ def handle_chat_send(main_window: "MainWindow"):
                                 logging.warning(f"引用消息ID无效: {reply_to_id}（ID必须大于0），将按普通消息发送")
                                 reply_to_id = None
                             else:
-                                # 验证引用消息是否真的存在（通过API检查）
+                                # 先在本地检查是否存在该消息（自己刚发出的消息可立即引用）
+                                local_exists = False
                                 try:
-                                    from client.api_client import get_reply_message
-                                    from client.login.token_storage import read_token
-                                    reply_token = read_token()
-                                    if not reply_token:
-                                        logging.warning(f"无法获取token，跳过引用消息验证")
-                                        reply_to_id = None
-                                    else:
-                                        reply_resp = get_reply_message(reply_to_id_int, reply_token)
-                                        if not reply_resp.get("success") or not reply_resp.get("message"):
-                                            logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
+                                    if hasattr(main_window, "_message_widgets_map") and reply_to_id_int in getattr(main_window, "_message_widgets_map", {}):
+                                        local_exists = True
+                                    elif hasattr(main_window, "chat_layout"):
+                                        for i in range(main_window.chat_layout.count() - 1, -1, -1):
+                                            item = main_window.chat_layout.itemAt(i)
+                                            if not item or not item.widget():
+                                                continue
+                                            widget = item.widget()
+                                            existing_id = widget.property("message_id")
+                                            if existing_id is None:
+                                                continue
+                                            try:
+                                                if int(existing_id) == reply_to_id_int:
+                                                    local_exists = True
+                                                    break
+                                            except Exception:
+                                                continue
+                                except Exception:
+                                    pass
+                                
+                                if not local_exists:
+                                    # 如果本地没有，调用后端验证；失败则按普通消息发送
+                                    try:
+                                        from client.api_client import get_reply_message
+                                        from client.login.token_storage import read_token
+                                        reply_token = read_token()
+                                        if not reply_token:
+                                            logging.warning(f"无法获取token，跳过引用消息验证")
                                             reply_to_id = None
-                                except Exception as e:
-                                    # 如果是404错误，说明消息不存在，将按普通消息发送
-                                    error_str = str(e)
-                                    if "404" in error_str or "NOT FOUND" in error_str:
-                                        logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
-                                    else:
-                                        logging.warning(f"验证引用消息失败: {e}，将按普通消息发送")
-                                    reply_to_id = None
+                                        else:
+                                            reply_resp = get_reply_message(reply_to_id_int, reply_token)
+                                            if not reply_resp.get("success") or not reply_resp.get("message"):
+                                                logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
+                                                reply_to_id = None
+                                    except Exception as e:
+                                        # 如果是404错误，说明消息不存在，将按普通消息发送
+                                        error_str = str(e)
+                                        if "404" in error_str or "NOT FOUND" in error_str:
+                                            logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
+                                        else:
+                                            logging.warning(f"验证引用消息失败: {e}，将按普通消息发送")
+                                        reply_to_id = None
                         except (ValueError, TypeError):
                             logging.warning(f"引用消息ID格式错误: {reply_to_id}，将按普通消息发送")
                             reply_to_id = None
@@ -399,6 +433,8 @@ def handle_chat_send(main_window: "MainWindow"):
                         main_window._reply_to_message_text = None
                     if hasattr(main_window, "_reply_to_username"):
                         main_window._reply_to_username = None
+                    if hasattr(main_window, "_reply_to_widget"):
+                        main_window._reply_to_widget = None
                     # 恢复输入框占位符
                     if hasattr(main_window, "chat_input"):
                         main_window.chat_input.setPlaceholderText("输入消息...")
@@ -424,102 +460,9 @@ def handle_chat_send(main_window: "MainWindow"):
                     )
                     return
                 
-                message_id_raw = resp.get("message_id")
-                message_id_int = None
-                try:
-                    message_id_int = int(message_id_raw) if message_id_raw else None
-                except (ValueError, TypeError):
-                    pass
-                
-                if message_id_int:
-                    if not hasattr(main_window, "_displayed_message_ids"):
-                        main_window._displayed_message_ids = set()
-                    main_window._displayed_message_ids.add(str(message_id_int))
-                    # 将返回的 message_id 绑定到最新一条"自己发送且尚无 message_id 的气泡"，
-                    # 以便后续 message_status 事件能精确更新状态，不用等轮询。
-                    # 同时更新 _message_widgets_map，避免服务器推送时重复显示
-                    try:
-                        # 优先从 _message_widgets_map[None] 中查找乐观展示的消息
-                        if hasattr(main_window, "_message_widgets_map") and None in main_window._message_widgets_map:
-                            existing_widget, existing_bubble = main_window._message_widgets_map[None]
-                            # 更新 message_id property
-                            existing_widget.setProperty("message_id", message_id_int)
-                            # 更新 _message_widgets_map
-                            del main_window._message_widgets_map[None]
-                            main_window._message_widgets_map[message_id_int] = (existing_widget, existing_bubble)
-                            # 如果有状态标签，保持为"发送中"直至收到服务器回执
-                            status_label = existing_widget.property("status_label")
-                            if status_label:
-                                status_label.setText("发送中")
-                                status_label.setStyleSheet("""
-                                    QLabel {
-                                        font-family: "Microsoft YaHei", "SimHei", "Arial";
-                                        font-size: 10px;
-                                        color: #9ca3af;
-                                    }
-                                """)
-                        else:
-                            # 如果 _message_widgets_map 中没有，从布局中查找
-                            if hasattr(main_window, "chat_layout"):
-                                for i in range(main_window.chat_layout.count() - 1, -1, -1):
-                                    item = main_window.chat_layout.itemAt(i)
-                                    if not item or not item.widget():
-                                        continue
-                                    widget = item.widget()
-                                    # 只处理还没有 message_id 的气泡
-                                    existing_id = widget.property("message_id")
-                                    if existing_id not in (None, 0, ""):
-                                        continue
-                                    # 仅限自己发送的消息：通过气泡在右侧的布局特征判断
-                                    layout = widget.layout()
-                                    is_self_msg = False
-                                    bubble_widget = None
-                                    if layout:
-                                        for j in range(layout.count()):
-                                            sub = layout.itemAt(j)
-                                            if sub and sub.layout():
-                                                row = sub.layout()
-                                                for k in range(row.count()):
-                                                    ritem = row.itemAt(k)
-                                                    if ritem and ritem.widget():
-                                                        w = ritem.widget()
-                                                        from gui.components.chat_bubble import ChatBubble
-                                                        from PyQt6.QtWidgets import QLabel
-                                                        if isinstance(w, ChatBubble) or (isinstance(w, QLabel) and w.pixmap() is not None):
-                                                            # 气泡前有 stretch 即为右侧（自己）消息
-                                                            if k > 0:
-                                                                prev = row.itemAt(k - 1)
-                                                                if prev and prev.spacerItem():
-                                                                    is_self_msg = True
-                                                                    bubble_widget = w
-                                                                    break
-                                                if is_self_msg:
-                                                    break
-                                    if not is_self_msg:
-                                        continue
-                                    # 绑定 message_id
-                                    widget.setProperty("message_id", message_id_int)
-                                    # 更新 _message_widgets_map
-                                    if not hasattr(main_window, "_message_widgets_map"):
-                                        main_window._message_widgets_map = {}
-                                    if bubble_widget:
-                                        main_window._message_widgets_map[message_id_int] = (widget, bubble_widget)
-                                    # 如果有状态标签，保持为"发送中"直至收到服务器回执
-                                    status_label = widget.property("status_label")
-                                    if status_label:
-                                        status_label.setText("发送中")
-                                        status_label.setStyleSheet("""
-                                            QLabel {
-                                                font-family: "Microsoft YaHei", "SimHei", "Arial";
-                                                font-size: 10px;
-                                                color: #9ca3af;
-                                            }
-                                        """)
-                                    break
-                    except Exception as e:
-                        logging.warning(f"绑定 message_id 到气泡失败: {e}")
-                    
-                    # 消息已通过WebSocket发送，后端会通过WebSocket推送回来，无需轮询
+                # WebSocket 发送为异步模式，此处仅表示数据已提交给 Socket.IO。
+                # 实际的 message_id、送达/已读状态等全部依赖服务器回推事件，再由 update_ui 同步到界面。
+                return
 
             # 使用QTimer.singleShot在后台执行WebSocket请求，避免阻塞UI
             def do_send():
@@ -812,8 +755,10 @@ def append_chat_message(
                         else:
                             is_self_recalled = (from_user_id == current_user_id)
                         
+                        expected_label_texts = set()
                         if is_self_recalled:
                             recall_text = "你撤回了一条消息"
+                            expected_label_texts.add(recall_text)
                         else:
                             username = from_username or "用户"
                             if from_user_id and not from_username:
@@ -828,6 +773,7 @@ def append_chat_message(
                                     except Exception:
                                         pass
                             recall_text = f"{username}撤回了一条消息"
+                            expected_label_texts.add(recall_text)
                         
                         # 检查是否已经有撤回提示标签
                         widget_layout = widget.layout()
@@ -838,7 +784,7 @@ def append_chat_message(
                                 item = widget_layout.itemAt(i)
                                 if item and item.widget():
                                     w = item.widget()
-                                    if isinstance(w, QLabel) and w.text() in ("你撤回了一条消息", f"{username}撤回了一条消息"):
+                                    if isinstance(w, QLabel) and w.text() in expected_label_texts:
                                         has_recall_label = True
                                         break
                             
@@ -1540,20 +1486,15 @@ def append_chat_message(
                     except (ValueError, TypeError):
                         pass
                 
-                # 如果 message_id 无效，提示用户等待消息发送完成
-                if not valid_msg_id:
-                    from PyQt6.QtWidgets import QMessageBox
-                    QMessageBox.warning(
-                        main_window,
-                        "无法引用",
-                        "该消息尚未发送完成，请等待消息发送成功后再引用。"
-                    )
-                    return
-                
-                main_window._reply_to_message_id = valid_msg_id
+                # 如果 message_id 无效，不再弹出阻塞弹窗，允许用户继续引用
+                # 这种情况下仅作为普通回复发送（不携带 reply_to_message_id），前端仍会显示引用提示
+                # 这样即使消息刚发送还未绑定 ID，用户也可以顺畅引用自己的消息
+                main_window._reply_to_message_id = valid_msg_id  # 可能为 None
                 main_window._reply_to_message_text = content
                 # 设置引用消息类型为文本（表情也是文本）
                 main_window._reply_to_message_type = "text"
+                # 记录被引用的控件，发送前可再次读取最新的 message_id（避免乐观消息尚未分配ID）
+                main_window._reply_to_widget = message_widget
                 # 获取被引用消息的发送者用户名
                 main_window._reply_to_username = from_username or (from_self and "我" or "用户")
                 # 在输入框显示引用提示
@@ -1563,12 +1504,6 @@ def append_chat_message(
                     placeholder = f"回复 {sender_name}：{preview}"
                     main_window.chat_input.setPlaceholderText(placeholder)
                     main_window.chat_input.setFocus()
-                    
-                    # 如果消息ID无效，给用户提示
-                    if valid_msg_id is None:
-                        # 不弹窗，只在输入框占位符中提示
-                        placeholder = f"⚠️ 无法引用此消息（消息ID无效），将按普通消息发送"
-                        main_window.chat_input.setPlaceholderText(placeholder)
             
             reply_action.triggered.connect(reply_message_action)
             

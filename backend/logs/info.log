@@ -746,3 +746,92 @@
 2026-01-13 14:32:36,745 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给发送方 2: delivered_count=1
 2026-01-13 14:33:38,536 - WARNING - backend.websocket.websocket_manager - 连接 af0a6195-d7ab-4173-86ea-90b86e4d5c03 心跳超时（距离上次心跳 144.9 秒），自动断开
 2026-01-13 14:33:38,701 - INFO - root - 连接 af0a6195-d7ab-4173-86ea-90b86e4d5c03 已断开
+2026-01-13 14:39:04,551 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 14:39:07,450 - INFO - root - 用户 1 的设备 8dddf8d4-3f3a-4e6a-9150-32aed00dcc53 已注册
+2026-01-13 14:39:07,460 - INFO - root - 用户 1 的连接 0791846e-cf67-471e-8f9b-121d73eee8c5 已创建
+2026-01-13 14:41:08,703 - WARNING - backend.websocket.websocket_manager - 连接 0791846e-cf67-471e-8f9b-121d73eee8c5 心跳超时（距离上次心跳 121.3 秒），自动断开
+2026-01-13 14:41:08,714 - INFO - root - 连接 0791846e-cf67-471e-8f9b-121d73eee8c5 已断开
+2026-01-13 14:44:52,421 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 14:44:55,482 - INFO - root - 用户 1 的设备 e95224a8-2d11-472a-92ba-443bb98f22d5 已注册
+2026-01-13 14:44:55,523 - INFO - root - 用户 1 的连接 c84c4c66-c927-4f18-9d34-16a1c813c940 已创建
+2026-01-13 14:45:10,570 - ERROR - __main__ - 无法推送消息：to_user_id为None, message_id=561, session_id=chat_1_327c6f13, from_user_id=1, role=user, chat_session={'id': 139, 'session_id': 'chat_1_327c6f13', 'user_id': 1, 'agent_id': None, 'status': 'pending', 'created_at': datetime.datetime(2026, 1, 13, 14, 45, 6), 'started_at': None, 'closed_at': None}
+2026-01-13 14:45:22,273 - INFO - root - 消息 562 已被用户 2 撤回
+2026-01-13 14:45:22,284 - INFO - __main__ - [HTTP API] 准备推送撤回消息事件: recall_data={'message_id': '562', 'session_id': 'chat_1_327c6f13', 'from_user_id': 2, 'username': '小旭', 'is_recalled': True, 'time': '刚刚'}
+2026-01-13 14:45:22,284 - INFO - __main__ - [HTTP API] 准备向接收方 1 推送撤回消息事件: message_id=562
+2026-01-13 14:45:22,284 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给接收方 1: delivered_count=1
+2026-01-13 14:45:22,285 - INFO - __main__ - [HTTP API] 准备向发送方 2 推送撤回消息事件: message_id=562
+2026-01-13 14:45:22,286 - INFO - __main__ - [HTTP API] 撤回消息事件已推送给发送方 2: delivered_count=1
+2026-01-13 14:45:49,748 - INFO - __main__ - 撤回消息数据库操作结果: message_id=1, user_id=1, success=False
+2026-01-13 14:46:42,449 - INFO - root - 连接 c84c4c66-c927-4f18-9d34-16a1c813c940 已断开
+2026-01-13 14:55:20,619 - INFO - root - 连接 1768274268280-mpiac4sca 已断开
+2026-01-13 15:03:31,655 - INFO - root - 数据库连接成功
+2026-01-13 15:03:31,696 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 15:03:31,709 - INFO - root - user_connections 表创建成功
+2026-01-13 15:03:31,711 - INFO - root - user_devices 表创建成功
+2026-01-13 15:03:31,716 - INFO - root - message_queue 表创建成功
+2026-01-13 15:03:31,716 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 15:03:31,716 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 15:03:31,839 - INFO - root - 用户 2 的设备 1768274428322-wfm7vasoo 已注册
+2026-01-13 15:03:31,847 - INFO - root - 用户 2 的连接 1768274268280-mpiac4sca 已创建
+2026-01-13 15:03:34,171 - INFO - root - 用户 1 的设备 acfd438b-d8e7-4688-820c-f92c43f0677f 已注册
+2026-01-13 15:03:34,178 - INFO - root - 用户 1 的连接 db80156d-4702-4486-8d6e-6aad01b9f16d 已创建
+2026-01-13 15:04:06,560 - INFO - root - 消息 568 已被用户 2 撤回
+2026-01-13 15:04:09,777 - INFO - __main__ - 撤回消息数据库操作结果: message_id=1, user_id=1, success=False
+2026-01-13 15:06:01,715 - WARNING - backend.websocket.websocket_manager - 连接 db80156d-4702-4486-8d6e-6aad01b9f16d 心跳超时（距离上次心跳 147.5 秒），自动断开
+2026-01-13 15:06:01,725 - INFO - root - 连接 db80156d-4702-4486-8d6e-6aad01b9f16d 已断开
+2026-01-13 15:08:06,499 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 15:08:10,915 - INFO - root - 用户 1 的设备 acd024d5-0fd9-4294-a636-da6b1ffb793a 已注册
+2026-01-13 15:08:10,922 - INFO - root - 用户 1 的连接 d4322c97-2f96-4cdd-8498-47b7615ed60a 已创建
+2026-01-13 15:08:33,703 - INFO - __main__ - 撤回消息数据库操作结果: message_id=1, user_id=1, success=False
+2026-01-13 15:09:59,375 - INFO - root - 连接 d4322c97-2f96-4cdd-8498-47b7615ed60a 已断开
+2026-01-13 15:18:32,389 - INFO - root - 用户 1 的设备 7c140fae-658c-4519-8115-6076a6b328b6 已注册
+2026-01-13 15:18:32,398 - INFO - root - 用户 1 的连接 5da77488-df5d-485e-b890-1f690d5e3c3a 已创建
+2026-01-13 15:18:52,477 - INFO - __main__ - 撤回消息数据库操作结果: message_id=1, user_id=1, success=False
+2026-01-13 15:20:16,773 - INFO - root - 连接 5da77488-df5d-485e-b890-1f690d5e3c3a 已断开
+2026-01-13 15:26:43,822 - INFO - root - 用户 1 的设备 12ba71d8-a34d-4175-a84a-e594934561ad 已注册
+2026-01-13 15:26:43,833 - INFO - root - 用户 1 的连接 f6c36d40-8223-405c-a93c-befc4b660b42 已创建
+2026-01-13 15:27:03,465 - INFO - __main__ - 撤回消息数据库操作结果: message_id=1, user_id=1, success=False
+2026-01-13 15:27:12,993 - WARNING - __main__ - 引用消息不存在: message_id=1, session_id=chat_1_eab063ac，已按普通消息处理
+2026-01-13 15:29:01,789 - WARNING - backend.websocket.websocket_manager - 连接 f6c36d40-8223-405c-a93c-befc4b660b42 心跳超时（距离上次心跳 138.0 秒），自动断开
+2026-01-13 15:29:01,818 - INFO - root - 连接 f6c36d40-8223-405c-a93c-befc4b660b42 已断开
+2026-01-13 15:29:32,085 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 15:54:55,687 - INFO - root - 连接 1768274268280-mpiac4sca 已断开
+2026-01-13 15:55:10,471 - INFO - root - 数据库连接成功
+2026-01-13 15:55:10,513 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 15:55:10,522 - INFO - root - user_connections 表创建成功
+2026-01-13 15:55:10,529 - INFO - root - user_devices 表创建成功
+2026-01-13 15:55:10,535 - INFO - root - message_queue 表创建成功
+2026-01-13 15:55:10,535 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 15:55:10,535 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 15:55:12,645 - INFO - root - 用户 1 的设备 42e321ad-85e3-4c16-a902-60618562d146 已注册
+2026-01-13 15:55:12,653 - INFO - root - 用户 1 的连接 b9effd16-0de4-4e34-a9c7-3a61f816d993 已创建
+2026-01-13 15:55:13,592 - INFO - root - 用户 2 的设备 1768274428322-wfm7vasoo 已注册
+2026-01-13 15:55:13,603 - INFO - root - 用户 2 的连接 1768274268280-mpiac4sca 已创建
+2026-01-13 15:57:40,547 - WARNING - backend.websocket.websocket_manager - 连接 b9effd16-0de4-4e34-a9c7-3a61f816d993 心跳超时（距离上次心跳 147.9 秒），自动断开
+2026-01-13 15:57:40,570 - INFO - root - 连接 b9effd16-0de4-4e34-a9c7-3a61f816d993 已断开
+2026-01-13 16:02:07,119 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 16:02:09,237 - INFO - root - 用户 1 的设备 4c93934f-02a6-4c0f-99d0-bb03bebf9d3c 已注册
+2026-01-13 16:02:09,268 - INFO - root - 用户 1 的连接 15651da5-1421-4949-adb1-75f8abf71dc4 已创建
+2026-01-13 16:02:37,873 - INFO - root - 消息 583 已被用户 2 撤回
+2026-01-13 16:03:11,262 - INFO - root - 消息 587 已被用户 1 撤回
+2026-01-13 16:03:11,263 - INFO - __main__ - 撤回消息数据库操作结果: message_id=587, user_id=1, success=True
+2026-01-13 16:03:11,266 - INFO - __main__ - 获取消息详情: message_id=587, message={'id': 587, 'session_id': 'chat_1_50f8d5c4', 'from_user_id': 1, 'to_user_id': 2, 'message': '23123123123', 'message_type': 'text', 'is_read': 0, 'is_recalled': 1, 'reply_to_message_id': None, 'created_at': datetime.datetime(2026, 1, 13, 16, 3, 3)}
+2026-01-13 16:03:11,267 - INFO - __main__ - 消息详情: session_id=chat_1_50f8d5c4, from_user_id=1, to_user_id=2
+2026-01-13 16:04:10,649 - WARNING - backend.websocket.websocket_manager - 连接 15651da5-1421-4949-adb1-75f8abf71dc4 心跳超时（距离上次心跳 121.4 秒），自动断开
+2026-01-13 16:04:10,659 - INFO - root - 连接 15651da5-1421-4949-adb1-75f8abf71dc4 已断开
+2026-01-13 16:53:34,744 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 16:53:38,415 - INFO - root - 用户 1 的设备 0c25ac1e-fe71-4c4d-b4d6-4d8d8e7e0e13 已注册
+2026-01-13 16:53:38,423 - INFO - root - 用户 1 的连接 75d9c677-a89f-4f49-82c2-8e4876ae1fc8 已创建
+2026-01-13 16:54:52,042 - INFO - root - 消息 590 已被用户 2 撤回
+2026-01-13 16:55:01,396 - INFO - root - 消息 592 已被用户 1 撤回
+2026-01-13 16:55:01,397 - INFO - __main__ - 撤回消息数据库操作结果: message_id=592, user_id=1, success=True
+2026-01-13 16:55:01,401 - INFO - __main__ - 获取消息详情: message_id=592, message={'id': 592, 'session_id': 'chat_1_48a8cb5b', 'from_user_id': 1, 'to_user_id': 2, 'message': '434324324', 'message_type': 'text', 'is_read': 0, 'is_recalled': 1, 'reply_to_message_id': None, 'created_at': datetime.datetime(2026, 1, 13, 16, 54, 55)}
+2026-01-13 16:55:01,401 - INFO - __main__ - 消息详情: session_id=chat_1_48a8cb5b, from_user_id=1, to_user_id=2
+2026-01-13 16:55:41,318 - WARNING - backend.websocket.websocket_manager - 连接 75d9c677-a89f-4f49-82c2-8e4876ae1fc8 心跳超时（距离上次心跳 122.9 秒），自动断开
+2026-01-13 16:55:41,339 - INFO - root - 连接 75d9c677-a89f-4f49-82c2-8e4876ae1fc8 已断开
+2026-01-13 16:56:06,076 - INFO - root - 消息 595 已被用户 2 撤回
+2026-01-13 16:56:16,492 - INFO - root - 消息 594 已被用户 2 撤回
+2026-01-13 16:56:50,735 - INFO - root - 消息 596 已被用户 1 撤回
+2026-01-13 16:56:50,736 - INFO - __main__ - 撤回消息数据库操作结果: message_id=596, user_id=1, success=True
+2026-01-13 16:56:50,760 - INFO - __main__ - 获取消息详情: message_id=596, message={'id': 596, 'session_id': 'chat_1_48a8cb5b', 'from_user_id': 1, 'to_user_id': 2, 'message': '🙃🙃🙃', 'message_type': 'text', 'is_read': 0, 'is_recalled': 1, 'reply_to_message_id': 594, 'created_at': datetime.datetime(2026, 1, 13, 16, 55, 31)}
+2026-01-13 16:56:50,761 - INFO - __main__ - 消息详情: session_id=chat_1_48a8cb5b, from_user_id=1, to_user_id=2

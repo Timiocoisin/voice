@@ -616,27 +616,6 @@ class DatabaseManager:
                 logging.warning(f"消息 {message_id} 已被撤回")
                 return False
             
-            # 检查时间：2分钟内
-            from datetime import timedelta
-            created_at = message.get("created_at")
-            if isinstance(created_at, datetime):
-                # MySQL TIMESTAMP 返回的是 datetime 对象
-                pass
-            elif isinstance(created_at, str):
-                try:
-                    created_at = datetime.strptime(created_at, "%Y-%m-%d %H:%M:%S")
-                except Exception:
-                    logging.error(f"消息创建时间格式错误: {created_at}")
-                    return False
-            else:
-                logging.error(f"消息创建时间类型错误: {type(created_at)}")
-                return False
-            
-            time_diff = datetime.now() - created_at
-            if time_diff > timedelta(minutes=2):
-                logging.warning(f"消息 {message_id} 已超过2分钟，不能撤回")
-                return False
-            
             # 更新消息为已撤回状态
             update_query = """
             UPDATE chat_messages

@@ -1262,6 +1262,40 @@ def recall_message_api() -> Any:
                     "time": _format_time(datetime.now()),
                 }
                 
+                # 如果 to_user_id 为空，尝试推断（与 WebSocket 撤回逻辑保持一致，避免客服端不同步）
+                if not to_user_id and session_id:
+                    # 优先使用会话中的 agent_id / user_id 信息
+                    try:
+                        chat_session = db.get_chat_session_by_session_id(session_id)
+                        if chat_session:
+                            role = chat_session.get("role") or None
+                            cs_user_id = chat_session.get("agent_id") or chat_session.get("cs_user_id")
+                            user_id = chat_session.get("user_id")
+                            # 如果发送者是用户，则接收方是客服
+                            if from_user_id == user_id and cs_user_id:
+                                to_user_id = cs_user_id
+                            # 如果发送者是客服，则接收方是用户
+                            elif from_user_id == cs_user_id and user_id:
+                                to_user_id = user_id
+                    except Exception as e:
+                        logger.error(f"撤回消息时从会话推断接收方失败: message_id={message_id}, session_id={session_id}, error={e}", exc_info=True)
+                    
+                    # 如果仍然为空，再尝试从最近的消息中推断接收方
+                    if not to_user_id:
+                        try:
+                            recent_messages = db.get_chat_messages(session_id, limit=10)
+                            for msg in recent_messages:
+                                msg_from_uid = msg.get("from_user_id")
+                                msg_to_uid = msg.get("to_user_id")
+                                if msg_from_uid != from_user_id and msg_to_uid:
+                                    to_user_id = msg_to_uid
+                                    break
+                                if msg_to_uid == from_user_id:
+                                    to_user_id = msg_from_uid
+                                    break
+                        except Exception as e:
+                            logger.error(f"撤回消息时从历史消息推断接收方失败: message_id={message_id}, session_id={session_id}, error={e}", exc_info=True)
+                
                 # 发送给接收方
                 if to_user_id:
                     ws_manager.send_message_to_user(to_user_id, "message_recalled", recall_data)
@@ -1853,6 +1887,47 @@ def handle_recall_message(data):
                     
                     logger.info(f"消息详情: session_id={session_id}, from_user_id={from_user_id}, to_user_id={to_user_id}")
                     
+                    # 如果数据库中的 to_user_id 为空，但会话已经有客服/用户绑定，尝试补全接收方，确保 Web 端也能收到撤回事件
+                    if not to_user_id and session_id:
+                        try:
+                            chat_session = db.get_chat_session_by_id(session_id)
+                        except Exception as e:
+                            logger.error(f"撤回消息时获取会话失败: session_id={session_id}, error={e}", exc_info=True)
+                            chat_session = None
+                        
+                        if chat_session:
+                            cs_user_id = chat_session.get("user_id")
+                            cs_agent_id = chat_session.get("agent_id")
+                            # 如果当前撤回的是用户消息，则接收方应为客服；反之亦然
+                            if from_user_id and cs_user_id and cs_agent_id:
+                                try:
+                                    if int(from_user_id) == int(cs_user_id):
+                                        to_user_id = cs_agent_id
+                                    elif int(from_user_id) == int(cs_agent_id):
+                                        to_user_id = cs_user_id
+                                except Exception:
+                                    # 回退逻辑：直接根据等号比较
+                                    if from_user_id == cs_user_id:
+                                        to_user_id = cs_agent_id
+                                    elif from_user_id == cs_agent_id:
+                                        to_user_id = cs_user_id
+                        
+                        # 如果仍然为空，再尝试从最近的消息中推断接收方（与发送逻辑保持一致）
+                        if not to_user_id and session_id:
+                            try:
+                                recent_messages = db.get_chat_messages(session_id, limit=10)
+                                for msg in recent_messages:
+                                    msg_from_uid = msg.get("from_user_id")
+                                    msg_to_uid = msg.get("to_user_id")
+                                    if msg_from_uid != from_user_id and msg_to_uid:
+                                        to_user_id = msg_to_uid
+                                        break
+                                    if msg_to_uid == from_user_id:
+                                        to_user_id = msg_from_uid
+                                        break
+                            except Exception as e:
+                                logger.error(f"撤回消息时从历史消息推断接收方失败: message_id={message_id}, session_id={session_id}, error={e}", exc_info=True)
+                    
                     # 获取发送者的用户名
                     from_username = None
                     try:
@@ -1876,7 +1951,7 @@ def handle_recall_message(data):
                     if to_user_id:
                         ws_manager.send_message_to_user(to_user_id, "message_recalled", recall_data)
                     else:
-                        logger.warning(f"撤回消息时 to_user_id 为 None: message_id={message_id}, from_user_id={from_user_id}")
+                        logger.warning(f"撤回消息时 to_user_id 为 None: message_id={message_id}, from_user_id={from_user_id}, session_id={session_id}")
                     
                     # 发送给发送方（多设备同步）
                     ws_manager.send_message_to_user(from_user_id, "message_recalled", recall_data)
