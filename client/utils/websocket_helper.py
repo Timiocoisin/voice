@@ -401,8 +401,14 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                 image = QImage.fromData(raw)
                                 if not image.isNull():
                                     pixmap = QPixmap.fromImage(image)
-                                    if pixmap.width() > 360:
-                                        pixmap = pixmap.scaledToWidth(360, Qt.TransformationMode.SmoothTransformation)
+                                    # 为了与用户本地发送图片的大小规格一致，统一使用最大边 160 像素的缩放规则
+                                    max_size = 160
+                                    w, h = pixmap.width(), pixmap.height()
+                                    if w > max_size or h > max_size:
+                                        if w >= h:
+                                            pixmap = pixmap.scaledToWidth(max_size, Qt.TransformationMode.SmoothTransformation)
+                                        else:
+                                            pixmap = pixmap.scaledToHeight(max_size, Qt.TransformationMode.SmoothTransformation)
                                     # 图片消息支持引用显示
                                     try:
                                         append_image_message(

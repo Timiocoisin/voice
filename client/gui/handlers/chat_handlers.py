@@ -829,8 +829,147 @@ def append_chat_message(
                                         new_text = "该引用消息已被撤回"
                                         if sender_name:
                                             new_text = f"{sender_name}: {new_text}"
-                                        if reply_label:
-                                            reply_label.setText(new_text)
+                                        
+                                        # 先找到并删除所有图片相关的控件
+                                        thumbnail_label = reply_container.property("reply_thumbnail_label")
+                                        thumbnail_layout = reply_container.property("reply_thumbnail_layout")
+                                        
+                                        # 找到 reply_content_layout
+                                        reply_content_layout = None
+                                        main_layout = reply_container.layout()
+                                        if main_layout and main_layout.count() > 0:
+                                            first_item = main_layout.itemAt(0)
+                                            if first_item and first_item.layout():
+                                                reply_content_layout = first_item.layout()
+                                        
+                                        # 如果有 thumbnail_layout，完全删除它及其所有子控件
+                                        if thumbnail_layout and reply_content_layout:
+                                            # 找到 thumbnail_layout 在 reply_content_layout 中的位置
+                                            layout_index = -1
+                                            for i in range(reply_content_layout.count()):
+                                                item = reply_content_layout.itemAt(i)
+                                                if item and item.layout() == thumbnail_layout:
+                                                    layout_index = i
+                                                    break
+                                            
+                                            if layout_index >= 0:
+                                                # 先删除 thumbnail_layout 中的所有控件
+                                                while thumbnail_layout.count() > 0:
+                                                    item = thumbnail_layout.takeAt(0)
+                                                    if item:
+                                                        widget = item.widget()
+                                                        if widget:
+                                                            # 完全删除控件
+                                                            widget.hide()
+                                                            widget.setVisible(False)
+                                                            if isinstance(widget, QLabel):
+                                                                widget.setPixmap(QPixmap())
+                                                                widget.clear()
+                                                            widget.setFixedSize(0, 0)
+                                                            widget.setParent(None)
+                                                            widget.deleteLater()
+                                                        else:
+                                                            # 如果是子布局，也删除
+                                                            sub_layout = item.layout()
+                                                            if sub_layout:
+                                                                while sub_layout.count() > 0:
+                                                                    sub_item = sub_layout.takeAt(0)
+                                                                    if sub_item:
+                                                                        sub_widget = sub_item.widget()
+                                                                        if sub_widget:
+                                                                            sub_widget.hide()
+                                                                            sub_widget.setVisible(False)
+                                                                            sub_widget.setParent(None)
+                                                                            sub_widget.deleteLater()
+                                                                sub_layout.deleteLater()
+                                                
+                                                # 从 reply_content_layout 中移除 thumbnail_layout
+                                                reply_content_layout.removeItem(thumbnail_layout)
+                                                # 删除 thumbnail_layout 本身
+                                                thumbnail_layout.deleteLater()
+                                                
+                                                # 创建新的文本标签并添加到相同位置
+                                                new_reply_label = QLabel(new_text)
+                                                new_reply_label.setStyleSheet("""
+                                                    QLabel {
+                                                        font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                        font-size: 12px;
+                                                        color: #4b5563;
+                                                        background-color: transparent;
+                                                    }
+                                                """)
+                                                new_reply_label.setWordWrap(True)
+                                                reply_content_layout.insertWidget(layout_index, new_reply_label)
+                                                
+                                                # 更新 reply_label 属性
+                                                reply_container.setProperty("reply_label", new_reply_label)
+                                                reply_label = new_reply_label
+                                        else:
+                                            # 如果没有 thumbnail_layout，直接更新 reply_label
+                                            if reply_label:
+                                                reply_label.setText(new_text)
+                                            else:
+                                                # 如果连 reply_label 都没有，创建一个新的
+                                                if reply_content_layout:
+                                                    new_reply_label = QLabel(new_text)
+                                                    new_reply_label.setStyleSheet("""
+                                                        QLabel {
+                                                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                            font-size: 12px;
+                                                            color: #4b5563;
+                                                            background-color: transparent;
+                                                        }
+                                                    """)
+                                                    new_reply_label.setWordWrap(True)
+                                                    reply_content_layout.addWidget(new_reply_label)
+                                                    reply_container.setProperty("reply_label", new_reply_label)
+                                                    reply_label = new_reply_label
+                                        
+                                        # 删除 thumbnail_label（如果还存在）
+                                        if thumbnail_label:
+                                            thumbnail_label.hide()
+                                            thumbnail_label.setVisible(False)
+                                            thumbnail_label.setPixmap(QPixmap())
+                                            thumbnail_label.clear()
+                                            thumbnail_label.setFixedSize(0, 0)
+                                            # 尝试从父布局中移除
+                                            parent = thumbnail_label.parent()
+                                            if parent:
+                                                parent_layout = parent.layout()
+                                                if parent_layout:
+                                                    parent_layout.removeWidget(thumbnail_label)
+                                            thumbnail_label.setParent(None)
+                                            thumbnail_label.deleteLater()
+                                        
+                                        # 清除所有属性
+                                        reply_container.setProperty("reply_thumbnail_label", None)
+                                        reply_container.setProperty("reply_thumbnail_layout", None)
+                                        
+                                        # 使用 findChildren 确保找到并删除所有图片标签
+                                        all_labels = reply_container.findChildren(QLabel)
+                                        for label in all_labels:
+                                            # 只处理有图片的标签，且不是新的文本标签
+                                            if label.pixmap() and label is not reply_label:
+                                                label.hide()
+                                                label.setVisible(False)
+                                                label.setPixmap(QPixmap())
+                                                label.clear()
+                                                label.setFixedSize(0, 0)
+                                                # 尝试从父布局中移除
+                                                parent = label.parent()
+                                                if parent:
+                                                    parent_layout = parent.layout()
+                                                    if parent_layout:
+                                                        parent_layout.removeWidget(label)
+                                                label.setParent(None)
+                                                label.deleteLater()
+                                        
+                                        # 强制更新整个引用容器和父控件
+                                        reply_container.update()
+                                        reply_container.repaint()
+                                        if w:
+                                            w.update()
+                                            w.repaint()
                         
                         # 已更新现有消息，直接返回，不创建新消息
                         return
@@ -880,10 +1019,23 @@ def append_chat_message(
                                                     if isinstance(w, (ChatBubble, QLabel)):
                                                         w.setVisible(False)
                                     
-                                    # 隐藏引用块（如果存在）
+                                    # 隐藏引用块（如果存在），并先隐藏其中的所有缩略图
                                     reply_container = widget.property("reply_container")
                                     if reply_container:
+                                        # 先隐藏引用块中的所有缩略图
+                                        thumbnail_label = reply_container.property("reply_thumbnail_label")
+                                        if thumbnail_label:
+                                            thumbnail_label.hide()
+                                            thumbnail_label.setVisible(False)
+                                        # 使用 findChildren 查找所有图片标签并隐藏
+                                        all_labels = reply_container.findChildren(QLabel)
+                                        for label in all_labels:
+                                            if label.pixmap():
+                                                label.hide()
+                                                label.setVisible(False)
+                                        # 最后隐藏整个引用块
                                         reply_container.setVisible(False)
+                                        reply_container.hide()
                                 
                                 # 隐藏时间标签（如果有）
                                 time_label = widget.property("time_label")
@@ -971,8 +1123,147 @@ def append_chat_message(
                                                 new_text = "该引用消息已被撤回"
                                                 if sender_name:
                                                     new_text = f"{sender_name}: {new_text}"
-                                                if reply_label:
-                                                    reply_label.setText(new_text)
+                                                
+                                                # 先找到并删除所有图片相关的控件
+                                                thumbnail_label = reply_container.property("reply_thumbnail_label")
+                                                thumbnail_layout = reply_container.property("reply_thumbnail_layout")
+                                                
+                                                # 找到 reply_content_layout
+                                                reply_content_layout = None
+                                                main_layout = reply_container.layout()
+                                                if main_layout and main_layout.count() > 0:
+                                                    first_item = main_layout.itemAt(0)
+                                                    if first_item and first_item.layout():
+                                                        reply_content_layout = first_item.layout()
+                                                
+                                                # 如果有 thumbnail_layout，完全删除它及其所有子控件
+                                                if thumbnail_layout and reply_content_layout:
+                                                    # 找到 thumbnail_layout 在 reply_content_layout 中的位置
+                                                    layout_index = -1
+                                                    for i in range(reply_content_layout.count()):
+                                                        item = reply_content_layout.itemAt(i)
+                                                        if item and item.layout() == thumbnail_layout:
+                                                            layout_index = i
+                                                            break
+                                                    
+                                                    if layout_index >= 0:
+                                                        # 先删除 thumbnail_layout 中的所有控件
+                                                        while thumbnail_layout.count() > 0:
+                                                            item = thumbnail_layout.takeAt(0)
+                                                            if item:
+                                                                widget = item.widget()
+                                                                if widget:
+                                                                    # 完全删除控件
+                                                                    widget.hide()
+                                                                    widget.setVisible(False)
+                                                                    if isinstance(widget, QLabel):
+                                                                        widget.setPixmap(QPixmap())
+                                                                        widget.clear()
+                                                                    widget.setFixedSize(0, 0)
+                                                                    widget.setParent(None)
+                                                                    widget.deleteLater()
+                                                                else:
+                                                                    # 如果是子布局，也删除
+                                                                    sub_layout = item.layout()
+                                                                    if sub_layout:
+                                                                        while sub_layout.count() > 0:
+                                                                            sub_item = sub_layout.takeAt(0)
+                                                                            if sub_item:
+                                                                                sub_widget = sub_item.widget()
+                                                                                if sub_widget:
+                                                                                    sub_widget.hide()
+                                                                                    sub_widget.setVisible(False)
+                                                                                    sub_widget.setParent(None)
+                                                                                    sub_widget.deleteLater()
+                                                                        sub_layout.deleteLater()
+                                                        
+                                                        # 从 reply_content_layout 中移除 thumbnail_layout
+                                                        reply_content_layout.removeItem(thumbnail_layout)
+                                                        # 删除 thumbnail_layout 本身
+                                                        thumbnail_layout.deleteLater()
+                                                        
+                                                        # 创建新的文本标签并添加到相同位置
+                                                        new_reply_label = QLabel(new_text)
+                                                        new_reply_label.setStyleSheet("""
+                                                            QLabel {
+                                                                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                                font-size: 12px;
+                                                                color: #4b5563;
+                                                                background-color: transparent;
+                                                            }
+                                                        """)
+                                                        new_reply_label.setWordWrap(True)
+                                                        reply_content_layout.insertWidget(layout_index, new_reply_label)
+                                                        
+                                                        # 更新 reply_label 属性
+                                                        reply_container.setProperty("reply_label", new_reply_label)
+                                                        reply_label = new_reply_label
+                                                else:
+                                                    # 如果没有 thumbnail_layout，直接更新 reply_label
+                                                    if reply_label:
+                                                        reply_label.setText(new_text)
+                                                    else:
+                                                        # 如果连 reply_label 都没有，创建一个新的
+                                                        if reply_content_layout:
+                                                            new_reply_label = QLabel(new_text)
+                                                            new_reply_label.setStyleSheet("""
+                                                                QLabel {
+                                                                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                                    font-size: 12px;
+                                                                    color: #4b5563;
+                                                                    background-color: transparent;
+                                                                }
+                                                            """)
+                                                            new_reply_label.setWordWrap(True)
+                                                            reply_content_layout.addWidget(new_reply_label)
+                                                            reply_container.setProperty("reply_label", new_reply_label)
+                                                            reply_label = new_reply_label
+                                                
+                                                # 删除 thumbnail_label（如果还存在）
+                                                if thumbnail_label:
+                                                    thumbnail_label.hide()
+                                                    thumbnail_label.setVisible(False)
+                                                    thumbnail_label.setPixmap(QPixmap())
+                                                    thumbnail_label.clear()
+                                                    thumbnail_label.setFixedSize(0, 0)
+                                                    # 尝试从父布局中移除
+                                                    parent = thumbnail_label.parent()
+                                                    if parent:
+                                                        parent_layout = parent.layout()
+                                                        if parent_layout:
+                                                            parent_layout.removeWidget(thumbnail_label)
+                                                    thumbnail_label.setParent(None)
+                                                    thumbnail_label.deleteLater()
+                                                
+                                                # 清除所有属性
+                                                reply_container.setProperty("reply_thumbnail_label", None)
+                                                reply_container.setProperty("reply_thumbnail_layout", None)
+                                                
+                                                # 使用 findChildren 确保找到并删除所有图片标签
+                                                all_labels = reply_container.findChildren(QLabel)
+                                                for label in all_labels:
+                                                    # 只处理有图片的标签，且不是新的文本标签
+                                                    if label.pixmap() and label is not reply_label:
+                                                        label.hide()
+                                                        label.setVisible(False)
+                                                        label.setPixmap(QPixmap())
+                                                        label.clear()
+                                                        label.setFixedSize(0, 0)
+                                                        # 尝试从父布局中移除
+                                                        parent = label.parent()
+                                                        if parent:
+                                                            parent_layout = parent.layout()
+                                                            if parent_layout:
+                                                                parent_layout.removeWidget(label)
+                                                        label.setParent(None)
+                                                        label.deleteLater()
+                                                
+                                                # 强制更新整个引用容器和父控件
+                                                reply_container.update()
+                                                reply_container.repaint()
+                                                if w:
+                                                    w.update()
+                                                    w.repaint()
                                 
                                 # 已更新现有消息，直接返回，不创建新消息
                                 return
@@ -1059,8 +1350,147 @@ def append_chat_message(
                             new_text = "该引用消息已被撤回"
                             if sender_name:
                                 new_text = f"{sender_name}: {new_text}"
-                            if reply_label:
-                                reply_label.setText(new_text)
+                            
+                            # 先找到并删除所有图片相关的控件
+                            thumbnail_label = reply_container.property("reply_thumbnail_label")
+                            thumbnail_layout = reply_container.property("reply_thumbnail_layout")
+                            
+                            # 找到 reply_content_layout
+                            reply_content_layout = None
+                            main_layout = reply_container.layout()
+                            if main_layout and main_layout.count() > 0:
+                                first_item = main_layout.itemAt(0)
+                                if first_item and first_item.layout():
+                                    reply_content_layout = first_item.layout()
+                            
+                            # 如果有 thumbnail_layout，完全删除它及其所有子控件
+                            if thumbnail_layout and reply_content_layout:
+                                # 找到 thumbnail_layout 在 reply_content_layout 中的位置
+                                layout_index = -1
+                                for i in range(reply_content_layout.count()):
+                                    item = reply_content_layout.itemAt(i)
+                                    if item and item.layout() == thumbnail_layout:
+                                        layout_index = i
+                                        break
+                                
+                                if layout_index >= 0:
+                                    # 先删除 thumbnail_layout 中的所有控件
+                                    while thumbnail_layout.count() > 0:
+                                        item = thumbnail_layout.takeAt(0)
+                                        if item:
+                                            widget = item.widget()
+                                            if widget:
+                                                # 完全删除控件
+                                                widget.hide()
+                                                widget.setVisible(False)
+                                                if isinstance(widget, QLabel):
+                                                    widget.setPixmap(QPixmap())
+                                                    widget.clear()
+                                                widget.setFixedSize(0, 0)
+                                                widget.setParent(None)
+                                                widget.deleteLater()
+                                            else:
+                                                # 如果是子布局，也删除
+                                                sub_layout = item.layout()
+                                                if sub_layout:
+                                                    while sub_layout.count() > 0:
+                                                        sub_item = sub_layout.takeAt(0)
+                                                        if sub_item:
+                                                            sub_widget = sub_item.widget()
+                                                            if sub_widget:
+                                                                sub_widget.hide()
+                                                                sub_widget.setVisible(False)
+                                                                sub_widget.setParent(None)
+                                                                sub_widget.deleteLater()
+                                                    sub_layout.deleteLater()
+                                    
+                                    # 从 reply_content_layout 中移除 thumbnail_layout
+                                    reply_content_layout.removeItem(thumbnail_layout)
+                                    # 删除 thumbnail_layout 本身
+                                    thumbnail_layout.deleteLater()
+                                    
+                                    # 创建新的文本标签并添加到相同位置
+                                    new_reply_label = QLabel(new_text)
+                                    new_reply_label.setStyleSheet("""
+                                        QLabel {
+                                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                            font-size: 12px;
+                                            color: #4b5563;
+                                            background-color: transparent;
+                                        }
+                                    """)
+                                    new_reply_label.setWordWrap(True)
+                                    reply_content_layout.insertWidget(layout_index, new_reply_label)
+                                    
+                                    # 更新 reply_label 属性
+                                    reply_container.setProperty("reply_label", new_reply_label)
+                                    reply_label = new_reply_label
+                            else:
+                                # 如果没有 thumbnail_layout，直接更新 reply_label
+                                if reply_label:
+                                    reply_label.setText(new_text)
+                                else:
+                                    # 如果连 reply_label 都没有，创建一个新的
+                                    if reply_content_layout:
+                                        new_reply_label = QLabel(new_text)
+                                        new_reply_label.setStyleSheet("""
+                                            QLabel {
+                                                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                font-size: 12px;
+                                                color: #4b5563;
+                                                background-color: transparent;
+                                            }
+                                        """)
+                                        new_reply_label.setWordWrap(True)
+                                        reply_content_layout.addWidget(new_reply_label)
+                                        reply_container.setProperty("reply_label", new_reply_label)
+                                        reply_label = new_reply_label
+                            
+                            # 删除 thumbnail_label（如果还存在）
+                            if thumbnail_label:
+                                thumbnail_label.hide()
+                                thumbnail_label.setVisible(False)
+                                thumbnail_label.setPixmap(QPixmap())
+                                thumbnail_label.clear()
+                                thumbnail_label.setFixedSize(0, 0)
+                                # 尝试从父布局中移除
+                                parent = thumbnail_label.parent()
+                                if parent:
+                                    parent_layout = parent.layout()
+                                    if parent_layout:
+                                        parent_layout.removeWidget(thumbnail_label)
+                                thumbnail_label.setParent(None)
+                                thumbnail_label.deleteLater()
+                            
+                            # 清除所有属性
+                            reply_container.setProperty("reply_thumbnail_label", None)
+                            reply_container.setProperty("reply_thumbnail_layout", None)
+                            
+                            # 使用 findChildren 确保找到并删除所有图片标签
+                            all_labels = reply_container.findChildren(QLabel)
+                            for label in all_labels:
+                                # 只处理有图片的标签，且不是新的文本标签
+                                if label.pixmap() and label is not reply_label:
+                                    label.hide()
+                                    label.setVisible(False)
+                                    label.setPixmap(QPixmap())
+                                    label.clear()
+                                    label.setFixedSize(0, 0)
+                                    # 尝试从父布局中移除
+                                    parent = label.parent()
+                                    if parent:
+                                        parent_layout = parent.layout()
+                                        if parent_layout:
+                                            parent_layout.removeWidget(label)
+                                    label.setParent(None)
+                                    label.deleteLater()
+                            
+                            # 强制更新整个引用容器和父控件
+                            reply_container.update()
+                            reply_container.repaint()
+                            if w:
+                                w.update()
+                                w.repaint()
         except Exception:
             # 更新引用块失败不影响主流程
             pass
@@ -1154,7 +1584,6 @@ def append_chat_message(
         reply_container.setStyleSheet("""
             QWidget {
                 background-color: #e5e5e5;
-                border-left: 3px solid #8dcf7d;
                 border-radius: 4px;
                 padding: 6px 10px;
                 margin-top: 6px;
@@ -1165,11 +1594,18 @@ def append_chat_message(
         reply_layout.setSpacing(0)
 
         reply_content_layout = QVBoxLayout()
-        reply_content_layout.setContentsMargins(0, 0, 0, 0)
-        reply_content_layout.setSpacing(2)
+        reply_content_layout.setContentsMargins(4, 4, 4, 4)
+        reply_content_layout.setSpacing(4)
 
         # 获取引用消息的发送者信息
         reply_sender_name = reply_to_username or "用户"
+        # 如果是当前用户自己发送的消息，用“我”替代用户名，效果更贴近聊天习惯
+        try:
+            current_username = getattr(main_window, "username", None)
+            if current_username and reply_sender_name == current_username:
+                reply_sender_name = "我"
+        except Exception:
+            pass
         # 检查引用消息是否被撤回
         reply_text = reply_to_message
         if reply_text == "[消息已撤回]":
@@ -1177,8 +1613,9 @@ def append_chat_message(
         
         # 初始化 reply_label，确保在所有分支中都有定义
         reply_label = None
+        thumbnail_label = None  # 初始化缩略图标签变量
         
-        # 如果是图片消息，显示缩略图
+        # 如果是图片消息，显示更美观的“左文右图”缩略图布局
         if reply_to_message_type == "image" and reply_text and reply_text.startswith("data:image"):
             try:
                 # 解析base64图片
@@ -1187,12 +1624,12 @@ def append_chat_message(
                 image = QImage.fromData(raw)
                 if not image.isNull():
                     pixmap = QPixmap.fromImage(image)
-                    # 创建30*30的缩略图
-                    thumbnail = pixmap.scaled(30, 30, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    # 创建 40x40 的略大缩略图，效果更清晰
+                    thumbnail = pixmap.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                     
                     # 创建缩略图标签
                     thumbnail_label = QLabel()
-                    thumbnail_label.setFixedSize(30, 30)
+                    thumbnail_label.setFixedSize(40, 40)
                     thumbnail_label.setPixmap(thumbnail)
                     thumbnail_label.setStyleSheet("""
                         QLabel {
@@ -1200,26 +1637,31 @@ def append_chat_message(
                             background-color: transparent;
                         }
                     """)
+                    # 立即保存缩略图标签到属性中，方便撤回时隐藏
+                    reply_container.setProperty("reply_thumbnail_label", thumbnail_label)
                     
                     # 创建文本标签（显示发送者名称），这个标签也作为 reply_label 用于撤回时更新
-                    sender_label = QLabel(f"{reply_sender_name}: [图片]")
+                    # 样式参考你给的示例：仅显示 “用户名:”，不再额外加“图片”文字
+                    sender_label = QLabel(f"{reply_sender_name}:")
                     sender_label.setStyleSheet("""
                         QLabel {
                             font-family: "Microsoft YaHei", "SimHei", "Arial";
-                            font-size: 12px;
-                            color: #4b5563;
+                        font-size: 12px;
+                        color: #4b5563;
                             background-color: transparent;
                         }
                     """)
+                    sender_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
                     reply_label = sender_label  # 使用 sender_label 作为 reply_label
                     
-                    # 水平布局：发送者名称 + 缩略图
+                    # 水平布局：发送者名称 + 缩略图（紧凑排列，中间不要太大空白）
                     thumbnail_layout = QHBoxLayout()
                     thumbnail_layout.setContentsMargins(0, 0, 0, 0)
                     thumbnail_layout.setSpacing(6)
                     thumbnail_layout.addWidget(sender_label)
                     thumbnail_layout.addWidget(thumbnail_label)
-                    thumbnail_layout.addStretch()
+                    # 保存 thumbnail_layout 到属性中，方便撤回时处理
+                    reply_container.setProperty("reply_thumbnail_layout", thumbnail_layout)
                     
                     reply_content_layout.addLayout(thumbnail_layout)
                 else:
@@ -1266,12 +1708,19 @@ def append_chat_message(
             reply_label.setWordWrap(True)
             reply_content_layout.addWidget(reply_label)
 
-        # 把引用信息存到容器属性里，方便后续在被引用消息撤回时更新文案
+        # 把引用信息存到容器属性里，方便后续在被引用消息撤回时更新文案/缩略图
         reply_container.setProperty("reply_sender_name", reply_sender_name)
         if reply_label:
             reply_container.setProperty("reply_label", reply_label)
+        # 缩略图标签已在创建时保存到属性中（如果存在的话）
 
         reply_layout.addLayout(reply_content_layout)
+
+        # 让引用卡片宽度自适应内容（但不超过正文气泡最大宽度）
+        reply_container.adjustSize()
+        content_width = reply_container.sizeHint().width()
+        desired_width = max(120, min(content_width, 420))  # 保底宽度 120，封顶 420
+        reply_container.setFixedWidth(desired_width)
 
         # 引用块单独占一行，与消息气泡左对齐（放在正文气泡下方）
         reply_row = QHBoxLayout()
@@ -1283,18 +1732,12 @@ def append_chat_message(
         # 对于客服消息，消息气泡左对齐，引用块也与气泡左边缘对齐
         if from_self:
             # 用户消息：引用块右对齐，与消息气泡左边缘对齐
-            # 需要添加与头像宽度相同的偏移（32px + 6px spacing），使引用块与消息气泡左边缘对齐
             reply_row.addStretch()
-            # 设置引用块的最大宽度，与消息气泡一致
-            reply_container.setMaximumWidth(420)
             reply_row.addWidget(reply_container)
-            # 添加与头像宽度相同的占位，使引用块与消息气泡左边缘对齐
             reply_row.addSpacing(38)  # 32px 头像 + 6px spacing
         else:
             # 客服消息：引用块左对齐，与消息气泡左边缘对齐
-            # 添加与头像宽度相同的偏移（32px + 6px spacing），使引用块与消息气泡左边缘对齐
             reply_row.addSpacing(38)  # 32px 头像 + 6px spacing
-            reply_container.setMaximumWidth(420)
             reply_row.addWidget(reply_container)
             reply_row.addStretch()
 
@@ -2640,6 +3083,304 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
     if not hasattr(main_window, "chat_layout"):
         return
 
+    # 处理撤回消息：查找现有消息并更新为撤回状态，同时更新所有引用块
+    if is_recalled and message_id is not None:
+        try:
+            recalled_id = None
+            try:
+                recalled_id = int(message_id)
+            except (ValueError, TypeError):
+                recalled_id = message_id
+            
+            # 先尝试查找并更新现有消息
+            if recalled_id is not None:
+                # 优先从 _message_widgets_map 中查找
+                if hasattr(main_window, "_message_widgets_map"):
+                    widget_img = main_window._message_widgets_map.get(recalled_id)
+                    # 如果没找到，尝试字符串键
+                    if not widget_img and isinstance(recalled_id, int):
+                        widget_img = main_window._message_widgets_map.get(str(recalled_id))
+                    # 如果还没找到，尝试整数键
+                    if not widget_img and isinstance(recalled_id, str):
+                        try:
+                            widget_img = main_window._message_widgets_map.get(int(recalled_id))
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    if widget_img:
+                        widget, img_label = widget_img
+                        if widget and not widget.property("is_recalled"):
+                            # 找到现有消息，更新为撤回状态
+                            # 隐藏图片和头像
+                            if img_label:
+                                img_label.setVisible(False)
+                            parent_layout = widget.layout()
+                            if parent_layout:
+                                # 隐藏头像
+                                for i in range(parent_layout.count()):
+                                    item = parent_layout.itemAt(i)
+                                    if item and item.layout():
+                                        row_layout = item.layout()
+                                        for j in range(row_layout.count()):
+                                            row_item = row_layout.itemAt(j)
+                                            if row_item and row_item.widget():
+                                                w = row_item.widget()
+                                                if isinstance(w, QLabel) and w.pixmap():
+                                                    # 检查是否是头像（固定大小32x32）
+                                                    if w.size().width() == 32 and w.size().height() == 32:
+                                                        w.setVisible(False)
+                            
+                            # 隐藏时间标签（如果有）
+                            time_label = widget.property("time_label")
+                            if time_label:
+                                time_label.setVisible(False)
+                            
+                            # 隐藏引用块（如果存在），并先隐藏其中的所有缩略图
+                            reply_container = widget.property("reply_container")
+                            if reply_container:
+                                # 先隐藏引用块中的所有缩略图
+                                thumbnail_label = reply_container.property("reply_thumbnail_label")
+                                if thumbnail_label:
+                                    thumbnail_label.hide()
+                                    thumbnail_label.setVisible(False)
+                                # 使用 findChildren 查找所有图片标签并隐藏
+                                all_labels = reply_container.findChildren(QLabel)
+                                for label in all_labels:
+                                    if label.pixmap():
+                                        label.hide()
+                                        label.setVisible(False)
+                                # 最后隐藏整个引用块
+                                reply_container.setVisible(False)
+                                reply_container.hide()
+                            
+                            # 判断是自己撤回还是对方撤回
+                            current_user_id = getattr(main_window, 'user_id', None)
+                            if current_user_id is not None and from_user_id is not None:
+                                try:
+                                    is_self_recalled = (int(from_user_id) == int(current_user_id))
+                                except (ValueError, TypeError):
+                                    is_self_recalled = (from_user_id == current_user_id)
+                            else:
+                                is_self_recalled = (from_user_id == current_user_id)
+                            
+                            if is_self_recalled:
+                                recall_text = "你撤回了一条消息"
+                            else:
+                                username = from_username or "用户"
+                                if from_user_id and not from_username:
+                                    if hasattr(main_window, "username"):
+                                        username = main_window.username
+                                    else:
+                                        try:
+                                            from client.login.login_status_manager import check_login_status
+                                            _, _, current_username = check_login_status()
+                                            if current_username:
+                                                username = current_username
+                                        except Exception:
+                                            pass
+                                recall_text = f"{username}撤回了一条消息"
+                            
+                            # 检查是否已经有撤回提示标签
+                            widget_layout = widget.layout()
+                            if widget_layout:
+                                # 查找是否已有撤回标签
+                                has_recall_label = False
+                                for layout_idx in range(widget_layout.count()):
+                                    item = widget_layout.itemAt(layout_idx)
+                                    if item and item.widget():
+                                        w = item.widget()
+                                        if isinstance(w, QLabel) and w.text() in ("你撤回了一条消息", f"{username}撤回了一条消息"):
+                                            has_recall_label = True
+                                            break
+                                
+                                # 如果没有撤回标签，创建一个
+                                if not has_recall_label:
+                                    recall_label = QLabel(recall_text)
+                                    recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                                    recall_label.setStyleSheet("""
+                                        QLabel {
+                                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                            font-size: 11px;
+                                            color: #9ca3af;
+                                            padding: 4px 0px;
+                                            background-color: transparent;
+                                        }
+                                    """)
+                                    widget_layout.insertWidget(0, recall_label)
+                            
+                            # 标记为已撤回
+                            widget.setProperty("is_recalled", True)
+                            
+                            # 同步更新所有引用了这条消息的引用块文案和缩略图
+                            if hasattr(main_window, "chat_layout"):
+                                parent_layout = main_window.chat_layout
+                                for layout_idx in range(parent_layout.count()):
+                                    item = parent_layout.itemAt(layout_idx)
+                                    w = item.widget() if item else None
+                                    if not w:
+                                        continue
+                                    ref_id = w.property("reply_to_message_id")
+                                    if ref_id is None:
+                                        continue
+                                    try:
+                                        ref_id_norm = int(ref_id)
+                                    except (ValueError, TypeError):
+                                        ref_id_norm = ref_id
+                                    if ref_id_norm == recalled_id:
+                                        reply_container = w.property("reply_container")
+                                        if reply_container:
+                                            sender_name = reply_container.property("reply_sender_name") or ""
+                                            reply_label = reply_container.property("reply_label")
+                                            new_text = "该引用消息已被撤回"
+                                            if sender_name:
+                                                new_text = f"{sender_name}: {new_text}"
+                                            
+                                            # 先找到并删除所有图片相关的控件
+                                            thumbnail_label = reply_container.property("reply_thumbnail_label")
+                                            thumbnail_layout = reply_container.property("reply_thumbnail_layout")
+                                            
+                                            # 找到 reply_content_layout
+                                            reply_content_layout = None
+                                            main_layout = reply_container.layout()
+                                            if main_layout and main_layout.count() > 0:
+                                                first_item = main_layout.itemAt(0)
+                                                if first_item and first_item.layout():
+                                                    reply_content_layout = first_item.layout()
+                                            
+                                            # 如果有 thumbnail_layout，完全删除它及其所有子控件
+                                            if thumbnail_layout and reply_content_layout:
+                                                # 找到 thumbnail_layout 在 reply_content_layout 中的位置
+                                                layout_index = -1
+                                                for i in range(reply_content_layout.count()):
+                                                    item = reply_content_layout.itemAt(i)
+                                                    if item and item.layout() == thumbnail_layout:
+                                                        layout_index = i
+                                                        break
+                                                
+                                                if layout_index >= 0:
+                                                    # 先删除 thumbnail_layout 中的所有控件
+                                                    while thumbnail_layout.count() > 0:
+                                                        item = thumbnail_layout.takeAt(0)
+                                                        if item:
+                                                            widget = item.widget()
+                                                            if widget:
+                                                                # 完全删除控件
+                                                                widget.hide()
+                                                                widget.setVisible(False)
+                                                                if isinstance(widget, QLabel):
+                                                                    widget.setPixmap(QPixmap())
+                                                                    widget.clear()
+                                                                widget.setFixedSize(0, 0)
+                                                                widget.setParent(None)
+                                                                widget.deleteLater()
+                                                            else:
+                                                                # 如果是子布局，也删除
+                                                                sub_layout = item.layout()
+                                                                if sub_layout:
+                                                                    while sub_layout.count() > 0:
+                                                                        sub_item = sub_layout.takeAt(0)
+                                                                        if sub_item:
+                                                                            sub_widget = sub_item.widget()
+                                                                            if sub_widget:
+                                                                                sub_widget.hide()
+                                                                                sub_widget.setVisible(False)
+                                                                                sub_widget.setParent(None)
+                                                                                sub_widget.deleteLater()
+                                                                    sub_layout.deleteLater()
+                                                    
+                                                    # 从 reply_content_layout 中移除 thumbnail_layout
+                                                    reply_content_layout.removeItem(thumbnail_layout)
+                                                    # 删除 thumbnail_layout 本身
+                                                    thumbnail_layout.deleteLater()
+                                                    
+                                                    # 创建新的文本标签并添加到相同位置
+                                                    new_reply_label = QLabel(new_text)
+                                                    new_reply_label.setStyleSheet("""
+                                                        QLabel {
+                                                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                            font-size: 12px;
+                                                            color: #4b5563;
+                                                            background-color: transparent;
+                                                        }
+                                                    """)
+                                                    new_reply_label.setWordWrap(True)
+                                                    reply_content_layout.insertWidget(layout_index, new_reply_label)
+                                                    
+                                                    # 更新 reply_label 属性
+                                                    reply_container.setProperty("reply_label", new_reply_label)
+                                                    reply_label = new_reply_label
+                                            else:
+                                                # 如果没有 thumbnail_layout，直接更新 reply_label
+                                                if reply_label:
+                                                    reply_label.setText(new_text)
+                                                else:
+                                                    # 如果连 reply_label 都没有，创建一个新的
+                                                    if reply_content_layout:
+                                                        new_reply_label = QLabel(new_text)
+                                                        new_reply_label.setStyleSheet("""
+                                                            QLabel {
+                                                                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                                font-size: 12px;
+                                                                color: #4b5563;
+                                                                background-color: transparent;
+                                                            }
+                                                        """)
+                                                        new_reply_label.setWordWrap(True)
+                                                        reply_content_layout.addWidget(new_reply_label)
+                                                        reply_container.setProperty("reply_label", new_reply_label)
+                                                        reply_label = new_reply_label
+                                            
+                                            # 删除 thumbnail_label（如果还存在）
+                                            if thumbnail_label:
+                                                thumbnail_label.hide()
+                                                thumbnail_label.setVisible(False)
+                                                thumbnail_label.setPixmap(QPixmap())
+                                                thumbnail_label.clear()
+                                                thumbnail_label.setFixedSize(0, 0)
+                                                # 尝试从父布局中移除
+                                                parent = thumbnail_label.parent()
+                                                if parent:
+                                                    parent_layout = parent.layout()
+                                                    if parent_layout:
+                                                        parent_layout.removeWidget(thumbnail_label)
+                                                thumbnail_label.setParent(None)
+                                                thumbnail_label.deleteLater()
+                                            
+                                            # 清除所有属性
+                                            reply_container.setProperty("reply_thumbnail_label", None)
+                                            reply_container.setProperty("reply_thumbnail_layout", None)
+                                            
+                                            # 使用 findChildren 确保找到并删除所有图片标签
+                                            all_labels = reply_container.findChildren(QLabel)
+                                            for label in all_labels:
+                                                # 只处理有图片的标签，且不是新的文本标签
+                                                if label.pixmap() and label is not reply_label:
+                                                    label.hide()
+                                                    label.setVisible(False)
+                                                    label.setPixmap(QPixmap())
+                                                    label.clear()
+                                                    label.setFixedSize(0, 0)
+                                                    # 尝试从父布局中移除
+                                                    parent = label.parent()
+                                                    if parent:
+                                                        parent_layout = parent.layout()
+                                                        if parent_layout:
+                                                            parent_layout.removeWidget(label)
+                                                    label.setParent(None)
+                                                    label.deleteLater()
+                                            
+                                            # 强制更新整个引用容器和父控件
+                                            reply_container.update()
+                                            reply_container.repaint()
+                                            if w:
+                                                w.update()
+                                                w.repaint()
+                            
+                            # 已更新现有消息，直接返回，不创建新消息
+                            return
+        except Exception as e:
+            logging.error(f"处理图片撤回消息失败: {e}", exc_info=True)
+
     message_widget = QWidget()
     v_layout = QVBoxLayout(message_widget)
     v_layout.setContentsMargins(4, 0, 4, 0)
@@ -2696,6 +3437,8 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                             background-color: transparent;
                         }
                     """)
+                    # 立即保存缩略图标签到属性中，方便撤回时隐藏
+                    reply_container.setProperty("reply_thumbnail_label", thumbnail_label)
                     
                     # 创建文本标签（显示发送者名称）
                     sender_label = QLabel(f"{reply_sender_name}: [图片]")
@@ -2707,6 +3450,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                             background-color: transparent;
                         }
                     """)
+                    reply_label = sender_label  # 使用 sender_label 作为 reply_label
                     
                     # 水平布局：发送者名称 + 缩略图
                     thumbnail_layout = QHBoxLayout()
@@ -2715,6 +3459,8 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                     thumbnail_layout.addWidget(sender_label)
                     thumbnail_layout.addWidget(thumbnail_label)
                     thumbnail_layout.addStretch()
+                    # 保存 thumbnail_layout 到属性中，方便撤回时处理
+                    reply_container.setProperty("reply_thumbnail_layout", thumbnail_layout)
                     
                     reply_content_layout.addLayout(thumbnail_layout)
                 else:
@@ -2762,6 +3508,43 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
 
         reply_layout.addLayout(reply_content_layout)
         v_layout.addWidget(reply_container)
+        
+        # 保存引用块相关属性到 message_widget，便于撤回时更新
+        message_widget.setProperty("reply_container", reply_container)
+        # 查找 reply_label（可能是 sender_label 或文本 reply_label）
+        reply_label_to_save = None
+        # 首先尝试从 reply_content_layout 中查找文字标签（没有 pixmap 的 QLabel）
+        for i in range(reply_content_layout.count()):
+            item = reply_content_layout.itemAt(i)
+            if item:
+                layout = item.layout()
+                if layout:
+                    # 如果是布局（如 thumbnail_layout），查找其中的文字 QLabel
+                    for j in range(layout.count()):
+                        sub_item = layout.itemAt(j)
+                        if sub_item and sub_item.widget():
+                            w = sub_item.widget()
+                            if isinstance(w, QLabel) and not w.pixmap():
+                                reply_label_to_save = w
+                                break
+                    if reply_label_to_save:
+                        break
+                else:
+                    widget = item.widget()
+                    if widget and isinstance(widget, QLabel) and not widget.pixmap():
+                        reply_label_to_save = widget
+                        break
+        # 如果还没找到，使用 findChildren 查找所有没有图片的 QLabel
+        if not reply_label_to_save:
+            all_labels = reply_container.findChildren(QLabel)
+            for label in all_labels:
+                if not label.pixmap():
+                    reply_label_to_save = label
+                    break
+        if reply_label_to_save:
+            reply_container.setProperty("reply_label", reply_label_to_save)
+        reply_container.setProperty("reply_sender_name", reply_sender_name)
+        message_widget.setProperty("reply_to_message_id", reply_to_message_id)
 
     time_label = None
     if from_self:
@@ -2866,7 +3649,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
         # 如果没有提供创建时间，使用当前时间
         message_widget.setProperty("message_created_time", datetime.now().isoformat())
     
-    # 为图片消息添加右键菜单（引用功能）
+    # 为图片消息添加右键菜单（引用 + 撤回）
     def show_context_menu(pos: QPoint):
         menu = QMenu(message_widget)
         menu.setStyleSheet("""
@@ -2895,6 +3678,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
         reply_action.setEnabled(True)
         
         def reply_message_action():
+            # 允许在 message_id 尚未同步时也进行引用，发送时按普通消息处理
             current_msg_id = message_widget.property("message_id")
             valid_msg_id = None
             if current_msg_id is not None:
@@ -2903,23 +3687,11 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                     # 数据库ID从1开始，所以允许 >= 1
                     if msg_id_int > 0:
                         valid_msg_id = msg_id_int
-                    else:
-                        logging.warning(f"引用消息ID无效: {current_msg_id}（ID必须大于0），将无法发送引用信息")
                 except (ValueError, TypeError):
-                    logging.warning(f"引用消息ID格式错误: {current_msg_id}，将无法发送引用信息")
+                    pass
             
-            # 如果 message_id 无效，提示用户等待消息发送完成
-            if not valid_msg_id:
-                from PyQt6.QtWidgets import QMessageBox
-                QMessageBox.warning(
-                    main_window,
-                    "无法引用",
-                    "该消息尚未发送完成，请等待消息发送成功后再引用。"
-                )
-                return
-            
-            main_window._reply_to_message_id = valid_msg_id
-            # 如果是图片消息，需要获取完整的data URL
+            main_window._reply_to_message_id = valid_msg_id  # 可能为 None
+            # 如果是图片消息且已拿到有效ID，尝试从后端获取完整 data URL
             if valid_msg_id:
                 try:
                     from client.api_client import get_reply_message
@@ -2943,8 +3715,12 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                     main_window._reply_to_message_text = "[图片]"
                     main_window._reply_to_message_type = "image"
             else:
-                main_window._reply_to_message_text = "[图片]"  # 图片消息的引用文本
+                # 未拿到有效ID时，仅作为普通消息发送，但前端保留引用样式
+                main_window._reply_to_message_text = "[图片]"
                 main_window._reply_to_message_type = "image"
+            
+            # 记录被引用的控件，便于后续在拿到 message_id 后自动补齐引用ID
+            main_window._reply_to_widget = message_widget
             
             main_window._reply_to_username = from_username or (from_self and "我" or "用户")
             # 在输入框显示引用提示
@@ -2953,12 +3729,82 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                 placeholder = f"回复 {sender_name}：[图片]"
                 main_window.chat_input.setPlaceholderText(placeholder)
                 main_window.chat_input.setFocus()
-                
-                if valid_msg_id is None:
-                    placeholder = f"⚠️ 无法引用此消息（消息ID无效），将按普通消息发送"
-                    main_window.chat_input.setPlaceholderText(placeholder)
         
         reply_action.triggered.connect(reply_message_action)
+        
+        # 撤回图片消息（仅自己发送的图片可以撤回）
+        if from_self:
+            recall_action = menu.addAction("撤回消息")
+            current_msg_id = message_widget.property("message_id")
+            message_created_time = message_widget.property("message_created_time")
+            
+            # 检查是否超过2分钟
+            can_recall = False
+            if current_msg_id and message_created_time:
+                try:
+                    from datetime import timedelta
+                    created_time = datetime.fromisoformat(str(message_created_time).replace('Z', '+00:00'))
+                    time_diff = datetime.now() - created_time.replace(tzinfo=None)
+                    can_recall = time_diff <= timedelta(minutes=2)
+                except Exception:
+                    # 解析失败则交给后端再校验
+                    can_recall = True
+            elif current_msg_id:
+                can_recall = True
+            
+            if current_msg_id and can_recall:
+                recall_action.setEnabled(True)
+            else:
+                recall_action.setEnabled(False)
+                if not current_msg_id:
+                    recall_action.setToolTip("消息ID尚未同步，请稍后再试")
+                else:
+                    recall_action.setToolTip("消息已超过2分钟，无法撤回")
+            
+            def recall_image_message_action():
+                # 再次读取最新 message_id 与时间，防止状态变化
+                current_msg_id = message_widget.property("message_id")
+                if not current_msg_id:
+                    return
+                
+                message_created_time = message_widget.property("message_created_time")
+                if message_created_time:
+                    try:
+                        from datetime import timedelta
+                        created_time = datetime.fromisoformat(str(message_created_time).replace('Z', '+00:00'))
+                        time_diff = datetime.now() - created_time.replace(tzinfo=None)
+                        if time_diff > timedelta(minutes=2):
+                            recall_action.setEnabled(False)
+                            return
+                    except Exception:
+                        pass
+                
+                from client.utils.websocket_helper import recall_message_via_websocket
+                try:
+                    resp = recall_message_via_websocket(main_window, current_msg_id)
+                    if resp.get("success"):
+                        # 本地立即更新 UI，隐藏图片并显示撤回提示，后续服务器广播时会自动跳过
+                        try:
+                            from gui.handlers.chat_handlers import append_chat_message
+                            append_chat_message(
+                                main_window,
+                                "",
+                                from_self=True,
+                                is_html=False,
+                                streaming=False,
+                                avatar_base64=None,
+                                message_id=current_msg_id,
+                                is_recalled=True,
+                                from_user_id=getattr(main_window, "user_id", None),
+                                from_username=getattr(main_window, "username", None),
+                                message_created_time=message_created_time,
+                            )
+                        except Exception as e:
+                            logging.error(f"更新图片撤回消息UI失败: {e}", exc_info=True)
+                except Exception as e:
+                    logging.error(f"撤回图片消息失败: {e}", exc_info=True)
+            
+            recall_action.triggered.connect(recall_image_message_action)
         
         global_pos = message_widget.mapToGlobal(pos)
         menu.exec(global_pos)
