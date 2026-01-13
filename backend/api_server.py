@@ -1698,13 +1698,16 @@ def handle_heartbeat(data):
     try:
         connection_id = data.get("connection_id")
         if not connection_id:
+            logger.warning("收到心跳但缺少连接ID")
             return {"success": False, "message": "缺少连接ID"}
         
         success = ws_manager.update_heartbeat(connection_id=connection_id)
         
         if success:
+            logger.debug(f"收到心跳并更新成功: connection_id={connection_id}")
             return {"success": True, "timestamp": datetime.now().isoformat()}
         else:
+            logger.warning(f"收到心跳但连接不存在: connection_id={connection_id}")
             return {"success": False, "message": "连接不存在"}
     
     except Exception as e:
@@ -1891,7 +1894,32 @@ def handle_send_message(data):
         if role == "user":
             to_user_id = chat_session.get("agent_id")
         else:
+            # 客服发送消息时，优先使用传入的to_user_id，否则从会话中获取user_id
             to_user_id = to_user_id or chat_session.get("user_id")
+            # 如果仍然为None，尝试从会话的历史消息中获取接收方用户ID（备用机制）
+            if to_user_id is None:
+                logger.warning(f"客服发送消息时无法从会话获取接收方，尝试从历史消息中获取: session_id={session_id}, from_user_id={from_user_id}, role={role}")
+                try:
+                    # 查询会话中最近的一条消息，获取接收方用户ID
+                    recent_messages = db.get_chat_messages(session_id, limit=10)
+                    for msg in recent_messages:
+                        # 如果消息的from_user_id不是当前发送者，且to_user_id不为None，则使用它
+                        msg_from_user_id = msg.get("from_user_id")
+                        msg_to_user_id = msg.get("to_user_id")
+                        if msg_from_user_id != from_user_id and msg_to_user_id:
+                            to_user_id = msg_to_user_id
+                            logger.info(f"从历史消息中获取到接收方用户ID: {to_user_id}, session_id={session_id}")
+                            break
+                        # 或者如果消息的to_user_id是当前发送者，则from_user_id就是接收方
+                        if msg_to_user_id == from_user_id:
+                            to_user_id = msg_from_user_id
+                            logger.info(f"从历史消息中获取到接收方用户ID: {to_user_id}, session_id={session_id}")
+                            break
+                except Exception as e:
+                    logger.error(f"从历史消息中获取接收方用户ID失败: {e}", exc_info=True)
+                # 如果仍然为None，记录错误日志
+                if to_user_id is None:
+                    logger.error(f"客服发送消息时无法确定接收方: session_id={session_id}, chat_session={chat_session}, from_user_id={from_user_id}, role={role}")
 
         # 统一将用户ID转换为整数，避免类型不一致导致在线状态判断失败
         try:
@@ -2011,11 +2039,13 @@ def handle_send_message(data):
         # 使用 WebSocket 管理器推送消息
         if to_user_id:
             # 尝试推送给接收方，无论在线检测结果如何都尝试一次，避免误判导致漏推
-            logger.debug(f"准备向用户 {to_user_id} 推送消息: message_id={message_id}, session_id={session_id}, from_user_id={from_user_id}")
+            logger.debug(f"准备向用户 {to_user_id} 推送消息: message_id={message_id}, session_id={session_id}, from_user_id={from_user_id}, role={role}")
             delivered_count = ws_manager.send_message_to_user(to_user_id, "new_message", payload_data)
             logger.debug(f"消息推送完成: message_id={message_id}, to_user_id={to_user_id}, delivered_count={delivered_count}")
             if delivered_count == 0:
                 logger.warning(f"发送给用户 {to_user_id} 的实时消息未送达（delivered_count=0），可能离线或房间未正确加入")
+        else:
+            logger.error(f"无法推送消息：to_user_id为None, message_id={message_id}, session_id={session_id}, from_user_id={from_user_id}, role={role}, chat_session={chat_session}")
             # 更新消息状态为已送达（基于数据库事务确认，使用重试机制）
             import threading
             def update_delivered_status():

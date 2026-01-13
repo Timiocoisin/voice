@@ -80,12 +80,14 @@ class WebSocketManager:
         with self.lock:
             for conn_id, conn_info in self.connections.items():
                 last_heartbeat = conn_info.get('last_heartbeat', 0)
-                if now - last_heartbeat > self.heartbeat_timeout:
-                    stale_connections.append(conn_id)
+                time_since_heartbeat = now - last_heartbeat
+                if time_since_heartbeat > self.heartbeat_timeout:
+                    stale_connections.append((conn_id, time_since_heartbeat))
+                    logger.debug(f"连接 {conn_id} 心跳超时: 距离上次心跳 {time_since_heartbeat:.1f} 秒 (超时阈值: {self.heartbeat_timeout} 秒)")
         
         # 断开过期连接
-        for conn_id in stale_connections:
-            logger.warning(f"连接 {conn_id} 心跳超时，自动断开")
+        for conn_id, time_since_heartbeat in stale_connections:
+            logger.warning(f"连接 {conn_id} 心跳超时（距离上次心跳 {time_since_heartbeat:.1f} 秒），自动断开")
             self.disconnect(conn_id)
         
         # 清理数据库中的过期连接
@@ -229,14 +231,21 @@ class WebSocketManager:
             if not connection_id and socket_id:
                 with self.lock:
                     connection_id = self.socket_to_connection.get(socket_id)
+                    if not connection_id:
+                        logger.debug(f"通过 socket_id 查找 connection_id 失败: socket_id={socket_id}")
             
             if not connection_id:
+                logger.debug(f"更新心跳失败: connection_id 和 socket_id 都为空")
                 return False
             
             with self.lock:
                 if connection_id in self.connections:
+                    old_heartbeat = self.connections[connection_id].get('last_heartbeat', 0)
                     self.connections[connection_id]['last_heartbeat'] = time.time()
+                    time_since_last = time.time() - old_heartbeat if old_heartbeat > 0 else 0
+                    logger.debug(f"更新心跳成功: connection_id={connection_id}, 距离上次心跳 {time_since_last:.1f} 秒")
                 else:
+                    logger.debug(f"更新心跳失败: connection_id={connection_id} 不在连接列表中")
                     return False
             
             # 更新数据库（异步，不阻塞）

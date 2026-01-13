@@ -539,3 +539,101 @@
 2026-01-12 20:52:55,141 - INFO - root - 用户 1 的连接 64a151ec-2720-4c50-ba4a-b18a31661f55 已创建
 2026-01-12 20:53:41,277 - INFO - root - 连接 64a151ec-2720-4c50-ba4a-b18a31661f55 已断开
 2026-01-12 20:53:43,627 - INFO - root - 连接 1768219958377-a2rtsn3if 已断开
+2026-01-13 10:56:21,346 - INFO - root - 数据库连接成功
+2026-01-13 10:56:21,422 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 10:56:21,438 - INFO - root - user_connections 表创建成功
+2026-01-13 10:56:21,443 - INFO - root - user_devices 表创建成功
+2026-01-13 10:56:21,448 - INFO - root - message_queue 表创建成功
+2026-01-13 10:56:21,448 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 10:56:21,448 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 10:56:46,611 - INFO - root - 用户 1 的设备 d75e3997-55d8-4edd-a06a-55f3d5bbec94 已注册
+2026-01-13 10:56:46,621 - INFO - root - 用户 1 的连接 331c85d3-5ecc-484c-b90f-fa702c7a1326 已创建
+2026-01-13 10:57:03,572 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-13 10:57:16,933 - INFO - root - 用户 2 的设备 1768273036891-n7upui64e 已注册
+2026-01-13 10:57:16,942 - INFO - root - 用户 2 的连接 1768273014628-a7sdyovkw 已创建
+2026-01-13 10:58:51,488 - WARNING - backend.websocket.websocket_manager - 连接 331c85d3-5ecc-484c-b90f-fa702c7a1326 心跳超时，自动断开
+2026-01-13 10:58:51,572 - INFO - root - 连接 331c85d3-5ecc-484c-b90f-fa702c7a1326 已断开
+2026-01-13 10:59:30,634 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 10:59:35,402 - INFO - root - 用户 1 的设备 68a4796b-1a49-45f1-9eb7-d44a78a8d5da 已注册
+2026-01-13 10:59:35,412 - INFO - root - 用户 1 的连接 c3ef3e51-e9d4-4b06-8f2a-e1d7999e995e 已创建
+2026-01-13 10:59:48,351 - INFO - root - 连接 c3ef3e51-e9d4-4b06-8f2a-e1d7999e995e 已断开
+2026-01-13 10:59:49,971 - INFO - root - 连接 1768273014628-a7sdyovkw 已断开
+2026-01-13 10:59:56,079 - INFO - root - 数据库连接成功
+2026-01-13 10:59:56,116 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 10:59:56,131 - INFO - root - user_connections 表创建成功
+2026-01-13 10:59:56,134 - INFO - root - user_devices 表创建成功
+2026-01-13 10:59:56,138 - INFO - root - message_queue 表创建成功
+2026-01-13 10:59:56,138 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 10:59:56,138 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 10:59:56,653 - INFO - root - 用户 2 的设备 1768273036891-n7upui64e 已注册
+2026-01-13 10:59:56,685 - INFO - root - 用户 2 的连接 1768273014628-a7sdyovkw 已创建
+2026-01-13 11:02:45,540 - INFO - root - 用户 1 的设备 cee06f6d-6d93-43f9-be7d-f8cf4185b953 已注册
+2026-01-13 11:02:45,548 - INFO - root - 用户 1 的连接 9737b473-5c4d-4f71-b7a4-9f4cff810449 已创建
+2026-01-13 11:03:45,242 - INFO - root - 连接 9737b473-5c4d-4f71-b7a4-9f4cff810449 已断开
+2026-01-13 11:03:45,244 - INFO - root - 连接 1768273014628-a7sdyovkw 已断开
+2026-01-13 11:04:02,522 - INFO - root - 数据库连接成功
+2026-01-13 11:04:02,571 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 11:04:02,583 - INFO - root - user_connections 表创建成功
+2026-01-13 11:04:02,585 - INFO - root - user_devices 表创建成功
+2026-01-13 11:04:02,588 - INFO - root - message_queue 表创建成功
+2026-01-13 11:04:02,588 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 11:04:02,588 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 11:04:02,948 - INFO - root - 用户 2 的设备 1768273036891-n7upui64e 已注册
+2026-01-13 11:04:02,958 - INFO - root - 用户 2 的连接 1768273014628-a7sdyovkw 已创建
+2026-01-13 11:04:06,611 - INFO - root - 用户 1 的设备 75edf7af-e222-4a23-b11a-c7fd20128e20 已注册
+2026-01-13 11:04:06,620 - INFO - root - 用户 1 的连接 d1d2f52b-f7e7-471d-86a5-42212cd9b9ea 已创建
+2026-01-13 11:06:32,637 - WARNING - backend.websocket.websocket_manager - 连接 d1d2f52b-f7e7-471d-86a5-42212cd9b9ea 心跳超时，自动断开
+2026-01-13 11:06:32,660 - INFO - root - 连接 d1d2f52b-f7e7-471d-86a5-42212cd9b9ea 已断开
+2026-01-13 11:10:10,885 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 11:10:12,122 - INFO - root - 连接 1768273014628-a7sdyovkw 已断开
+2026-01-13 11:10:23,734 - INFO - root - 数据库连接成功
+2026-01-13 11:10:23,772 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 11:10:23,784 - INFO - root - user_connections 表创建成功
+2026-01-13 11:10:23,787 - INFO - root - user_devices 表创建成功
+2026-01-13 11:10:23,791 - INFO - root - message_queue 表创建成功
+2026-01-13 11:10:23,791 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 11:10:23,792 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 11:10:24,208 - INFO - root - 用户 2 的设备 1768273036891-n7upui64e 已注册
+2026-01-13 11:10:24,241 - INFO - root - 用户 2 的连接 1768273014628-a7sdyovkw 已创建
+2026-01-13 11:10:48,854 - INFO - root - 用户 1 的设备 447ec59a-6640-495f-bf70-bceef9558bed 已注册
+2026-01-13 11:10:48,863 - INFO - root - 用户 1 的连接 be171246-f4bd-49bf-8f91-c771d55604d8 已创建
+2026-01-13 11:12:53,853 - WARNING - backend.websocket.websocket_manager - 连接 be171246-f4bd-49bf-8f91-c771d55604d8 心跳超时（距离上次心跳 125.0 秒），自动断开
+2026-01-13 11:12:53,872 - INFO - root - 连接 be171246-f4bd-49bf-8f91-c771d55604d8 已断开
+2026-01-13 11:17:47,925 - INFO - root - 连接 1768273014628-a7sdyovkw 已断开
+2026-01-13 11:17:49,969 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 11:18:01,515 - INFO - root - 数据库连接成功
+2026-01-13 11:18:01,564 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 11:18:01,579 - INFO - root - user_connections 表创建成功
+2026-01-13 11:18:01,582 - INFO - root - user_devices 表创建成功
+2026-01-13 11:18:01,587 - INFO - root - message_queue 表创建成功
+2026-01-13 11:18:01,587 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 11:18:01,588 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 11:18:07,321 - INFO - __main__ - 客服 小旭 登录成功，ID: 2
+2026-01-13 11:19:58,322 - INFO - root - 数据库连接成功
+2026-01-13 11:19:58,365 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-13 11:19:58,380 - INFO - root - user_connections 表创建成功
+2026-01-13 11:19:58,383 - INFO - root - user_devices 表创建成功
+2026-01-13 11:19:58,388 - INFO - root - message_queue 表创建成功
+2026-01-13 11:19:58,388 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-13 11:19:58,389 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-13 11:20:00,703 - INFO - root - 用户 1 的设备 b71e93c2-e739-4eb6-bae7-0b16425ad5a9 已注册
+2026-01-13 11:20:00,711 - INFO - root - 用户 1 的连接 eb9fbfa1-0654-450b-bf0d-8fbd62923de1 已创建
+2026-01-13 11:20:28,359 - INFO - root - 用户 2 的设备 1768274428322-wfm7vasoo 已注册
+2026-01-13 11:20:28,368 - INFO - root - 用户 2 的连接 1768274268280-mpiac4sca 已创建
+2026-01-13 11:22:28,409 - WARNING - backend.websocket.websocket_manager - 连接 eb9fbfa1-0654-450b-bf0d-8fbd62923de1 心跳超时（距离上次心跳 147.7 秒），自动断开
+2026-01-13 11:22:28,418 - INFO - root - 连接 eb9fbfa1-0654-450b-bf0d-8fbd62923de1 已断开
+2026-01-13 11:22:58,520 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 11:23:08,816 - INFO - root - 用户 1 的设备 2c91522b-da6f-4d9d-b741-3f1e011fdbd9 已注册
+2026-01-13 11:23:08,846 - INFO - root - 用户 1 的连接 e5641f6b-6a4d-4c67-a3f7-c5a1771f7377 已创建
+2026-01-13 11:25:28,464 - WARNING - backend.websocket.websocket_manager - 连接 e5641f6b-6a4d-4c67-a3f7-c5a1771f7377 心跳超时（距离上次心跳 139.6 秒），自动断开
+2026-01-13 11:25:28,472 - INFO - root - 连接 e5641f6b-6a4d-4c67-a3f7-c5a1771f7377 已断开
+2026-01-13 11:29:34,952 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 11:29:40,927 - INFO - root - 用户 1 的设备 1b5ef64f-2b5e-4c03-8bc6-0e0ce30977e2 已注册
+2026-01-13 11:29:40,937 - INFO - root - 用户 1 的连接 7fe4648e-3105-4307-974b-ca7330a4ec0a 已创建
+2026-01-13 11:31:58,575 - WARNING - backend.websocket.websocket_manager - 连接 7fe4648e-3105-4307-974b-ca7330a4ec0a 心跳超时（距离上次心跳 137.6 秒），自动断开
+2026-01-13 11:31:58,586 - INFO - root - 连接 7fe4648e-3105-4307-974b-ca7330a4ec0a 已断开
+2026-01-13 11:35:14,036 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-13 11:37:21,796 - INFO - root - 用户 1 的设备 c1c7cbd0-5fb5-428c-8d92-7d5b6ae959fc 已注册
+2026-01-13 11:37:21,806 - INFO - root - 用户 1 的连接 67c8adb1-7c1d-4c85-8f7f-7ad928a586bb 已创建
+2026-01-13 11:37:43,611 - INFO - root - 消息 519 已被用户 2 撤回
+2026-01-13 11:37:51,878 - INFO - root - 消息 520 已被用户 2 撤回

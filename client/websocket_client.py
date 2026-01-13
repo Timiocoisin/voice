@@ -275,35 +275,64 @@ class WebSocketClient:
     
     def _start_heartbeat(self):
         """启动心跳定时器（主线程 QTimer）"""
-        try:
-            from PyQt6.QtCore import QThread, QMetaObject, Qt
-            from PyQt6.QtWidgets import QApplication
-            app = QApplication.instance()
-            if app and QThread.currentThread() != app.thread():
-                logging.info("心跳定时器启动请求在非主线程，切到主线程执行")
-                return QMetaObject.invokeMethod(
-                    app,
-                    lambda: self._start_heartbeat(),
-                    Qt.ConnectionType.QueuedConnection,
-                )
-        except Exception:
-            # 若 Qt 不可用，直接继续，可能会触发警告
-            pass
-        if self.heartbeat_timer and self.heartbeat_timer.isActive():
+        from PyQt6.QtCore import QThread, QTimer
+        from PyQt6.QtWidgets import QApplication
+        
+        app = QApplication.instance()
+        if not app:
+            logging.warning("QApplication 不存在，无法启动心跳定时器")
             return
-        self.heartbeat_timer = QTimer()
-        self.heartbeat_timer.setInterval(int(self.heartbeat_interval * 1000))
-        self.heartbeat_timer.setSingleShot(False)
-        self.heartbeat_timer.timeout.connect(self._send_heartbeat)
-        self.heartbeat_timer.start()
-        logging.debug("心跳定时器已启动")
+        
+        # 检查是否在主线程
+        is_main_thread = QThread.currentThread() == app.thread()
+        
+        if not is_main_thread:
+            # 不在主线程，通过 QTimer.singleShot 切换到主线程执行
+            logging.info("心跳定时器启动请求在非主线程，切换到主线程执行")
+            QTimer.singleShot(0, self._start_heartbeat)
+            return
+        
+        # 在主线程中执行
+        if self.heartbeat_timer and self.heartbeat_timer.isActive():
+            logging.debug("心跳定时器已在运行")
+            return
+        
+        try:
+            self.heartbeat_timer = QTimer()
+            self.heartbeat_timer.setInterval(int(self.heartbeat_interval * 1000))
+            self.heartbeat_timer.setSingleShot(False)
+            self.heartbeat_timer.timeout.connect(self._send_heartbeat)
+            self.heartbeat_timer.start()
+            logging.debug("心跳定时器已启动")
+        except Exception as e:
+            logging.error(f"启动心跳定时器失败: {e}", exc_info=True)
     
     def _stop_heartbeat(self):
-        """停止心跳定时器"""
+        """停止心跳定时器（必须在主线程中执行）"""
+        from PyQt6.QtCore import QThread, QTimer
+        from PyQt6.QtWidgets import QApplication
+        
+        app = QApplication.instance()
+        if not app:
+            return
+        
+        # 检查是否在主线程
+        is_main_thread = QThread.currentThread() == app.thread()
+        
+        if not is_main_thread:
+            # 不在主线程，通过 QTimer.singleShot 切换到主线程执行
+            QTimer.singleShot(0, self._stop_heartbeat)
+            return
+        
+        # 在主线程中执行
         if self.heartbeat_timer:
-            self.heartbeat_timer.stop()
-            self.heartbeat_timer.deleteLater()
-            self.heartbeat_timer = None
+            try:
+                self.heartbeat_timer.stop()
+                self.heartbeat_timer.deleteLater()
+                self.heartbeat_timer = None
+                logging.debug("心跳定时器已停止")
+            except Exception as e:
+                logging.error(f"停止心跳定时器失败: {e}", exc_info=True)
     
     
     def _send_heartbeat(self):
@@ -318,34 +347,63 @@ class WebSocketClient:
     
     def _start_retry_worker(self):
         """启动重试定时器（主线程 QTimer）"""
-        try:
-            from PyQt6.QtCore import QThread, QMetaObject, Qt
-            from PyQt6.QtWidgets import QApplication
-            app = QApplication.instance()
-            if app and QThread.currentThread() != app.thread():
-                return QMetaObject.invokeMethod(
-                    app,
-                    lambda: self._start_retry_worker(),
-                    Qt.ConnectionType.QueuedConnection,
-                )
-        except Exception:
-            pass
-        if self.retry_timer and self.retry_timer.isActive():
+        from PyQt6.QtCore import QThread, QTimer
+        from PyQt6.QtWidgets import QApplication
+        
+        app = QApplication.instance()
+        if not app:
+            logging.warning("QApplication 不存在，无法启动重试定时器")
             return
-        self.retry_timer = QTimer()
-        self.retry_timer.setInterval(int(self.retry_interval * 1000))
-        self.retry_timer.setSingleShot(False)
-        self.retry_timer.timeout.connect(self._process_message_queue)
-        self.retry_timer.start()
-        logging.debug("重试定时器已启动")
+        
+        # 检查是否在主线程
+        is_main_thread = QThread.currentThread() == app.thread()
+        
+        if not is_main_thread:
+            # 不在主线程，通过 QTimer.singleShot 切换到主线程执行
+            QTimer.singleShot(0, self._start_retry_worker)
+            return
+        
+        # 在主线程中执行
+        if self.retry_timer and self.retry_timer.isActive():
+            logging.debug("重试定时器已在运行")
+            return
+        
+        try:
+            self.retry_timer = QTimer()
+            self.retry_timer.setInterval(int(self.retry_interval * 1000))
+            self.retry_timer.setSingleShot(False)
+            self.retry_timer.timeout.connect(self._process_message_queue)
+            self.retry_timer.start()
+            logging.debug("重试定时器已启动")
+        except Exception as e:
+            logging.error(f"启动重试定时器失败: {e}", exc_info=True)
     
     def _stop_retry_worker(self):
-        """停止重试定时器"""
+        """停止重试定时器（必须在主线程中执行）"""
+        from PyQt6.QtCore import QThread, QTimer
+        from PyQt6.QtWidgets import QApplication
+        
+        app = QApplication.instance()
+        if not app:
+            return
+        
+        # 检查是否在主线程
+        is_main_thread = QThread.currentThread() == app.thread()
+        
+        if not is_main_thread:
+            # 不在主线程，通过 QTimer.singleShot 切换到主线程执行
+            QTimer.singleShot(0, self._stop_retry_worker)
+            return
+        
+        # 在主线程中执行
         if self.retry_timer:
-            self.retry_timer.stop()
-            self.retry_timer.deleteLater()
-            self.retry_timer = None
-        logging.info("重试定时器已停止")
+            try:
+                self.retry_timer.stop()
+                self.retry_timer.deleteLater()
+                self.retry_timer = None
+                logging.info("重试定时器已停止")
+            except Exception as e:
+                logging.error(f"停止重试定时器失败: {e}", exc_info=True)
     
     def _process_message_queue(self):
         """处理消息队列"""

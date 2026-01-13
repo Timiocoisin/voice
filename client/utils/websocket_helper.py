@@ -40,6 +40,8 @@ def _get_ui_dispatcher(main_window) -> Optional[_UIDispatcher]:
             logger.warning("[UIDispatcher] QApplication 不存在，无法创建调度器")
             return None
         # 使用 main_window 作为 parent，确保调度器在主线程中
+        _ui_dispatcher = _UIDispatcher(parent=main_window)
+        logger.info("[UIDispatcher] UI 调度器已创建")
     return _ui_dispatcher
 
 
@@ -72,33 +74,37 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
         # 初始化 UI 调度器（确保在主线程中创建）
         _get_ui_dispatcher(main_window)
         
-        # 注册回调
+        # 注册回调（所有回调都通过 UI 调度器在主线程中执行）
         def on_connect():
-            logger.debug("WebSocket 连接成功")
+            def _on_connect():
+                logger.debug("WebSocket 连接成功")
+            # 通过 UI 调度器在主线程中执行
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_connect)
+            else:
+                _on_connect()
         
         def on_disconnect():
-            logger.warning("WebSocket 连接断开")
+            def _on_disconnect():
+                logger.warning("WebSocket 连接断开")
+            # 通过 UI 调度器在主线程中执行
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_disconnect)
+            else:
+                _on_disconnect()
         
         def on_message(data):
             # 处理收到的新消息
-            # 注意：Socket.IO 的回调可能在后台线程中执行，需要使用 QTimer.singleShot 确保 UI 更新在主线程中执行
+            # 注意：Socket.IO 的回调可能在后台线程中执行，必须通过 UI 调度器确保在主线程中执行
             try:
-                from PyQt6.QtCore import QTimer
+                message_id_log = data.get('id') if isinstance(data, dict) else 'unknown'
                 
                 # 在主线程中执行 UI 更新
                 def update_ui():
                     message_id_log = data.get('id') if isinstance(data, dict) else 'unknown'
-                    # 验证是否在主线程中
                     try:
-                        from PyQt6.QtCore import QThread
-                        from PyQt6.QtWidgets import QApplication
-                        app = QApplication.instance()
-                        if app:
-                            is_main_thread = QThread.currentThread() == app.thread()
-                    except Exception as e:
-                        logger.debug(f"[update_ui] 线程检查失败: {e}")
-                    try:
-                        logger.debug(f"[update_ui] 进入 try 块: message_id={message_id_log}")
                         message_id = data.get('id')
                         text = data.get('text', '')
                         from_user_id = data.get('from_user_id')
@@ -112,9 +118,9 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         # 使用服务端提供的 is_from_self 标记（优先使用，更可靠）
                         # 如果没有提供，则回退到通过 user_id 比较判断
                         is_from_self = data.get('is_from_self')
+                        current_user_id = getattr(main_window, 'user_id', None)
                         if is_from_self is None:
                             # 回退逻辑：通过 user_id 比较判断
-                            current_user_id = getattr(main_window, 'user_id', None)
                             if current_user_id is not None and from_user_id is not None:
                                 try:
                                     is_from_self = (int(from_user_id) == int(current_user_id))
@@ -233,6 +239,7 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         
                         # 检查 chat_layout 是否存在
                         if not hasattr(main_window, "chat_layout"):
+                            logger.error(f"chat_layout 不存在，无法显示消息: message_id={message_id}")
                             return
                         
                         # 如果是撤回的消息
@@ -383,10 +390,6 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                     from_username=from_username,
                                     message_created_time=message_time
                                 )
-                                
-                                # 验证消息是否真的被添加到布局中
-                                if hasattr(main_window, "chat_layout"):
-                                    layout_count = main_window.chat_layout.count()
                             except Exception as e:
                                 logger.error(f"显示消息失败: message_id={message_id}, error={e}", exc_info=True)
                             # 确保消息ID已添加到已显示列表（避免轮询重复显示）
@@ -396,26 +399,31 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                 main_window._displayed_message_ids.add(str(message_id))
                     
                     except Exception as e:
-                        logger.error(f"[update_ui] 处理 WebSocket 消息失败: {e}", exc_info=True)
+                        logger.error(f"处理 WebSocket 消息失败: {e}", exc_info=True)
                 
-                # 在主线程中执行 update_ui：统一用 UI 调度器（信号）或 QTimer 兜底
+                # 强制通过 UI 调度器在主线程中执行 update_ui
+                # Socket.IO 回调总是在后台线程中执行，必须通过信号机制切换到主线程
                 try:
                     from PyQt6.QtCore import QThread, QTimer
+                    from PyQt6.QtWidgets import QApplication
                     app = QApplication.instance()
                     if app:
                         is_main_thread = QThread.currentThread() == app.thread()
-                        if is_main_thread:
-                            update_ui()
+                        
+                        # 无论是否在主线程，都通过 UI 调度器执行，确保安全
+                        dispatcher = _get_ui_dispatcher(main_window)
+                        if dispatcher:
+                            dispatcher.trigger.emit(update_ui)
                         else:
-                            dispatcher = _get_ui_dispatcher(main_window)
-                            if dispatcher:
-                                dispatcher.trigger.emit(update_ui)
-                            else:
+                            # 如果调度器不存在，使用 QTimer.singleShot（必须在主线程中调用）
+                            if is_main_thread:
                                 QTimer.singleShot(0, update_ui)
+                            else:
+                                logger.error(f"无法执行 update_ui: 不在主线程且 UI 调度器不存在, message_id={message_id_log}")
                     else:
-                        update_ui()
+                        logger.error(f"QApplication 不存在，无法执行 update_ui: message_id={message_id_log}")
                 except Exception as e:
-                    logger.error(f"执行 update_ui 失败: {e}", exc_info=True)
+                    logger.error(f"执行 update_ui 失败: {e}, message_id={message_id_log}", exc_info=True)
             
             except Exception as e:
                 logger.error(f"on_message 回调外层异常: {e}, message_id={data.get('id') if isinstance(data, dict) else 'unknown'}", exc_info=True)
@@ -428,7 +436,14 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                     logger.error(f"调用自定义 WebSocket 消息处理函数失败: {e}", exc_info=True)
         
         def on_error(error):
-            logger.error(f"WebSocket 错误: {error}")
+            def _on_error():
+                logger.error(f"WebSocket 错误: {error}")
+            # 通过 UI 调度器在主线程中执行
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_error)
+            else:
+                _on_error()
         
         ws_client.on_connect(on_connect)
         ws_client.on_disconnect(on_disconnect)
