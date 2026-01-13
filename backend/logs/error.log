@@ -1,0 +1,1 @@
+2026-01-13 14:25:24,956 - ERROR - __main__ - 无法推送消息：to_user_id为None, message_id=544, session_id=chat_1_225298ba, from_user_id=1, role=user, chat_session={'id': 135, 'session_id': 'chat_1_225298ba', 'user_id': 1, 'agent_id': None, 'status': 'pending', 'created_at': datetime.datetime(2026, 1, 13, 14, 25, 21), 'started_at': None, 'closed_at': None}

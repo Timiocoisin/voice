@@ -1236,6 +1236,41 @@ def recall_message_api() -> Any:
     try:
         success = db.recall_message(int(message_id), user_id)
         if success:
+            # 获取消息详情并推送 WebSocket 事件（与 WebSocket 撤回消息逻辑保持一致）
+            message = db.get_message_by_id(int(message_id))
+            if message:
+                session_id = message.get("session_id")
+                from_user_id = message.get("from_user_id")
+                to_user_id = message.get("to_user_id")
+                
+                # 获取发送者的用户名
+                from_username = None
+                try:
+                    from_user_row = db.get_user_by_id(from_user_id)
+                    if from_user_row:
+                        from_username = from_user_row.get("username")
+                except Exception:
+                    pass
+                
+                # 推送撤回消息事件给会话中的所有用户
+                recall_data = {
+                    "message_id": str(message_id),
+                    "session_id": session_id,
+                    "from_user_id": from_user_id,
+                    "username": from_username,
+                    "is_recalled": True,
+                    "time": _format_time(datetime.now()),
+                }
+                
+                # 发送给接收方
+                if to_user_id:
+                    ws_manager.send_message_to_user(to_user_id, "message_recalled", recall_data)
+                else:
+                    logger.warning(f"撤回消息时 to_user_id 为 None: message_id={message_id}, from_user_id={from_user_id}")
+                
+                # 发送给发送方（多设备同步）
+                ws_manager.send_message_to_user(from_user_id, "message_recalled", recall_data)
+            
             return jsonify({
                 "success": True,
                 "message": "消息已撤回"
@@ -1806,19 +1841,33 @@ def handle_recall_message(data):
         # 撤回消息
         try:
             success = db.recall_message(int(message_id), user_id)
+            logger.info(f"撤回消息数据库操作结果: message_id={message_id}, user_id={user_id}, success={success}")
             if success:
                 # 获取消息详情
                 message = db.get_message_by_id(int(message_id))
+                logger.info(f"获取消息详情: message_id={message_id}, message={message}")
                 if message:
                     session_id = message.get("session_id")
                     from_user_id = message.get("from_user_id")
                     to_user_id = message.get("to_user_id")
+                    
+                    logger.info(f"消息详情: session_id={session_id}, from_user_id={from_user_id}, to_user_id={to_user_id}")
+                    
+                    # 获取发送者的用户名
+                    from_username = None
+                    try:
+                        from_user_row = db.get_user_by_id(from_user_id)
+                        if from_user_row:
+                            from_username = from_user_row.get("username")
+                    except Exception:
+                        pass
                     
                     # 推送撤回消息事件给会话中的所有用户
                     recall_data = {
                         "message_id": str(message_id),
                         "session_id": session_id,
                         "from_user_id": from_user_id,
+                        "username": from_username,
                         "is_recalled": True,
                         "time": _format_time(datetime.now()),
                     }
@@ -1826,11 +1875,13 @@ def handle_recall_message(data):
                     # 发送给接收方
                     if to_user_id:
                         ws_manager.send_message_to_user(to_user_id, "message_recalled", recall_data)
+                    else:
+                        logger.warning(f"撤回消息时 to_user_id 为 None: message_id={message_id}, from_user_id={from_user_id}")
                     
                     # 发送给发送方（多设备同步）
                     ws_manager.send_message_to_user(from_user_id, "message_recalled", recall_data)
-                    
-                    logger.debug(f"消息 {message_id} 已被用户 {user_id} 撤回，已推送事件")
+                else:
+                    logger.warning(f"撤回消息后无法获取消息详情: message_id={message_id}")
                 
                 return {"success": True, "message": "消息已撤回"}
             else:

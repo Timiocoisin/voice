@@ -214,6 +214,7 @@ class WebSocketClient:
                 message_id = data.get("message_id")
                 
                 if not message_id:
+                    logging.warning(f"撤回消息事件缺少 message_id: {data}")
                     return
                 
                 # 将撤回事件转换为与 new_message 接近的结构，统一通过 on_message_callback 分发
@@ -228,7 +229,7 @@ class WebSocketClient:
                     "message_type": "text",
                     "reply_to_message_id": None,
                     "is_recalled": True,
-                    # 可选用户名字段，供前端判断“谁撤回了消息”
+                    # 可选用户名字段，供前端判断"谁撤回了消息"
                     "username": data.get("username"),
                 }
                 

@@ -435,54 +435,87 @@ def handle_chat_send(main_window: "MainWindow"):
                     if not hasattr(main_window, "_displayed_message_ids"):
                         main_window._displayed_message_ids = set()
                     main_window._displayed_message_ids.add(str(message_id_int))
-                    # 将返回的 message_id 绑定到最新一条“自己发送且尚无 message_id 的气泡”，
+                    # 将返回的 message_id 绑定到最新一条"自己发送且尚无 message_id 的气泡"，
                     # 以便后续 message_status 事件能精确更新状态，不用等轮询。
+                    # 同时更新 _message_widgets_map，避免服务器推送时重复显示
                     try:
-                        if hasattr(main_window, "chat_layout"):
-                            for i in range(main_window.chat_layout.count() - 1, -1, -1):
-                                item = main_window.chat_layout.itemAt(i)
-                                if not item or not item.widget():
-                                    continue
-                                widget = item.widget()
-                                # 只处理还没有 message_id 的气泡
-                                existing_id = widget.property("message_id")
-                                if existing_id not in (None, 0, ""):
-                                    continue
-                                # 仅限自己发送的消息：通过气泡在右侧的布局特征判断
-                                layout = widget.layout()
-                                is_self_msg = False
-                                if layout:
-                                    for j in range(layout.count()):
-                                        sub = layout.itemAt(j)
-                                        if sub and sub.layout():
-                                            row = sub.layout()
-                                            for k in range(row.count()):
-                                                ritem = row.itemAt(k)
-                                                if ritem and ritem.widget() and isinstance(ritem.widget(), ChatBubble):
-                                                    # 气泡前有 stretch 即为右侧（自己）消息
-                                                    if k > 0:
-                                                        prev = row.itemAt(k - 1)
-                                                        if prev and prev.spacerItem():
-                                                            is_self_msg = True
-                                                            break
-                                            if is_self_msg:
-                                                break
-                                if not is_self_msg:
-                                    continue
-                                # 绑定 message_id
-                                widget.setProperty("message_id", message_id_int)
-                                # 如果有状态标签，保持为“发送中”直至收到服务器回执
-                                status_label = widget.property("status_label")
-                                if status_label:
-                                    status_label.setText("发送中")
-                                    status_label.setStyleSheet("""
-                                        QLabel {
-                                            font-family: "Microsoft YaHei", "SimHei", "Arial";
-                                            font-size: 10px;
-                                            color: #9ca3af;
-                                        }
-                                    """)
-                                break
+                        # 优先从 _message_widgets_map[None] 中查找乐观展示的消息
+                        if hasattr(main_window, "_message_widgets_map") and None in main_window._message_widgets_map:
+                            existing_widget, existing_bubble = main_window._message_widgets_map[None]
+                            # 更新 message_id property
+                            existing_widget.setProperty("message_id", message_id_int)
+                            # 更新 _message_widgets_map
+                            del main_window._message_widgets_map[None]
+                            main_window._message_widgets_map[message_id_int] = (existing_widget, existing_bubble)
+                            # 如果有状态标签，保持为"发送中"直至收到服务器回执
+                            status_label = existing_widget.property("status_label")
+                            if status_label:
+                                status_label.setText("发送中")
+                                status_label.setStyleSheet("""
+                                    QLabel {
+                                        font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                        font-size: 10px;
+                                        color: #9ca3af;
+                                    }
+                                """)
+                        else:
+                            # 如果 _message_widgets_map 中没有，从布局中查找
+                            if hasattr(main_window, "chat_layout"):
+                                for i in range(main_window.chat_layout.count() - 1, -1, -1):
+                                    item = main_window.chat_layout.itemAt(i)
+                                    if not item or not item.widget():
+                                        continue
+                                    widget = item.widget()
+                                    # 只处理还没有 message_id 的气泡
+                                    existing_id = widget.property("message_id")
+                                    if existing_id not in (None, 0, ""):
+                                        continue
+                                    # 仅限自己发送的消息：通过气泡在右侧的布局特征判断
+                                    layout = widget.layout()
+                                    is_self_msg = False
+                                    bubble_widget = None
+                                    if layout:
+                                        for j in range(layout.count()):
+                                            sub = layout.itemAt(j)
+                                            if sub and sub.layout():
+                                                row = sub.layout()
+                                                for k in range(row.count()):
+                                                    ritem = row.itemAt(k)
+                                                    if ritem and ritem.widget():
+                                                        w = ritem.widget()
+                                                        from gui.components.chat_bubble import ChatBubble
+                                                        from PyQt6.QtWidgets import QLabel
+                                                        if isinstance(w, ChatBubble) or (isinstance(w, QLabel) and w.pixmap() is not None):
+                                                            # 气泡前有 stretch 即为右侧（自己）消息
+                                                            if k > 0:
+                                                                prev = row.itemAt(k - 1)
+                                                                if prev and prev.spacerItem():
+                                                                    is_self_msg = True
+                                                                    bubble_widget = w
+                                                                    break
+                                                if is_self_msg:
+                                                    break
+                                    if not is_self_msg:
+                                        continue
+                                    # 绑定 message_id
+                                    widget.setProperty("message_id", message_id_int)
+                                    # 更新 _message_widgets_map
+                                    if not hasattr(main_window, "_message_widgets_map"):
+                                        main_window._message_widgets_map = {}
+                                    if bubble_widget:
+                                        main_window._message_widgets_map[message_id_int] = (widget, bubble_widget)
+                                    # 如果有状态标签，保持为"发送中"直至收到服务器回执
+                                    status_label = widget.property("status_label")
+                                    if status_label:
+                                        status_label.setText("发送中")
+                                        status_label.setStyleSheet("""
+                                            QLabel {
+                                                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                font-size: 10px;
+                                                color: #9ca3af;
+                                            }
+                                        """)
+                                    break
                     except Exception as e:
                         logging.warning(f"绑定 message_id 到气泡失败: {e}")
                     
@@ -713,20 +746,61 @@ def append_chat_message(
                 recalled_id = message_id
             
             # 先尝试查找并更新现有消息
-            if recalled_id is not None and hasattr(main_window, "_message_widgets_map"):
-                widget_bubble = main_window._message_widgets_map.get(recalled_id)
-                if widget_bubble:
-                    widget, bubble = widget_bubble
-                    if widget and not widget.property("is_recalled"):
-                        # 找到现有消息，更新为撤回状态
-                        # 隐藏原有的气泡和头像
-                        if bubble:
-                            bubble.setVisible(False)
-                        
-                        # 隐藏时间标签（如果有）
-                        time_label = widget.property("time_label")
-                        if time_label:
-                            time_label.setVisible(False)
+            if recalled_id is not None:
+                # 优先从 _message_widgets_map 中查找
+                # 注意：需要同时尝试整数和字符串键，因为存储时可能类型不一致
+                if hasattr(main_window, "_message_widgets_map"):
+                    widget_bubble = main_window._message_widgets_map.get(recalled_id)
+                    # 如果没找到，尝试字符串键
+                    if not widget_bubble and isinstance(recalled_id, int):
+                        widget_bubble = main_window._message_widgets_map.get(str(recalled_id))
+                    # 如果还没找到，尝试整数键
+                    if not widget_bubble and isinstance(recalled_id, str):
+                        try:
+                            widget_bubble = main_window._message_widgets_map.get(int(recalled_id))
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    if widget_bubble:
+                        widget, bubble = widget_bubble
+                        if widget and not widget.property("is_recalled"):
+                            # 找到现有消息，更新为撤回状态
+                            # 隐藏整个消息行（包括头像和气泡）以及引用块
+                            parent_layout = widget.layout()
+                            if parent_layout and bubble:
+                                # 找到包含bubble的row布局
+                                row_layout = None
+                                row_index = -1
+                                for i in range(parent_layout.count()):
+                                    item = parent_layout.itemAt(i)
+                                    if item and item.layout():
+                                        # 检查这个布局中是否包含bubble
+                                        layout = item.layout()
+                                        for j in range(layout.count()):
+                                            layout_item = layout.itemAt(j)
+                                            if layout_item and layout_item.widget() == bubble:
+                                                row_layout = layout
+                                                row_index = i
+                                                break
+                                        if row_layout:
+                                            break
+                                
+                                # 隐藏包含气泡的row布局中的所有控件（包括头像和气泡）
+                                if row_layout:
+                                    for i in range(row_layout.count()):
+                                        item = row_layout.itemAt(i)
+                                        if item and item.widget():
+                                            item.widget().setVisible(False)
+                                
+                                # 隐藏引用块（如果存在）
+                                reply_container = widget.property("reply_container")
+                                if reply_container:
+                                    reply_container.setVisible(False)
+                            
+                            # 隐藏时间标签（如果有）
+                            time_label = widget.property("time_label")
+                            if time_label:
+                                time_label.setVisible(False)
                         
                         # 判断是自己撤回还是对方撤回
                         current_user_id = getattr(main_window, 'user_id', None)
@@ -814,6 +888,148 @@ def append_chat_message(
                         
                         # 已更新现有消息，直接返回，不创建新消息
                         return
+                
+                # 如果 _message_widgets_map 中没有找到，尝试从布局中查找
+                if hasattr(main_window, "chat_layout"):
+                    for i in range(main_window.chat_layout.count() - 1, -1, -1):
+                        item = main_window.chat_layout.itemAt(i)
+                        if not item or not item.widget():
+                            continue
+                        widget = item.widget()
+                        widget_id = widget.property("message_id")
+                        if widget_id is not None:
+                            # 尝试将 widget_id 转换为整数进行比较
+                            widget_id_matched = False
+                            try:
+                                widget_id_int = int(widget_id)
+                                if isinstance(recalled_id, int):
+                                    widget_id_matched = (widget_id_int == recalled_id)
+                                else:
+                                    try:
+                                        recalled_id_int = int(recalled_id)
+                                        widget_id_matched = (widget_id_int == recalled_id_int)
+                                    except (ValueError, TypeError):
+                                        widget_id_matched = (str(widget_id_int) == str(recalled_id))
+                            except (ValueError, TypeError):
+                                # 如果无法转换为整数，直接进行字符串比较
+                                widget_id_matched = (str(widget_id) == str(recalled_id))
+                            
+                            if widget_id_matched and not widget.property("is_recalled"):
+                                # 找到现有消息，更新为撤回状态
+                                # 隐藏整个消息行（包括头像和气泡）以及引用块
+                                parent_layout = widget.layout()
+                                if parent_layout:
+                                    # 遍历所有布局项，找到包含头像和气泡的row布局
+                                    for i in range(parent_layout.count()):
+                                        item = parent_layout.itemAt(i)
+                                        if item and item.layout():
+                                            row_layout = item.layout()
+                                            # 检查这个布局是否包含头像和气泡（通常是QHBoxLayout）
+                                            # 隐藏row布局中的所有控件（包括头像和气泡）
+                                            for j in range(row_layout.count()):
+                                                row_item = row_layout.itemAt(j)
+                                                if row_item and row_item.widget():
+                                                    w = row_item.widget()
+                                                    # 隐藏头像（QLabel with pixmap）和气泡（ChatBubble 或 QLabel without pixmap）
+                                                    if isinstance(w, (ChatBubble, QLabel)):
+                                                        w.setVisible(False)
+                                    
+                                    # 隐藏引用块（如果存在）
+                                    reply_container = widget.property("reply_container")
+                                    if reply_container:
+                                        reply_container.setVisible(False)
+                                
+                                # 隐藏时间标签（如果有）
+                                time_label = widget.property("time_label")
+                                if time_label:
+                                    time_label.setVisible(False)
+                                
+                                # 判断是自己撤回还是对方撤回
+                                current_user_id = getattr(main_window, 'user_id', None)
+                                if current_user_id is not None and from_user_id is not None:
+                                    try:
+                                        is_self_recalled = (int(from_user_id) == int(current_user_id))
+                                    except (ValueError, TypeError):
+                                        is_self_recalled = (from_user_id == current_user_id)
+                                else:
+                                    is_self_recalled = (from_user_id == current_user_id)
+                                
+                                if is_self_recalled:
+                                    recall_text = "你撤回了一条消息"
+                                else:
+                                    username = from_username or "用户"
+                                    if from_user_id and not from_username:
+                                        if hasattr(main_window, "username"):
+                                            username = main_window.username
+                                        else:
+                                            try:
+                                                from client.login.login_status_manager import check_login_status
+                                                _, _, current_username = check_login_status()
+                                                if current_username:
+                                                    username = current_username
+                                            except Exception:
+                                                pass
+                                    recall_text = f"{username}撤回了一条消息"
+                                
+                                # 检查是否已经有撤回提示标签
+                                widget_layout = widget.layout()
+                                if widget_layout:
+                                    # 查找是否已有撤回标签
+                                    has_recall_label = False
+                                    for layout_idx in range(widget_layout.count()):
+                                        item = widget_layout.itemAt(layout_idx)
+                                        if item and item.widget():
+                                            w = item.widget()
+                                            if isinstance(w, QLabel) and w.text() in ("你撤回了一条消息", f"{username}撤回了一条消息"):
+                                                has_recall_label = True
+                                                break
+                                    
+                                    # 如果没有撤回标签，创建一个
+                                    if not has_recall_label:
+                                        recall_label = QLabel(recall_text)
+                                        recall_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                                        recall_label.setStyleSheet("""
+                                            QLabel {
+                                                font-family: "Microsoft YaHei", "SimHei", "Arial";
+                                                font-size: 11px;
+                                                color: #9ca3af;
+                                                padding: 4px 0px;
+                                                background-color: transparent;
+                                            }
+                                        """)
+                                        widget_layout.insertWidget(0, recall_label)
+                                
+                                # 标记为已撤回
+                                widget.setProperty("is_recalled", True)
+                                
+                                # 同步更新所有引用了这条消息的引用块文案
+                                if hasattr(main_window, "chat_layout"):
+                                    parent_layout = main_window.chat_layout
+                                    for layout_idx in range(parent_layout.count()):
+                                        item = parent_layout.itemAt(layout_idx)
+                                        w = item.widget() if item else None
+                                        if not w:
+                                            continue
+                                        ref_id = w.property("reply_to_message_id")
+                                        if ref_id is None:
+                                            continue
+                                        try:
+                                            ref_id_norm = int(ref_id)
+                                        except (ValueError, TypeError):
+                                            ref_id_norm = ref_id
+                                        if ref_id_norm == recalled_id:
+                                            reply_container = w.property("reply_container")
+                                            if reply_container:
+                                                sender_name = reply_container.property("reply_sender_name") or ""
+                                                reply_label = reply_container.property("reply_label")
+                                                new_text = "该引用消息已被撤回"
+                                                if sender_name:
+                                                    new_text = f"{sender_name}: {new_text}"
+                                                if reply_label:
+                                                    reply_label.setText(new_text)
+                                
+                                # 已更新现有消息，直接返回，不创建新消息
+                                return
         except Exception as e:
             logging.error(f"更新撤回消息失败: {e}", exc_info=True)
             # 如果更新失败，继续创建新的撤回提示消息
@@ -1294,9 +1510,6 @@ def append_chat_message(
                 # 从message_widget获取message_id（可能为None，但引用功能不需要message_id）
                 current_msg_id = message_widget.property("message_id")
                 
-                # 调试日志：记录获取到的 message_id
-                logging.debug(f"引用消息时获取到的 message_id: {current_msg_id}, 类型: {type(current_msg_id)}")
-                
                 # 验证消息ID是否有效（必须是正整数）
                 valid_msg_id = None
                 if current_msg_id is not None:
@@ -1307,7 +1520,6 @@ def append_chat_message(
                         if msg_id_int > 0:
                             # 特别检查：如果 message_id 是 1，可能是默认值，需要验证
                             if msg_id_int == 1:
-                                logging.warning(f"检测到 message_id=1，可能是默认值，将验证消息是否存在")
                                 # 验证消息是否真的存在
                                 try:
                                     from client.api_client import get_reply_message
@@ -1316,22 +1528,17 @@ def append_chat_message(
                                     if reply_token:
                                         reply_resp = get_reply_message(msg_id_int, reply_token)
                                         if not reply_resp.get("success") or not reply_resp.get("message"):
-                                            logging.warning(f"message_id=1 的消息不存在，可能是默认值，将无法引用")
                                             valid_msg_id = None
                                         else:
                                             valid_msg_id = msg_id_int
                                     else:
-                                        logging.warning(f"无法获取token，跳过验证")
                                         valid_msg_id = None
-                                except Exception as e:
-                                    logging.warning(f"验证 message_id=1 失败: {e}，将无法引用")
+                                except Exception:
                                     valid_msg_id = None
                             else:
                                 valid_msg_id = msg_id_int
-                        else:
-                            logging.warning(f"引用消息ID无效: {current_msg_id}（ID必须大于0），将无法发送引用信息")
                     except (ValueError, TypeError):
-                        logging.warning(f"引用消息ID格式错误: {current_msg_id}，将无法发送引用信息")
+                        pass
                 
                 # 如果 message_id 无效，提示用户等待消息发送完成
                 if not valid_msg_id:
@@ -1503,10 +1710,40 @@ def append_chat_message(
         message_widget.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
         message_widget.customContextMenuRequested.connect(show_context_menu)
         
-        # 存储消息ID和控件引用，用于更新撤回状态
+        # 存储消息ID和控件引用，用于更新撤回状态和消息查找
+        # 即使 message_id 是 None（乐观展示），也要注册到 _message_widgets_map，以便后续更新
         if not hasattr(main_window, "_message_widgets_map"):
             main_window._message_widgets_map = {}
-        main_window._message_widgets_map[message_id] = (message_widget, bubble_label)
+        
+        if message_id is not None:
+            main_window._message_widgets_map[message_id] = (message_widget, bubble_label)
+            message_widget.setProperty("message_id", message_id)
+        else:
+            # 乐观展示时，使用 None 作为临时 key，后续收到 message_id 后会更新
+            # 但要注意：如果已经有 None 的消息，需要先移除（避免覆盖）
+            if None in main_window._message_widgets_map:
+                # 如果已经有乐观展示的消息，检查是否是同一条消息（通过内容匹配）
+                existing_widget, existing_bubble = main_window._message_widgets_map[None]
+                # 如果内容匹配，不重复添加；否则移除旧的（可能是之前的消息）
+                try:
+                    if hasattr(existing_bubble, 'toPlainText'):
+                        existing_text = existing_bubble.toPlainText()
+                    elif hasattr(existing_bubble, 'text'):
+                        existing_text = existing_bubble.text()
+                    else:
+                        existing_text = ""
+                    import re
+                    existing_clean = re.sub(r'<[^>]+>', '', existing_text).strip()
+                    content_clean = re.sub(r'<[^>]+>', '', effective_content).strip()
+                    if existing_clean == content_clean:
+                        # 内容相同，不重复添加
+                        return
+                except Exception:
+                    pass
+                # 移除旧的乐观展示消息
+                del main_window._message_widgets_map[None]
+            main_window._message_widgets_map[None] = (message_widget, bubble_label)
+            message_widget.setProperty("message_id", None)
     
     main_window.chat_layout.addWidget(message_widget)
 
@@ -1702,29 +1939,6 @@ def append_human_service_request(main_window: "MainWindow"):
     
     # 滚动到底部
     scroll_to_bottom(main_window)
-
-
-def set_chat_mode_indicator(main_window: "MainWindow", human: bool):
-    """更新顶部模式指示（呼吸灯 + 文案）"""
-    label = getattr(main_window, "chat_mode_label", None)
-    if human:
-        if label:
-            label.setText("人工客服模式")
-            label.setStyleSheet("""
-                QLabel#modeIndicator {
-                    color: #d1fae5;
-                    font-size: 13px;
-                }
-            """)
-    else:
-        if label:
-            label.setText("智能机器人模式")
-            label.setStyleSheet("""
-                QLabel#modeIndicator {
-                    color: #e5e7eb;
-                    font-size: 13px;
-                }
-            """)
 
 
 def request_human_service(main_window: "MainWindow"):

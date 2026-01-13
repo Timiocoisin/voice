@@ -114,6 +114,10 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         reply_to_message_id = data.get('reply_to_message_id')
                         is_recalled = data.get('is_recalled', False)
                         offline = data.get('offline', False)
+                        message_time = data.get('time') or data.get('created_at') or data.get('timestamp')
+                        
+                        # 初始化 updated 变量，用于标记是否已找到并更新了乐观展示的消息
+                        updated = False
                         
                         # 使用服务端提供的 is_from_self 标记（优先使用，更可靠）
                         # 如果没有提供，则回退到通过 user_id 比较判断
@@ -129,30 +133,77 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                             else:
                                 is_from_self = (from_user_id == current_user_id)
                         
+                        # 如果是撤回的消息，先尝试更新现有消息
+                        if is_recalled and message_id:
+                            try:
+                                recalled_id = int(message_id)
+                                
+                                # 直接调用 append_chat_message，让它自己处理查找和更新逻辑
+                                from gui.handlers.chat_handlers import append_chat_message
+                                append_chat_message(
+                                    main_window,
+                                    text or "",
+                                    from_self=is_from_self,
+                                    is_html=False,
+                                    streaming=False,
+                                    avatar_base64=avatar,
+                                    message_id=recalled_id,
+                                    is_recalled=True,
+                                    from_user_id=from_user_id,
+                                    from_username=from_username,
+                                    message_created_time=message_time
+                                )
+                                # append_chat_message 内部会处理查找和更新，如果找到现有消息会直接返回
+                                # 如果没有找到，会创建新的撤回提示消息
+                                return
+                            except (ValueError, TypeError) as e:
+                                logger.error(f"处理撤回消息失败: {e}", exc_info=True)
+                        
                         # 如果是自己的消息，且已经通过乐观展示显示过了，则只更新message_id，不重复显示
                         # 注意：只对文本消息和图片消息进行此检查，其他消息类型直接显示
-                        if is_from_self and message_id and message_type in ['text', 'image']:
+                        if is_from_self and message_id and message_type in ['text', 'image'] and not is_recalled:
                             # 检查是否已经显示过（乐观展示的消息可能还没有message_id）
                             # 尝试更新已显示的消息的message_id
                             updated = False
                             if hasattr(main_window, "chat_layout"):
-                                # 对于图片消息，优先检查 _message_widgets_map 中是否有未设置 message_id 的图片消息
-                                if message_type == 'image' and hasattr(main_window, "_message_widgets_map") and None in main_window._message_widgets_map:
-                                    existing_widget, existing_label = main_window._message_widgets_map[None]
-                                    # 检查是否是图片消息（通过 label 是否有 pixmap 判断）
-                                    from PyQt6.QtWidgets import QLabel
-                                    if isinstance(existing_label, QLabel) and existing_label.pixmap() is not None:
-                                        # 找到用户发送的图片消息，更新message_id
+                                # 优先检查 _message_widgets_map 中是否有未设置 message_id 的消息（乐观展示的消息）
+                                if hasattr(main_window, "_message_widgets_map") and None in main_window._message_widgets_map:
+                                    existing_widget, existing_bubble = main_window._message_widgets_map[None]
+                                    # 检查消息类型和内容是否匹配
+                                    matched = False
+                                    if message_type == 'image':
+                                        # 对于图片消息，检查是否是图片
+                                        from PyQt6.QtWidgets import QLabel
+                                        if isinstance(existing_bubble, QLabel) and existing_bubble.pixmap() is not None:
+                                            matched = True
+                                    elif message_type == 'text':
+                                        # 对于文本消息，检查内容是否匹配
+                                        from gui.components.chat_bubble import ChatBubble
+                                        if isinstance(existing_bubble, ChatBubble):
+                                            try:
+                                                bubble_text = existing_bubble.toPlainText() if hasattr(existing_bubble, 'toPlainText') else existing_bubble.text() if hasattr(existing_bubble, 'text') else ""
+                                                # 比较文本内容（去除HTML标签和空白字符）
+                                                import re
+                                                bubble_text_clean = re.sub(r'<[^>]+>', '', bubble_text).strip()
+                                                text_clean = re.sub(r'<[^>]+>', '', text).strip()
+                                                if bubble_text_clean == text_clean:
+                                                    matched = True
+                                            except Exception:
+                                                pass
+                                    
+                                    if matched:
+                                        # 找到匹配的乐观展示消息，更新message_id
                                         existing_widget.setProperty("message_id", int(message_id))
                                         # 更新 _message_widgets_map
                                         del main_window._message_widgets_map[None]
                                         if not hasattr(main_window, "_message_widgets_map"):
                                             main_window._message_widgets_map = {}
-                                        main_window._message_widgets_map[int(message_id)] = (existing_widget, existing_label)
+                                        main_window._message_widgets_map[int(message_id)] = (existing_widget, existing_bubble)
                                         updated = True
                                 
                                 # 如果图片消息没有在 _message_widgets_map 中找到，或者不是图片消息，查找布局中未设置 message_id 的消息
                                 if not updated:
+                                    # 从最新的消息开始查找（从后往前），找到第一个没有ID且是用户发送的消息
                                     for i in range(main_window.chat_layout.count() - 1, -1, -1):
                                         if updated:
                                             break
@@ -185,6 +236,22 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                                                         if k > 0:
                                                                             prev_item = row_layout.itemAt(k - 1)
                                                                             if prev_item and prev_item.spacerItem():
+                                                                                # 对于文本消息，还需要检查内容是否匹配（避免匹配到错误的消息）
+                                                                                if message_type == 'text' and isinstance(w, ChatBubble):
+                                                                                    # 获取气泡的文本内容进行比较
+                                                                                    try:
+                                                                                        bubble_text = w.toPlainText() if hasattr(w, 'toPlainText') else w.text() if hasattr(w, 'text') else ""
+                                                                                        # 比较文本内容（去除HTML标签和空白字符）
+                                                                                        import re
+                                                                                        bubble_text_clean = re.sub(r'<[^>]+>', '', bubble_text).strip()
+                                                                                        text_clean = re.sub(r'<[^>]+>', '', text).strip()
+                                                                                        if bubble_text_clean != text_clean:
+                                                                                            # 内容不匹配，继续查找
+                                                                                            continue
+                                                                                    except Exception:
+                                                                                        # 如果无法获取文本内容，跳过内容匹配检查
+                                                                                        pass
+                                                                                
                                                                                 # 找到用户发送的消息，更新message_id
                                                                                 widget.setProperty("message_id", int(message_id))
                                                                                 if not hasattr(main_window, "_message_widgets_map"):
@@ -196,29 +263,38 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                                                                     main_window._message_widgets_map[int(message_id)] = (widget, w)
                                                                                 updated = True
                                                                                 break
+                            
+                            # 如果成功更新了message_id，直接返回，不重复显示
+                            if updated:
+                                return
                         
-                        # 消息去重：检查是否已经显示过（只对非自己的消息进行去重检查）
-                        # 注意：对于图片和表情消息，即使消息ID已经在_displayed_message_ids中，
-                        # 也要检查是否真的已经显示（可能HTTP轮询获取了消息但显示失败）
-                        if not is_from_self:
+                        # 消息去重：检查是否已经显示过
+                        # 对于自己的消息，如果已经通过乐观展示显示并更新了message_id，上面的逻辑应该已经返回了
+                        # 这里只对未处理的消息进行去重检查
+                        if not updated:  # 只对未找到乐观展示的消息进行去重
                             if not hasattr(main_window, "_displayed_message_ids"):
                                 main_window._displayed_message_ids = set()
                             
                             # 如果有message_id，进行去重检查
                             if message_id:
                                 msg_id_str = str(message_id)
+                                msg_id_int = None
+                                try:
+                                    msg_id_int = int(message_id)
+                                except (ValueError, TypeError):
+                                    pass
                                 
-                                # 对于图片消息，即使ID在列表中，也要检查是否真的已经显示
-                                # 因为HTTP轮询可能获取了消息但显示失败
+                                # 首先检查 _message_widgets_map 中是否已经有该 message_id 的消息
+                                if msg_id_int and hasattr(main_window, "_message_widgets_map") and msg_id_int in main_window._message_widgets_map:
+                                    # 消息已经在 _message_widgets_map 中，说明已经显示过了，跳过
+                                    return
+                                
+                                # 然后检查 _displayed_message_ids 集合
                                 if msg_id_str in main_window._displayed_message_ids:
                                     # 检查消息是否真的已经显示（在_message_widgets_map中）
                                     if hasattr(main_window, "_message_widgets_map"):
-                                        msg_id_int = None
-                                        try:
-                                            msg_id_int = int(message_id)
-                                        except (ValueError, TypeError):
-                                            pass
                                         if msg_id_int and msg_id_int in main_window._message_widgets_map:
+                                            # 消息已显示，跳过
                                             return
                                         else:
                                             # 消息ID在列表中但未显示，可能是HTTP轮询获取失败，继续处理
