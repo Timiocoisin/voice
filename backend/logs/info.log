@@ -85,3 +85,17 @@
 2026-01-14 14:16:45,386 - INFO - root - message_queue 表创建成功
 2026-01-14 14:16:45,386 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
 2026-01-14 14:16:45,386 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-14 15:05:49,382 - INFO - root - 数据库连接成功
+2026-01-14 15:05:49,423 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-14 15:05:49,435 - INFO - root - user_connections 表创建成功
+2026-01-14 15:05:49,439 - INFO - root - user_devices 表创建成功
+2026-01-14 15:05:49,442 - INFO - root - message_queue 表创建成功
+2026-01-14 15:05:49,442 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-14 15:05:49,442 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-14 15:29:26,999 - INFO - root - 数据库连接成功
+2026-01-14 15:29:27,041 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-14 15:29:27,054 - INFO - root - user_connections 表创建成功
+2026-01-14 15:29:27,057 - INFO - root - user_devices 表创建成功
+2026-01-14 15:29:27,061 - INFO - root - message_queue 表创建成功
+2026-01-14 15:29:27,061 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-14 15:29:27,061 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动

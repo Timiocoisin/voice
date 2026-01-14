@@ -127,14 +127,29 @@ def get_user_profile(user_id: int) -> Dict[str, Any]:
         if not data.get("success"):
             return {}
         user = data.get("user") or {}
+        vip = data.get("vip") or {}
         token_user_id = user.get("id")
+
+        # 后端统一返回 avatar_base64，这里为桌面端补充 avatar_bytes 字段，便于现有代码复用
+        avatar_b64 = user.get("avatar_base64")
+        if avatar_b64 and not user.get("avatar_bytes"):
+            try:
+                b64 = avatar_b64
+                if isinstance(b64, str) and b64.startswith("data:image"):
+                    b64 = b64.split(",", 1)[1]
+                avatar_bytes = base64.b64decode(b64)
+                user["avatar_bytes"] = avatar_bytes
+            except Exception:
+                # 解码失败时忽略，保持兼容
+                pass
         if token_user_id is not None:
             try:
                 if int(token_user_id) != int(user_id):
                     return {}
             except Exception:
                 return {}
-        return user
+        # 兼容桌面端历史调用：上层期望 profile 结构包含 user/vip 两个字段
+        return {"user": user, "vip": vip}
     except Exception:
         return {}
 
