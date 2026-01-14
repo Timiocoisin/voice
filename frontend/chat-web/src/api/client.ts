@@ -57,54 +57,8 @@ export const customerServiceApi = {
     return response.data;
   },
 
-  // 获取会话列表
-  getSessions: async (userId: number, token: string, type: 'my' | 'pending' = 'my') => {
-    const response = await api.post('/api/customer_service/sessions', {
-      user_id: userId,
-      token: token,
-      type: type,
-    });
-    return response.data;
-  },
 
-  // 获取待接入会话列表
-  getPendingSessions: async (userId: number, token: string) => {
-    const response = await api.post('/api/customer_service/pending_sessions', {
-      user_id: userId,
-      token: token,
-    });
-    return response.data;
-  },
-
-  // 接入会话（从待接入移到我的会话）
-  acceptSession: async (userId: number, sessionId: string, token: string) => {
-    const response = await api.post('/api/customer_service/accept_session', {
-      user_id: userId,
-      session_id: sessionId,
-      token: token,
-    });
-    return response.data;
-  },
-
-  // 更新客服状态
-  updateStatus: async (userId: number, status: string, token: string) => {
-    const response = await api.post('/api/customer_service/update_status', {
-      user_id: userId,
-      status: status,
-      token: token,
-    });
-    return response.data;
-  },
-
-  // 获取聊天消息
-  getMessages: async (sessionId: string, userId: number, token: string) => {
-    const response = await api.post('/api/customer_service/messages', {
-      session_id: sessionId,
-      user_id: userId,
-      token: token,
-    });
-    return response.data;
-  },
+  // 获取聊天消息（已删除：改用 WebSocket get_session_messages）
 
   // 发送消息
   /**
@@ -132,23 +86,9 @@ export const customerServiceApi = {
     // return response.data;
   },
 
-  // 撤回消息
-  recallMessage: async (data: { message_id: number; user_id: number; token: string }) => {
-    const response = await api.post('/api/message/recall', data);
-    return response.data;
-  },
+  // 撤回消息（已删除：改用 WebSocket recall_message）
 
-  // 编辑消息
-  editMessage: async (data: { message_id: number; user_id: number; new_content: string; token: string }) => {
-    const response = await api.post('/api/message/edit', data);
-    return response.data;
-  },
-
-  // 获取被引用的消息详情
-  getReplyMessage: async (data: { message_id: number; token?: string }) => {
-    const response = await api.post('/api/message/reply', data);
-    return response.data;
-  },
+  // 获取被引用的消息详情（已删除：引用消息摘要由服务端随消息推送）
 
   // 忘记密码
   forgotPassword: async (email: string) => {

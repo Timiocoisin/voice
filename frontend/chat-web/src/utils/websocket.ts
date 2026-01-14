@@ -15,6 +15,16 @@ export enum ConnectionStatus {
   ERROR = 'error',
 }
 
+export interface ReplyMessageInfo {
+  id: number;
+  message: string;
+  message_type: 'text' | 'image' | 'file';
+  is_recalled: boolean;
+  from_user_id: number;
+  from_username?: string;
+  created_at?: string;
+}
+
 export interface WebSocketMessage {
   id: string;
   session_id: string;
@@ -26,6 +36,7 @@ export interface WebSocketMessage {
   avatar?: string;
   message_type?: 'text' | 'image' | 'file';
   reply_to_message_id?: number;
+  reply_to_message?: ReplyMessageInfo;  // 引用消息的摘要信息（由服务端自动填充）
   status?: 'sent' | 'delivered' | 'read';
   is_recalled?: boolean;
   username?: string;
@@ -39,6 +50,15 @@ export interface WebSocketClientCallbacks {
   onStatusChange?: (status: ConnectionStatus) => void;
   onError?: (error: any) => void;
   onMessageStatus?: (data: { message_id: string; status: string; timestamp: string }) => void;
+  onSessionListUpdated?: (data: { sessions: any[]; type: string }) => void;
+  onNewPendingSession?: (data: { session: any }) => void;
+  onPendingSessionAccepted?: (data: { session_id: string; agent_id: number }) => void;
+  onAgentStatusChanged?: (data: { agent_id: number; status: string }) => void;
+  onVipStatusUpdated?: (data: { user_id: number; vip_info: any }) => void;
+  onDiamondBalanceUpdated?: (data: { user_id: number; balance: number }) => void;
+  onUserProfileUpdated?: (data: { user_id: number; profile: any }) => void;
+  onMessageEdited?: (data: { message_id: number; session_id: string; new_content: string; edited_at: string }) => void;
+  onSessionStatusUpdated?: (data: { session_id: string; status: string; user_id: number; agent_id: number }) => void;
 }
 
 class WebSocketClient {
@@ -241,6 +261,48 @@ class WebSocketClient {
         console.error('处理撤回消息事件失败:', e);
       }
     });
+
+    // 会话列表更新
+    this.socket.on('session_list_updated', (data: { sessions: any[]; type: string }) => {
+      if (this.callbacks.onSessionListUpdated) {
+        this.callbacks.onSessionListUpdated(data);
+      }
+    });
+
+    // 新待接入会话
+    this.socket.on('new_pending_session', (data: { session: any }) => {
+      if (this.callbacks.onNewPendingSession) {
+        this.callbacks.onNewPendingSession(data);
+      }
+    });
+
+    // 待接入会话被接入
+    this.socket.on('pending_session_accepted', (data: { session_id: string; agent_id: number }) => {
+      if (this.callbacks.onPendingSessionAccepted) {
+        this.callbacks.onPendingSessionAccepted(data);
+      }
+    });
+
+    // 客服状态变化
+    this.socket.on('agent_status_changed', (data: { agent_id: number; status: string }) => {
+      if (this.callbacks.onAgentStatusChanged) {
+        this.callbacks.onAgentStatusChanged(data);
+      }
+    });
+
+    // VIP 状态更新
+    this.socket.on('vip_status_updated', (data: { user_id: number; vip_info: any }) => {
+      if (this.callbacks.onVipStatusUpdated) {
+        this.callbacks.onVipStatusUpdated(data);
+      }
+    });
+
+    // 钻石余额更新
+    this.socket.on('diamond_balance_updated', (data: { user_id: number; balance: number }) => {
+      if (this.callbacks.onDiamondBalanceUpdated) {
+        this.callbacks.onDiamondBalanceUpdated(data);
+      }
+    });
   }
 
   /**
@@ -268,7 +330,7 @@ class WebSocketClient {
   /**
    * 发送心跳
    */
-  private sendHeartbeat(): void {
+  sendHeartbeat(): void {
     if (!this.socket) return;
 
     this.socket.emit('heartbeat', { connection_id: this.connectionId }, (response: any) => {
@@ -351,6 +413,50 @@ class WebSocketClient {
   }
 
   /**
+   * 获取会话历史消息（通过 WebSocket）
+   * @param sessionId 会话ID
+   * @param limit 返回消息数量限制（默认200）
+   */
+  getSessionMessages(
+    sessionId: string,
+    limit: number = 200
+  ): Promise<{
+    success: boolean;
+    messages: WebSocketMessage[];
+    message?: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      if (this.status !== ConnectionStatus.CONNECTED) {
+        reject(new Error('WebSocket 未连接'));
+        return;
+      }
+
+      const data = {
+        session_id: sessionId,
+        user_id: this.userId,
+        token: this.token,
+        limit: limit,
+      };
+
+      this.socket.emit('get_session_messages', data, (response: any) => {
+        if (response && response.success) {
+          resolve({
+            success: true,
+            messages: response.messages || [],
+          });
+        } else {
+          reject(new Error(response?.message || '获取消息失败'));
+        }
+      });
+    });
+  }
+
+  /**
    * 断开连接
    */
   disconnect(): void {
@@ -372,6 +478,343 @@ class WebSocketClient {
    */
   on(event: keyof WebSocketClientCallbacks, callback: any): void {
     this.callbacks[event] = callback;
+  }
+
+  /**
+   * 订阅会话列表
+   */
+  subscribeSessions(type: 'my' | 'pending'): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit('subscribe_sessions', {
+        user_id: this.userId,
+        token: this.token,
+        type: type
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log(`订阅会话列表成功: type=${type}`);
+          resolve();
+        } else {
+          reject(new Error(response?.message || '订阅失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 订阅待接入会话
+   */
+  subscribePendingSessions(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit('subscribe_pending_sessions', {
+        user_id: this.userId,
+        token: this.token
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log('订阅待接入会话成功');
+          resolve();
+        } else {
+          reject(new Error(response?.message || '订阅失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 更新客服状态
+   */
+  updateAgentStatus(status: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit('update_agent_status', {
+        user_id: this.userId,
+        status: status,
+        token: this.token
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log(`更新客服状态成功: ${status}`);
+          resolve();
+        } else {
+          reject(new Error(response?.message || '更新状态失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 订阅 VIP 信息
+   */
+  subscribeVipInfo(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit('subscribe_vip_info', {
+        user_id: this.userId,
+        token: this.token
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log('订阅 VIP 信息成功');
+          resolve();
+        } else {
+          reject(new Error(response?.message || '订阅失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 订阅用户资料更新
+   */
+  subscribeUserProfile(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit('subscribe_user_profile', {
+        user_id: this.userId,
+        token: this.token
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log('订阅用户资料成功');
+          resolve();
+        } else {
+          reject(new Error(response?.message || '订阅失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 编辑消息
+   */
+  editMessage(messageId: number, sessionId: string, newContent: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit('edit_message', {
+        message_id: messageId,
+        user_id: this.userId,
+        session_id: sessionId,
+        new_content: newContent,
+        token: this.token
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log('消息编辑成功');
+          resolve();
+        } else {
+          reject(new Error(response?.message || '编辑失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 关闭会话
+   */
+  closeSession(sessionId: string): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit('close_session', {
+        session_id: sessionId,
+        user_id: this.userId,
+        token: this.token
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log('会话关闭成功');
+          resolve();
+        } else {
+          reject(new Error(response?.message || '关闭失败'));
+        }
+      });
+    });
+  }
+
+  /**
+   * 匹配在线客服（用户侧）
+   */
+  matchAgent(sessionId: string): Promise<{
+    success: boolean;
+    matched: boolean;
+    agent_id?: number;
+    agent_name?: string;
+    message?: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit(
+        'match_agent',
+        {
+          session_id: sessionId,
+          user_id: this.userId,
+          token: this.token,
+        },
+        (response: any) => {
+          if (response && response.success !== undefined) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.message || '匹配失败'));
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * 接入待接入会话（客服侧）
+   */
+  acceptSession(sessionId: string): Promise<{
+    success: boolean;
+    message?: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit(
+        'accept_session',
+        {
+          session_id: sessionId,
+          user_id: this.userId,
+          token: this.token,
+        },
+        (response: any) => {
+          if (response && response.success) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.message || '接入失败'));
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * 获取链接预览（富文本相关）
+   */
+  getLinkPreview(url: string): Promise<{
+    success: boolean;
+    preview?: any;
+    message?: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit(
+        'link_preview',
+        {
+          url,
+          token: this.token,
+        },
+        (response: any) => {
+          if (response && response.success) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.message || '获取链接预览失败'));
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * 处理富文本（交给服务端，便于一致化处理）
+   */
+  processRichText(
+    content: string
+  ): Promise<{
+    success: boolean;
+    html: string;
+    is_rich: boolean;
+    urls: string[];
+    mentions: any[];
+    message?: string;
+  }> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      this.socket.emit(
+        'process_rich_text',
+        {
+          content,
+          user_id: this.userId,
+          token: this.token,
+        },
+        (response: any) => {
+          if (response && response.success) {
+            resolve(response);
+          } else {
+            reject(new Error(response?.message || '处理富文本失败'));
+          }
+        }
+      );
+    });
+  }
+
+  /**
+   * 撤回消息
+   */
+  recallMessage(messageId: number): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if (!this.socket || !this.userId || !this.token) {
+        reject(new Error('未连接或未登录'));
+        return;
+      }
+
+      if (this.status !== ConnectionStatus.CONNECTED) {
+        reject(new Error('WebSocket 未连接'));
+        return;
+      }
+
+      this.socket.emit('recall_message', {
+        message_id: messageId,
+        user_id: this.userId,
+        token: this.token
+      }, (response: any) => {
+        if (response && response.success) {
+          console.log('撤回消息成功');
+          resolve();
+        } else {
+          reject(new Error(response?.message || '撤回失败'));
+        }
+      });
+    });
   }
 
   /**

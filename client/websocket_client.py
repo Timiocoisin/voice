@@ -82,6 +82,11 @@ class WebSocketClient:
         self.on_message_status_callback: Optional[Callable] = None
         self.on_status_change_callback: Optional[Callable] = None
         self.on_error_callback: Optional[Callable] = None
+        self.on_vip_status_updated_callback: Optional[Callable] = None
+        self.on_diamond_balance_updated_callback: Optional[Callable] = None
+        self.on_user_profile_updated_callback: Optional[Callable] = None
+        self.on_message_edited_callback: Optional[Callable] = None
+        self.on_session_status_updated_callback: Optional[Callable] = None
         
         # 消息去重
         self.received_message_ids = set()
@@ -206,6 +211,68 @@ class WebSocketClient:
                         logging.error(f"消息状态回调异常: {e}", exc_info=True)
             except Exception as e:
                 logging.error(f"处理消息状态更新失败: {e}", exc_info=True)
+        
+        @self.sio.on("vip_status_updated")
+        def on_vip_status_updated(data):
+            """VIP 状态更新"""
+            try:
+                # 调用回调以更新 UI
+                if hasattr(self, 'on_vip_status_updated_callback') and self.on_vip_status_updated_callback:
+                    try:
+                        self.on_vip_status_updated_callback(data)
+                    except Exception as e:
+                        logging.error(f"VIP 状态更新回调异常: {e}", exc_info=True)
+            except Exception as e:
+                logging.error(f"处理 VIP 状态更新失败: {e}", exc_info=True)
+        
+        @self.sio.on("diamond_balance_updated")
+        def on_diamond_balance_updated(data):
+            """钻石余额更新"""
+            try:
+                # 调用回调以更新 UI
+                if hasattr(self, 'on_diamond_balance_updated_callback') and self.on_diamond_balance_updated_callback:
+                    try:
+                        self.on_diamond_balance_updated_callback(data)
+                    except Exception as e:
+                        logging.error(f"钻石余额更新回调异常: {e}", exc_info=True)
+            except Exception as e:
+                logging.error(f"处理钻石余额更新失败: {e}", exc_info=True)
+        
+        @self.sio.on("user_profile_updated")
+        def on_user_profile_updated(data):
+            """用户资料更新"""
+            try:
+                if hasattr(self, 'on_user_profile_updated_callback') and self.on_user_profile_updated_callback:
+                    try:
+                        self.on_user_profile_updated_callback(data)
+                    except Exception as e:
+                        logging.error(f"用户资料更新回调异常: {e}", exc_info=True)
+            except Exception as e:
+                logging.error(f"处理用户资料更新失败: {e}", exc_info=True)
+        
+        @self.sio.on("message_edited")
+        def on_message_edited(data):
+            """消息编辑"""
+            try:
+                if hasattr(self, 'on_message_edited_callback') and self.on_message_edited_callback:
+                    try:
+                        self.on_message_edited_callback(data)
+                    except Exception as e:
+                        logging.error(f"消息编辑回调异常: {e}", exc_info=True)
+            except Exception as e:
+                logging.error(f"处理消息编辑失败: {e}", exc_info=True)
+        
+        @self.sio.on("session_status_updated")
+        def on_session_status_updated(data):
+            """会话状态更新"""
+            try:
+                if hasattr(self, 'on_session_status_updated_callback') and self.on_session_status_updated_callback:
+                    try:
+                        self.on_session_status_updated_callback(data)
+                    except Exception as e:
+                        logging.error(f"会话状态更新回调异常: {e}", exc_info=True)
+            except Exception as e:
+                logging.error(f"处理会话状态更新失败: {e}", exc_info=True)
         
         @self.sio.on("message_recalled")
         def on_message_recalled(data):
@@ -594,6 +661,59 @@ class WebSocketClient:
             logging.error(f"发送消息异常: {e}", exc_info=True)
             return False
     
+    def get_session_messages(self, session_id: str, limit: int = 200) -> Optional[Dict[str, Any]]:
+        """
+        获取会话历史消息（通过 WebSocket）
+
+        Args:
+            session_id: 会话ID
+            limit: 拉取条数（默认 200，上限由服务端限制）
+
+        Returns:
+            dict: {success, messages, message?}，失败返回 None
+        """
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法获取历史消息")
+                return None
+
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法获取历史消息")
+                return None
+
+            data = {
+                "session_id": session_id,
+                "user_id": self.user_id,
+                "token": self.token,
+                "limit": limit,
+            }
+
+            # 使用 call-like 回调方式：_send_event 无回调，这里直接 sio.emit 并等待回调
+            event = threading.Event()
+            result: Dict[str, Any] = {}
+
+            def callback(response):
+                nonlocal result
+                result = response or {}
+                event.set()
+
+            try:
+                self.sio.emit("get_session_messages", data, callback=callback)
+            except Exception as e:
+                logging.error(f"发送 get_session_messages 事件失败: {e}", exc_info=True)
+                return None
+
+            # 等待回调，超时 5 秒
+            if not event.wait(timeout=5.0):
+                logging.error("获取历史消息超时")
+                return None
+
+            return result
+
+        except Exception as e:
+            logging.error(f"获取历史消息异常: {e}", exc_info=True)
+            return None
+    
     def send_message_delivered(self, message_id: int, user_id: int) -> bool:
         """
         发送消息已送达回执
@@ -674,6 +794,146 @@ class WebSocketClient:
         except Exception as e:
             logging.error(f"撤回消息异常: {e}", exc_info=True)
             return False
+
+    def match_agent(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """匹配在线客服（用户侧）"""
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法匹配客服")
+                return None
+
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法匹配客服")
+                return None
+
+            data = {
+                "session_id": session_id,
+                "user_id": self.user_id,
+                "token": self.token,
+            }
+
+            event = threading.Event()
+            result: Dict[str, Any] = {}
+
+            def callback(response):
+                nonlocal result
+                result = response or {}
+                event.set()
+
+            self.sio.emit("match_agent", data, callback=callback)
+
+            if not event.wait(timeout=5.0):
+                logging.error("匹配客服超时")
+                return None
+
+            return result
+        except Exception as e:
+            logging.error(f"匹配客服异常: {e}", exc_info=True)
+            return None
+
+    def accept_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        """客服接入待接入会话"""
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法接入会话")
+                return None
+
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法接入会话")
+                return None
+
+            data = {
+                "session_id": session_id,
+                "user_id": self.user_id,
+                "token": self.token,
+            }
+
+            event = threading.Event()
+            result: Dict[str, Any] = {}
+
+            def callback(response):
+                nonlocal result
+                result = response or {}
+                event.set()
+
+            self.sio.emit("accept_session", data, callback=callback)
+
+            if not event.wait(timeout=5.0):
+                logging.error("接入会话超时")
+                return None
+
+            return result
+        except Exception as e:
+            logging.error(f"接入会话异常: {e}", exc_info=True)
+            return None
+
+    def get_link_preview(self, url: str) -> Optional[Dict[str, Any]]:
+        """通过 WebSocket 获取链接预览"""
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法获取链接预览")
+                return None
+
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法获取链接预览")
+                return None
+
+            data = {"url": url, "token": self.token}
+
+            event = threading.Event()
+            result: Dict[str, Any] = {}
+
+            def callback(response):
+                nonlocal result
+                result = response or {}
+                event.set()
+
+            self.sio.emit("link_preview", data, callback=callback)
+
+            if not event.wait(timeout=5.0):
+                logging.error("获取链接预览超时")
+                return None
+
+            return result
+        except Exception as e:
+            logging.error(f"获取链接预览异常: {e}", exc_info=True)
+            return None
+
+    def process_rich_text(self, content: str) -> Optional[Dict[str, Any]]:
+        """通过 WebSocket 处理富文本"""
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法处理富文本")
+                return None
+
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法处理富文本")
+                return None
+
+            data = {
+                "content": content,
+                "user_id": self.user_id,
+                "token": self.token,
+            }
+
+            event = threading.Event()
+            result: Dict[str, Any] = {}
+
+            def callback(response):
+                nonlocal result
+                result = response or {}
+                event.set()
+
+            self.sio.emit("process_rich_text", data, callback=callback)
+
+            if not event.wait(timeout=5.0):
+                logging.error("处理富文本超时")
+                return None
+
+            return result
+        except Exception as e:
+            logging.error(f"处理富文本异常: {e}", exc_info=True)
+            return None
     
     def on_connect(self, callback: Callable):
         """注册连接成功回调"""
@@ -690,6 +950,114 @@ class WebSocketClient:
     def on_message_status(self, callback: Callable):
         """注册消息状态更新回调"""
         self.on_message_status_callback = callback
+    
+    def on_vip_status_updated(self, callback: Callable):
+        """注册 VIP 状态更新回调"""
+        self.on_vip_status_updated_callback = callback
+    
+    def on_diamond_balance_updated(self, callback: Callable):
+        """注册钻石余额更新回调"""
+        self.on_diamond_balance_updated_callback = callback
+    
+    def subscribe_vip_info(self) -> bool:
+        """
+        订阅 VIP 信息
+        
+        Returns:
+            bool: 是否成功
+        """
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法订阅 VIP 信息")
+                return False
+            
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法订阅 VIP 信息")
+                return False
+            
+            data = {
+                "user_id": self.user_id,
+                "token": self.token,
+            }
+            
+            return self._send_event("subscribe_vip_info", data)
+        
+        except Exception as e:
+            logging.error(f"订阅 VIP 信息异常: {e}", exc_info=True)
+            return False
+    
+    def subscribe_user_profile(self) -> bool:
+        """订阅用户资料更新"""
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法订阅用户资料")
+                return False
+            
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法订阅用户资料")
+                return False
+            
+            data = {"user_id": self.user_id, "token": self.token}
+            return self._send_event("subscribe_user_profile", data)
+        except Exception as e:
+            logging.error(f"订阅用户资料异常: {e}", exc_info=True)
+            return False
+    
+    def edit_message(self, message_id: int, session_id: str, new_content: str) -> bool:
+        """编辑消息"""
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法编辑消息")
+                return False
+            
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法编辑消息")
+                return False
+            
+            data = {
+                "message_id": message_id,
+                "user_id": self.user_id,
+                "session_id": session_id,
+                "new_content": new_content,
+                "token": self.token,
+            }
+            return self._send_event("edit_message", data)
+        except Exception as e:
+            logging.error(f"编辑消息异常: {e}", exc_info=True)
+            return False
+    
+    def close_session(self, session_id: str) -> bool:
+        """关闭会话"""
+        try:
+            if not self.user_id or not self.token:
+                logging.error("未登录，无法关闭会话")
+                return False
+            
+            if self.status != ConnectionStatus.CONNECTED:
+                logging.error("WebSocket 未连接，无法关闭会话")
+                return False
+            
+            data = {
+                "session_id": session_id,
+                "user_id": self.user_id,
+                "token": self.token,
+            }
+            return self._send_event("close_session", data)
+        except Exception as e:
+            logging.error(f"关闭会话异常: {e}", exc_info=True)
+            return False
+    
+    def on_user_profile_updated(self, callback: Callable):
+        """注册用户资料更新回调"""
+        self.on_user_profile_updated_callback = callback
+    
+    def on_message_edited(self, callback: Callable):
+        """注册消息编辑回调"""
+        self.on_message_edited_callback = callback
+    
+    def on_session_status_updated(self, callback: Callable):
+        """注册会话状态更新回调"""
+        self.on_session_status_updated_callback = callback
     
     def on_status_change(self, callback: Callable):
         """注册状态变化回调"""

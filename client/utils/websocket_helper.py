@@ -78,6 +78,12 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
         def on_connect():
             def _on_connect():
                 logger.debug("WebSocket 连接成功")
+                # 连接成功后订阅 VIP 信息
+                if hasattr(main_window, '_ws_client') and main_window._ws_client:
+                    try:
+                        main_window._ws_client.subscribe_vip_info()
+                    except Exception as e:
+                        logger.error(f"订阅 VIP 信息失败: {e}", exc_info=True)
             # 通过 UI 调度器在主线程中执行
             dispatcher = _get_ui_dispatcher(main_window)
             if dispatcher:
@@ -573,10 +579,115 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
             else:
                 _on_error()
         
+        def on_vip_status_updated(data):
+            """处理 VIP 状态更新"""
+            def _on_vip_status_updated():
+                try:
+                    user_id = data.get('user_id')
+                    vip_info = data.get('vip_info', {})
+                    
+                    # 更新会员信息显示
+                    if hasattr(main_window, 'refresh_membership_from_db'):
+                        main_window.refresh_membership_from_db()
+                except Exception as e:
+                    logger.error(f"处理 VIP 状态更新失败: {e}", exc_info=True)
+            
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_vip_status_updated)
+            else:
+                _on_vip_status_updated()
+        
+        def on_diamond_balance_updated(data):
+            """处理钻石余额更新"""
+            def _on_diamond_balance_updated():
+                try:
+                    user_id = data.get('user_id')
+                    balance = data.get('balance', 0)
+                    
+                    # 更新会员信息显示（包含钻石余额）
+                    if hasattr(main_window, 'refresh_membership_from_db'):
+                        main_window.refresh_membership_from_db()
+                except Exception as e:
+                    logger.error(f"处理钻石余额更新失败: {e}", exc_info=True)
+            
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_diamond_balance_updated)
+            else:
+                _on_diamond_balance_updated()
+        
+        def on_user_profile_updated(data):
+            """处理用户资料更新"""
+            def _on_user_profile_updated():
+                try:
+                    user_id = data.get('user_id')
+                    profile = data.get('profile', {})
+                    
+                    # 更新会员信息显示
+                    if hasattr(main_window, 'refresh_membership_from_db'):
+                        main_window.refresh_membership_from_db()
+                except Exception as e:
+                    logger.error(f"处理用户资料更新失败: {e}", exc_info=True)
+            
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_user_profile_updated)
+            else:
+                _on_user_profile_updated()
+        
+        def on_message_edited(data):
+            """处理消息编辑"""
+            def _on_message_edited():
+                try:
+                    message_id = data.get('message_id')
+                    session_id = data.get('session_id')
+                    new_content = data.get('new_content')
+                    edited_at = data.get('edited_at')
+                    
+                    # 更新聊天面板中的消息内容
+                    # 这里需要根据实际的消息显示逻辑来更新
+                    # 可以通过 main_window 的方法来更新消息显示
+                    if hasattr(main_window, 'update_message_content'):
+                        main_window.update_message_content(message_id, new_content, edited_at)
+                except Exception as e:
+                    logger.error(f"处理消息编辑失败: {e}", exc_info=True)
+            
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_message_edited)
+            else:
+                _on_message_edited()
+        
+        def on_session_status_updated(data):
+            """处理会话状态更新"""
+            def _on_session_status_updated():
+                try:
+                    session_id = data.get('session_id')
+                    status = data.get('status')
+                    
+                    # 更新会话列表和状态显示
+                    # 这里需要根据实际的会话列表逻辑来更新
+                    if hasattr(main_window, 'update_session_status'):
+                        main_window.update_session_status(session_id, status)
+                except Exception as e:
+                    logger.error(f"处理会话状态更新失败: {e}", exc_info=True)
+            
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_session_status_updated)
+            else:
+                _on_session_status_updated()
+        
         ws_client.on_connect(on_connect)
         ws_client.on_disconnect(on_disconnect)
         ws_client.on_message(on_message)
         ws_client.on_error(on_error)
+        ws_client.on_vip_status_updated(on_vip_status_updated)
+        ws_client.on_diamond_balance_updated(on_diamond_balance_updated)
+        ws_client.on_user_profile_updated(on_user_profile_updated)
+        ws_client.on_message_edited(on_message_edited)
+        ws_client.on_session_status_updated(on_session_status_updated)
         
         # 注册撤回消息事件处理器（通过 WebSocketClient 的 message_recalled 事件）
         # WebSocketClient 会将 message_recalled 事件转换为消息格式并调用 on_message_callback

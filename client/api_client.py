@@ -74,6 +74,88 @@ def check_token(token: str) -> Dict[str, Any]:
     return _post("/api/check_token", {"token": token})
 
 
+def get_vip_info(user_id: int) -> Dict[str, Any]:
+    """
+    获取 VIP 信息（包含 diamonds/vip_expiry_date 等）。
+
+    注意：当前后端没有单独的 /api/vip/info 接口，此处复用 /api/check_token 返回的 vip。
+    """
+    try:
+        from client.login.token_storage import read_token
+        token = read_token()
+        if not token:
+            return {}
+        data = check_token(token)
+        if not data.get("success"):
+            return {}
+        vip = data.get("vip") or {}
+        # 轻量校验：若传入 user_id 与 token 对应 user_id 不一致，则返回空
+        user = data.get("user") or {}
+        token_user_id = user.get("id")
+        if token_user_id is not None:
+            try:
+                if int(token_user_id) != int(user_id):
+                    return {}
+            except Exception:
+                return {}
+        return vip
+    except Exception:
+        return {}
+
+
+def get_diamond_balance(user_id: int) -> int:
+    """获取钻石余额（来自 VIP 信息）"""
+    vip = get_vip_info(user_id) or {}
+    try:
+        return int(vip.get("diamonds", 0) or 0)
+    except Exception:
+        return 0
+
+
+def get_user_profile(user_id: int) -> Dict[str, Any]:
+    """
+    获取用户资料（包含 avatar 等）。
+
+    注意：当前后端已移除独立的 HTTP 用户资料接口，此处复用 /api/check_token 返回的 user。
+    """
+    try:
+        from client.login.token_storage import read_token
+        token = read_token()
+        if not token:
+            return {}
+        data = check_token(token)
+        if not data.get("success"):
+            return {}
+        user = data.get("user") or {}
+        token_user_id = user.get("id")
+        if token_user_id is not None:
+            try:
+                if int(token_user_id) != int(user_id):
+                    return {}
+            except Exception:
+                return {}
+        return user
+    except Exception:
+        return {}
+
+
+def update_avatar(user_id: int, avatar_bytes: bytes) -> Dict[str, Any]:
+    """
+    更新头像。
+
+    说明：
+    - 之前存在 HTTP 头像更新接口，但已在“全量迁移 WebSocket + 删除废弃 HTTP”中移除。
+    - 目前后端仅提供用户资料订阅推送（subscribe_user_profile），未提供“设置头像”的 WS 事件。
+    - 为了避免桌面端启动阶段 ImportError，这里保留同名函数并返回友好错误。
+    """
+    _ = user_id
+    _ = avatar_bytes
+    return {
+        "success": False,
+        "message": "头像更新接口已移除（HTTP 已删除，WS 暂未实现设置头像事件）。",
+    }
+
+
 def get_latest_announcement() -> Optional[str]:
     """获取最新公告"""
     try:
@@ -85,38 +167,6 @@ def get_latest_announcement() -> Optional[str]:
     return data.get("content")
 
 
-def get_user_profile(user_id: int) -> Optional[Dict[str, Any]]:
-    """获取用户信息（包含头像）"""
-    data = _post("/api/user/profile", {"user_id": user_id})
-    if not data.get("success"):
-        return None
-    user = data.get("user") or {}
-    avatar_b64 = user.get("avatar_base64")
-    if avatar_b64:
-        try:
-            user["avatar_bytes"] = base64.b64decode(avatar_b64)
-        except Exception:
-            user["avatar_bytes"] = None
-    else:
-        user["avatar_bytes"] = None
-    return data
-
-
-def update_avatar(user_id: int, avatar_bytes: bytes) -> Dict[str, Any]:
-    """更新用户头像"""
-    avatar_b64 = base64.b64encode(avatar_bytes).decode("ascii")
-    return _post(
-        "/api/user/avatar",
-        {"user_id": user_id, "avatar_base64": avatar_b64},
-    )
-
-
-def get_vip_info(user_id: int) -> Optional[Dict[str, Any]]:
-    """获取 VIP 信息"""
-    data = _post("/api/vip/info", {"user_id": user_id})
-    if not data.get("success"):
-        return None
-    return data.get("vip") or {}
 
 
 def purchase_membership(user_id: int, card_info: Dict[str, Any]) -> Dict[str, Any]:
@@ -125,14 +175,6 @@ def purchase_membership(user_id: int, card_info: Dict[str, Any]) -> Dict[str, An
         "/api/vip/purchase",
         {"user_id": user_id, "card": card_info},
     )
-
-
-def get_diamond_balance(user_id: int) -> Optional[int]:
-    """获取钻石余额"""
-    data = _post("/api/diamond/balance", {"user_id": user_id})
-    if not data.get("success"):
-        return None
-    return int(data.get("diamonds", 0))
 
 
 def forgot_password(email: str) -> Dict[str, Any]:
@@ -155,17 +197,25 @@ def change_password(token: str, old_password: str, new_password: str) -> Dict[st
 
 def match_human_service(user_id: int, session_id: str, token: str) -> Dict[str, Any]:
     """匹配人工客服"""
-    return _post(
-        "/api/customer_service/match_agent",
-        {"user_id": user_id, "session_id": session_id, "token": token},
+    raise ApiError(
+        "HTTP 匹配客服接口已移除，请使用 WebSocket：\n"
+        "1. 通过 client.websocket_client.WebSocketClient 连接\n"
+        "2. 调用 ws_client.match_agent(session_id) 触发匹配\n"
+        "3. 通过会话列表/待接入推送获取结果"
     )
 
 
 def get_chat_messages(session_id: str, user_id: int, token: str) -> Dict[str, Any]:
-    """获取会话消息（用户端调用）"""
-    return _post(
-        "/api/user/chat_messages",
-        {"session_id": session_id, "user_id": user_id, "token": token},
+    """
+    获取会话消息（用户端调用，已废弃）。
+
+    @deprecated 此 HTTP 接口已废弃，请使用 WebSocket 获取历史消息：
+    - 使用 client.websocket_client.WebSocketClient
+    - 连接后通过 on_message 回调接收实时消息，并在客户端自行维护消息列表。
+    """
+    raise ApiError(
+        "HTTP 获取会话消息接口已废弃，请使用 WebSocket 获取历史消息。\n"
+        "请使用 client.websocket_client.WebSocketClient 建立连接，并在 on_message 回调中维护消息列表。"
     )
 
 
@@ -191,18 +241,20 @@ def send_chat_message(session_id: str, user_id: int, message: str, token: str, m
     # return _post("/api/user/send_message", data)
 
 
-def recall_message(message_id: int, user_id: int, token: str) -> Dict[str, Any]:
-    """撤回消息（2分钟内可撤回）"""
-    return _post(
-        "/api/message/recall",
-        {"message_id": message_id, "user_id": user_id, "token": token},
-    )
+def get_reply_message(message_id: int, token: str) -> Dict[str, Any]:
+    """
+    获取被引用的消息摘要（已废弃）。
+
+    说明：引用摘要已由服务端随消息推送（reply_to_message），不再提供 HTTP 获取。
+    这里保留函数仅用于避免旧代码 import 失败。
+    """
+    _ = message_id
+    _ = token
+    raise ApiError("HTTP 引用消息详情接口已移除，请使用 WebSocket 推送的 reply_to_message 字段。")
 
 
-def get_reply_message(message_id: int, token: Optional[str] = None) -> Dict[str, Any]:
-    """获取被引用的消息详情（用于引用回复显示）"""
-    data = {"message_id": message_id}
-    if token:
-        data["token"] = token
-    return _post("/api/message/reply", data)
+### 已删除：HTTP 撤回消息接口（改用 WebSocket recall_message）
+
+
+### 已删除：HTTP 引用消息详情接口（引用摘要已随消息推送）
 

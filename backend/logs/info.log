@@ -69,3 +69,19 @@
 2026-01-13 21:00:52,903 - INFO - root - 消息 677 已被用户 2 撤回
 2026-01-13 21:01:21,709 - WARNING - backend.websocket.websocket_manager - 连接 748f8dca-c346-42fa-96a8-5b08b2dea91e 心跳超时（距离上次心跳 126.2 秒），自动断开
 2026-01-13 21:01:21,717 - INFO - root - 连接 748f8dca-c346-42fa-96a8-5b08b2dea91e 已断开
+2026-01-13 21:09:53,002 - WARNING - backend.websocket.websocket_manager - 断开连接失败：未找到连接ID
+2026-01-14 11:38:57,114 - INFO - root - 数据库连接成功
+2026-01-14 11:38:57,221 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-14 11:38:57,235 - INFO - root - user_connections 表创建成功
+2026-01-14 11:38:57,240 - INFO - root - user_devices 表创建成功
+2026-01-14 11:38:57,243 - INFO - root - message_queue 表创建成功
+2026-01-14 11:38:57,243 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-14 11:38:57,243 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动
+2026-01-14 14:16:45,295 - INFO - root - 数据库连接成功
+2026-01-14 14:16:45,331 - INFO - root - 检测到 chat_messages 表缺少 is_edited 列，正在自动添加...
+2026-01-14 14:16:45,365 - INFO - root - chat_messages 表消息状态字段升级完成
+2026-01-14 14:16:45,379 - INFO - root - user_connections 表创建成功
+2026-01-14 14:16:45,382 - INFO - root - user_devices 表创建成功
+2026-01-14 14:16:45,386 - INFO - root - message_queue 表创建成功
+2026-01-14 14:16:45,386 - INFO - backend.websocket.websocket_manager - WebSocket 管理器初始化完成
+2026-01-14 14:16:45,386 - INFO - backend.websocket.websocket_manager - WebSocket 心跳检测线程已启动

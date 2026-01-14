@@ -1147,36 +1147,37 @@ def append_chat_message(
                                                         if item and item.layout() == thumbnail_layout:
                                                             layout_index = i
                                                             break
-                                                    
+
                                                     if layout_index >= 0:
                                                         # 先删除 thumbnail_layout 中的所有控件
                                                         while thumbnail_layout.count() > 0:
                                                             item = thumbnail_layout.takeAt(0)
-                                                            if item:
-                                                                widget = item.widget()
-                                                                if widget:
-                                                                    # 完全删除控件
-                                                                    widget.hide()
-                                                                    widget.setVisible(False)
-                                                                    if isinstance(widget, QLabel):
-                                                                        widget.setPixmap(QPixmap())
-                                                                        widget.clear()
-                                                                    widget.setFixedSize(0, 0)
-                                                                    widget.setParent(None)
-                                                                    widget.deleteLater()
-                                                                else:
-                                                                    # 如果是子布局，也删除
-                                                                    sub_layout = item.layout()
-                                                                    if sub_layout:
-                                                                        while sub_layout.count() > 0:
-                                                                            sub_item = sub_layout.takeAt(0)
-                                                                            if sub_item:
-                                                                                sub_widget = sub_item.widget()
-                                                                                if sub_widget:
-                                                                                    sub_widget.hide()
-                                                                                    sub_widget.setVisible(False)
-                                                                                    sub_widget.setParent(None)
-                                                                                    sub_widget.deleteLater()
+                                                            if not item:
+                                                                continue
+                                                            widget = item.widget()
+                                                            if widget:
+                                                                # 完全删除控件
+                                                                widget.hide()
+                                                                widget.setVisible(False)
+                                                                if isinstance(widget, QLabel):
+                                                                    widget.setPixmap(QPixmap())
+                                                                    widget.clear()
+                                                                widget.setFixedSize(0, 0)
+                                                                widget.setParent(None)
+                                                                widget.deleteLater()
+                                                            else:
+                                                                # 如果是子布局，也删除
+                                                                sub_layout = item.layout()
+                                                                if sub_layout:
+                                                                    while sub_layout.count() > 0:
+                                                                        sub_item = sub_layout.takeAt(0)
+                                                                        if sub_item:
+                                                                            sub_widget = sub_item.widget()
+                                                                            if sub_widget:
+                                                                                sub_widget.hide()
+                                                                                sub_widget.setVisible(False)
+                                                                                sub_widget.setParent(None)
+                                                                                sub_widget.deleteLater()
                                                                         sub_layout.deleteLater()
                                                         
                                                         # 从 reply_content_layout 中移除 thumbnail_layout
@@ -2448,9 +2449,9 @@ def append_matching_message(main_window: "MainWindow"):
 
 
 def match_human_service(main_window: "MainWindow"):
-    """匹配人工客服（调用后端API）"""
-    from client.api_client import match_human_service as api_match_human_service
+    """匹配人工客服（通过 WebSocket）"""
     from client.login.token_storage import read_token
+    from client.utils.websocket_helper import get_or_create_websocket_client, connect_websocket
     
     # 获取session_id（如果不存在则生成）
     if not hasattr(main_window, "_chat_session_id") or not main_window._chat_session_id:
@@ -2473,8 +2474,13 @@ def match_human_service(main_window: "MainWindow"):
         return
     
     try:
-        # 调用后端API匹配客服
-        response = api_match_human_service(main_window.user_id, session_id, token)
+        # 确保 WebSocket 连接
+        ws_client = get_or_create_websocket_client(main_window)
+        if not ws_client or ws_client.status.value != "connected":
+            if not connect_websocket(main_window, main_window.user_id, token):
+                raise RuntimeError("WebSocket 连接失败，无法匹配客服")
+
+        response = ws_client.match_agent(session_id) if ws_client else None
         
         # 移除匹配中的消息
         if hasattr(main_window, "_matching_message_widget") and main_window._matching_message_widget:
@@ -2482,7 +2488,7 @@ def match_human_service(main_window: "MainWindow"):
             if widget:
                 widget.deleteLater()
         
-        if response.get("success") and response.get("matched"):
+        if response and response.get("success") and response.get("matched"):
             # 匹配成功 - 清除所有对话
             clear_all_chat_messages(main_window)
             
@@ -2518,7 +2524,8 @@ def match_human_service(main_window: "MainWindow"):
                 logging.error(f"检查 WebSocket 连接状态失败: {e}", exc_info=True)
         else:
             # 匹配失败，加入等待队列
-            wait_message = response.get("message", "暂无在线客服，您的请求已加入等待队列，客服接入后会主动联系您。")
+            safe_response = response or {}
+            wait_message = safe_response.get("message", "暂无在线客服，您的请求已加入等待队列，客服接入后会主动联系您。")
             append_chat_message(
                 main_window,
                 wait_message,
@@ -3286,32 +3293,33 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                                                     # 先删除 thumbnail_layout 中的所有控件
                                                     while thumbnail_layout.count() > 0:
                                                         item = thumbnail_layout.takeAt(0)
-                                                        if item:
-                                                            widget = item.widget()
-                                                            if widget:
-                                                                # 完全删除控件
-                                                                widget.hide()
-                                                                widget.setVisible(False)
-                                                                if isinstance(widget, QLabel):
-                                                                    widget.setPixmap(QPixmap())
-                                                                    widget.clear()
-                                                                widget.setFixedSize(0, 0)
-                                                                widget.setParent(None)
-                                                                widget.deleteLater()
-                                                            else:
-                                                                # 如果是子布局，也删除
-                                                                sub_layout = item.layout()
-                                                                if sub_layout:
-                                                                    while sub_layout.count() > 0:
-                                                                        sub_item = sub_layout.takeAt(0)
-                                                                        if sub_item:
-                                                                            sub_widget = sub_item.widget()
-                                                                            if sub_widget:
-                                                                                sub_widget.hide()
-                                                                                sub_widget.setVisible(False)
-                                                                                sub_widget.setParent(None)
-                                                                                sub_widget.deleteLater()
-                                                                    sub_layout.deleteLater()
+                                                        if not item:
+                                                            continue
+                                                        widget = item.widget()
+                                                        if widget:
+                                                            # 完全删除控件
+                                                            widget.hide()
+                                                            widget.setVisible(False)
+                                                            if isinstance(widget, QLabel):
+                                                                widget.setPixmap(QPixmap())
+                                                                widget.clear()
+                                                            widget.setFixedSize(0, 0)
+                                                            widget.setParent(None)
+                                                            widget.deleteLater()
+                                                        else:
+                                                            # 如果是子布局，也删除
+                                                            sub_layout = item.layout()
+                                                            if sub_layout:
+                                                                while sub_layout.count() > 0:
+                                                                    sub_item = sub_layout.takeAt(0)
+                                                                    if sub_item:
+                                                                        sub_widget = sub_item.widget()
+                                                                        if sub_widget:
+                                                                            sub_widget.hide()
+                                                                            sub_widget.setVisible(False)
+                                                                            sub_widget.setParent(None)
+                                                                            sub_widget.deleteLater()
+                                                                sub_layout.deleteLater()
                                                     
                                                     # 从 reply_content_layout 中移除 thumbnail_layout
                                                     reply_content_layout.removeItem(thumbnail_layout)

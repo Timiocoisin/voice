@@ -306,9 +306,31 @@ class DatabaseManager:
             self.connection.commit()
             # 确保新增字段存在（迁移已有表）
             self._ensure_message_recall_fields()
+            # 确保消息编辑字段存在
+            self._ensure_message_edit_fields()
         except pymysql.Error as e:
             logging.error(f"创建/升级聊天消息表失败: {e}")
 
+    def _ensure_message_edit_fields(self):
+        """确保 chat_messages 表中存在消息编辑相关字段（迁移方法）"""
+        try:
+            cursor = self.connection.cursor()
+            # 检查 is_edited 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'is_edited'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 is_edited 列，正在自动添加...")
+                cursor.execute("ALTER TABLE chat_messages ADD COLUMN is_edited BOOLEAN DEFAULT FALSE AFTER is_recalled")
+                self.connection.commit()
+            
+            # 检查 edited_at 字段
+            cursor.execute("SHOW COLUMNS FROM chat_messages LIKE 'edited_at'")
+            if not cursor.fetchone():
+                logging.info("检测到 chat_messages 表缺少 edited_at 列，正在自动添加...")
+                cursor.execute("ALTER TABLE chat_messages ADD COLUMN edited_at TIMESTAMP NULL AFTER is_edited")
+                self.connection.commit()
+        except pymysql.Error as e:
+            logging.error(f"添加消息编辑字段失败: {e}")
+    
     def _ensure_message_recall_fields(self):
         """确保 chat_messages 表中存在 is_recalled 和 reply_to_message_id 字段（迁移方法）"""
         try:
@@ -1621,6 +1643,174 @@ class DatabaseManager:
 
     # ==================== 消息状态管理方法 ====================
 
+    def edit_message(self, message_id: int, user_id: int, new_content: str) -> bool:
+        """
+        编辑消息
+        
+        Args:
+            message_id: 消息ID
+            user_id: 用户ID（验证消息归属）
+            new_content: 新内容
+            
+        Returns:
+            bool: 是否成功
+        """
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            
+            # 首先检查消息是否存在且属于该用户，且未撤回
+            check_query = """
+            SELECT id, from_user_id, is_recalled, created_at
+            FROM chat_messages
+            WHERE id = %s
+            """
+            cursor.execute(check_query, (message_id,))
+            message = cursor.fetchone()
+            
+            if not message:
+                logging.warning(f"消息不存在: message_id={message_id}")
+                return False
+            
+            # 检查消息归属
+            if message[1] != user_id:
+                logging.warning(f"用户 {user_id} 无权编辑消息 {message_id}（消息属于用户 {message[1]}）")
+                return False
+            
+            # 检查是否已撤回
+            if message[2]:
+                logging.warning(f"消息 {message_id} 已撤回，不能编辑")
+                return False
+            
+            # 检查时间限制（5分钟内可编辑）
+            import time
+            from datetime import datetime, timedelta
+            created_at = message[3]
+            if isinstance(created_at, datetime):
+                time_diff = datetime.now() - created_at
+                if time_diff > timedelta(minutes=5):
+                    logging.warning(f"消息 {message_id} 超过5分钟，不能编辑")
+                    return False
+            
+            # 更新消息内容
+            update_query = """
+            UPDATE chat_messages
+            SET message = %s, is_edited = TRUE, edited_at = NOW()
+            WHERE id = %s AND from_user_id = %s
+            """
+            cursor.execute(update_query, (new_content, message_id, user_id))
+            conn.commit()
+            
+            if cursor.rowcount == 0:
+                logging.warning(f"编辑消息失败: message_id={message_id}, user_id={user_id}")
+                return False
+            
+            logging.info(f"消息 {message_id} 编辑成功")
+            return True
+            
+        except Exception as e:
+            logging.error(f"编辑消息失败: {e}", exc_info=True)
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            return False
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+    
+    def close_session(self, session_id: str, closed_by_user_id: int) -> bool:
+        """
+        关闭会话
+        
+        Args:
+            session_id: 会话ID
+            closed_by_user_id: 关闭操作的用户ID
+            
+        Returns:
+            bool: 是否成功
+        """
+        conn = None
+        cursor = None
+        try:
+            conn = self._open_conn()
+            cursor = conn.cursor()
+            
+            # 首先检查会话是否存在
+            check_query = """
+            SELECT id, user_id, agent_id, status
+            FROM chat_sessions
+            WHERE session_id = %s
+            """
+            cursor.execute(check_query, (session_id,))
+            session = cursor.fetchone()
+            
+            if not session:
+                logging.warning(f"会话不存在: session_id={session_id}")
+                return False
+            
+            # 检查权限：用户只能关闭自己的会话，客服可以关闭分配的会话
+            user_id = session[1]
+            agent_id = session[2]
+            if closed_by_user_id != user_id and closed_by_user_id != agent_id:
+                # 检查是否是管理员或客服
+                user_row = self.get_user_by_id(closed_by_user_id)
+                if not user_row or user_row.get('role') not in ['customer_service', 'admin']:
+                    logging.warning(f"用户 {closed_by_user_id} 无权关闭会话 {session_id}")
+                    return False
+            
+            # 检查会话是否已关闭
+            if session[3] == 'closed':
+                logging.info(f"会话 {session_id} 已经关闭")
+                return True
+            
+            # 更新会话状态
+            update_query = """
+            UPDATE chat_sessions
+            SET status = 'closed', closed_at = NOW()
+            WHERE session_id = %s
+            """
+            cursor.execute(update_query, (session_id,))
+            conn.commit()
+            
+            if cursor.rowcount == 0:
+                logging.warning(f"关闭会话失败: session_id={session_id}")
+                return False
+            
+            logging.info(f"会话 {session_id} 已关闭（由用户 {closed_by_user_id} 关闭）")
+            return True
+            
+        except Exception as e:
+            logging.error(f"关闭会话失败: {e}", exc_info=True)
+            if conn:
+                try:
+                    conn.rollback()
+                except Exception:
+                    pass
+            return False
+        finally:
+            if cursor:
+                try:
+                    cursor.close()
+                except Exception:
+                    pass
+            if conn:
+                try:
+                    conn.close()
+                except Exception:
+                    pass
+    
     def update_message_status(self, message_id: int, status: str) -> bool:
         """更新消息状态"""
         conn = None

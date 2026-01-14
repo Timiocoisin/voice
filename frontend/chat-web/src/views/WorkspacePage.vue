@@ -98,6 +98,17 @@
               问题类型：{{ activeSession.category }} · 会话时长：{{ activeSession.duration }}
             </div>
           </div>
+          <button 
+            v-if="activeSession.status !== 'closed'"
+            class="close-session-btn"
+            @click="handleCloseSession"
+            title="关闭会话"
+          >
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <path d="M12 4L4 12M4 4L12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            关闭会话
+          </button>
         </header>
 
         <div class="chat-messages" ref="messagesRef">
@@ -124,7 +135,11 @@
                 />
                 <span v-else>{{ msg.from === 'agent' ? '客' : '用' }}</span>
               </div>
-              <div class="msg-bubble">
+              <div 
+                class="msg-bubble" 
+                :class="{ 'editable': msg.userId === currentUser?.id && msg.messageType === 'text' && !msg.isRecalled && !msg.isEdited && canEditMessage(msg) }"
+                @dblclick="handleMessageDoubleClick(msg)"
+              >
                 <div class="msg-text">
                   <template v-if="msg.messageType === 'image'">
                     <img 
@@ -184,6 +199,7 @@
                         v-html="msg.richText"
                       ></div>
                       <span v-else>{{ msg.text }}</span>
+                      <span v-if="msg.isEdited" class="edited-badge">已编辑</span>
                     </div>
                     <!-- 链接预览卡片 -->
                     <div v-if="msg.linkUrls && msg.linkUrls.length > 0" class="link-preview-container">
@@ -202,6 +218,29 @@
                 <div class="msg-time">{{ msg.time }}</div>
               </div>
             </template>
+          </div>
+        </div>
+
+        <!-- 编辑消息模态框 -->
+        <div v-if="editingMessage" class="edit-message-modal" @click.self="cancelEditMessage">
+          <div class="edit-message-dialog">
+            <div class="edit-message-header">
+              <h3>编辑消息</h3>
+              <button @click="cancelEditMessage" class="close-btn">×</button>
+            </div>
+            <div class="edit-message-body">
+              <textarea
+                v-model="editingContent"
+                class="edit-message-input"
+                placeholder="编辑消息内容"
+                rows="4"
+                ref="editMessageInputRef"
+              ></textarea>
+            </div>
+            <div class="edit-message-footer">
+              <button @click="cancelEditMessage" class="cancel-btn">取消</button>
+              <button @click="saveEditedMessage" class="save-btn">保存</button>
+            </div>
           </div>
         </div>
 
@@ -329,6 +368,7 @@ interface Session {
   duration: string;
   unread: number;
   avatar?: string;
+  status?: string; // 会话状态：pending, active, closed
 }
 
 interface ChatMessage {
@@ -343,6 +383,8 @@ interface ChatMessage {
   isRich?: boolean; // 是否为富文本
   linkUrls?: string[]; // 链接URL列表（用于预览）
   isRecalled?: boolean; // 是否已撤回
+  isEdited?: boolean; // 是否已编辑
+  editedAt?: string; // 编辑时间
   reply_to_message_id?: number | null; // 引用消息ID
   replyToMessage?: string; // 引用消息内容（用于显示）
   replyToMessageType?: 'text' | 'image' | 'file'; // 引用消息类型
@@ -368,9 +410,8 @@ const replyToMessageId = ref<number | null>(null); // 引用消息ID
 const replyToMessageText = ref<string | null>(null); // 引用消息内容
 const replyToMessageUsername = ref<string | null>(null); // 引用消息的发送者用户名
 
-// HTTP轮询：已接收消息ID集合（用于去重）
+// WebSocket：已接收消息ID集合（用于去重）
 const receivedMessageIds = new Set<string>();
-let messagePollTimer: number | null = null;
 
 // 状态管理
 type StatusType = 'online' | 'offline' | 'away' | 'busy';
@@ -444,10 +485,10 @@ const changeStatus = async (status: StatusOption) => {
   saveStatus(status.type);
   showStatusMenu.value = false;
   
-  // 更新后端状态
-  if (currentUser.value && token.value) {
+  // 通过 WebSocket 更新后端状态
+  if (websocketClient.isConnected() && currentUser.value && token.value) {
     try {
-      await customerServiceApi.updateStatus(currentUser.value.id, status.type, token.value);
+      await websocketClient.updateAgentStatus(status.type);
     } catch (error) {
       console.error('更新状态失败:', error);
     }
@@ -531,10 +572,14 @@ const filteredSessions = computed(() => {
 // 切换标签
 const switchTab = async (tab: 'my' | 'pending') => {
   activeTab.value = tab;
-  // 切换标签时，重新加载对应的会话列表
-  await loadSessions();
-  // 切换标签时也更新待接入数量
-  await updatePendingCount();
+  // 切换标签时，重新订阅对应的会话列表（通过 WebSocket）
+  if (websocketClient.isConnected() && currentUser.value && token.value) {
+    try {
+      await websocketClient.subscribeSessions(tab);
+    } catch (error) {
+      console.error('订阅会话列表失败:', error);
+    }
+  }
 };
 
 // 检查登录状态并验证 token
@@ -573,25 +618,13 @@ onMounted(async () => {
         localStorage.setItem('user', JSON.stringify(verifyResponse.user));
       }
       
-        // 登录成功后自动设置为在线状态
-        if (currentUser.value && token.value) {
-          try {
-            await customerServiceApi.updateStatus(currentUser.value.id, 'online', token.value);
-            // 更新当前状态显示
-            const onlineStatus = statusOptions.find(s => s.type === 'online');
-            if (onlineStatus) {
-              currentStatus.value = onlineStatus;
-              saveStatus('online');
-            }
-          } catch (error) {
-            console.error('设置在线状态失败:', error);
-          }
-
-          // 不再在登录时自动连接 WebSocket
-          // WebSocket 连接将在客服接入会话时才建立
+        // 登录成功后自动设置为在线状态（通过 WebSocket）
+        // 注意：需要在 WebSocket 连接成功后设置
+        const onlineStatus = statusOptions.find(s => s.type === 'online');
+        if (onlineStatus) {
+          currentStatus.value = onlineStatus;
+          saveStatus('online');
         }
-      // 启动消息轮询（作为备用，WebSocket 连接后可以停止轮询）
-      startMessagePolling();
     } catch (error) {
       console.error('Token 验证失败:', error);
       // Token 验证失败，清除并跳转登录
@@ -601,16 +634,16 @@ onMounted(async () => {
       return;
     }
 
-    loadSessions();
+    // 连接 WebSocket 并订阅会话列表
+    connectWebSocket().then(() => {
+      // WebSocket 连接成功后，订阅会话列表和待接入会话
+      subscribeToSessions();
+    }).catch((error) => {
+      console.error('WebSocket 连接失败:', error);
+    });
     
-    // 启动心跳机制，每30秒更新一次状态
+    // 启动心跳机制（仅发送心跳，不更新状态）
     startHeartbeat();
-    
-    // 定期刷新待接入数量（每5秒）
-    let refreshPendingInterval: number | null = null;
-    refreshPendingInterval = window.setInterval(() => {
-      updatePendingCount();
-    }, 5000);
     
     // 监听浏览器关闭/刷新事件，清除 localStorage
     const handleBeforeUnload = () => {
@@ -627,11 +660,6 @@ onMounted(async () => {
     onUnmounted(() => {
       document.removeEventListener('click', handleClickOutside);
       stopHeartbeat();
-      if (refreshPendingInterval) {
-        clearInterval(refreshPendingInterval);
-      }
-      // 组件卸载时停止消息轮询
-      stopMessagePolling();
       // 断开 WebSocket 连接
       disconnectWebSocket();
       // 移除 beforeunload 事件监听
@@ -655,14 +683,10 @@ const startHeartbeat = () => {
     clearInterval(heartbeatInterval);
   }
   
-  // 每30秒发送一次心跳，更新 last_heartbeat
-  heartbeatInterval = window.setInterval(async () => {
-    if (currentUser.value && token.value && currentStatus.value.type !== 'offline') {
-      try {
-        await customerServiceApi.updateStatus(currentUser.value.id, currentStatus.value.type, token.value);
-      } catch (error) {
-        console.error('心跳更新失败:', error);
-      }
+  // 每30秒发送一次心跳（仅发送心跳，状态更新通过 WebSocket）
+  heartbeatInterval = window.setInterval(() => {
+    if (websocketClient.isConnected() && currentUser.value && token.value) {
+      websocketClient.sendHeartbeat();
     }
   }, 30000); // 30秒
 };
@@ -674,55 +698,19 @@ const stopHeartbeat = () => {
   }
 };
 
-// 加载会话列表
-const loadSessions = async () => {
-  if (!currentUser.value || !token.value) return;
-
-  loading.value = true;
-  try {
-    // 根据当前tab加载不同的会话列表
-    const sessionType = activeTab.value === 'pending' ? 'pending' : 'my';
-    const response = await customerServiceApi.getSessions(currentUser.value.id, token.value, sessionType);
-    if (response.success) {
-      sessions.value = response.sessions.map((s: any) => ({
-        id: s.id,
-        userName: s.userName,
-        userId: s.userId,
-        isVip: s.isVip,
-        category: s.category || '待分类',
-        lastMessage: s.lastMessage || '',
-        lastTime: s.lastTime || '刚刚',
-        duration: s.duration || '00:00',
-        unread: s.unread || 0,
-        avatar: s.avatar
-      }));
-
-      // 自动选择第一个会话（仅在我的会话tab）
-      if (activeTab.value === 'my' && sessions.value.length > 0 && !activeSessionId.value) {
-        selectSession(sessions.value[0].id);
-      }
-    }
-  } catch (error) {
-    console.error('加载会话列表失败:', error);
-  } finally {
-    loading.value = false;
+// 订阅会话列表（通过 WebSocket）
+const subscribeToSessions = async () => {
+  if (!websocketClient.isConnected() || !currentUser.value || !token.value) {
+    return;
   }
-  
-  // 无论当前tab是什么，都更新待接入数量
-  await updatePendingCount();
-};
 
-// 更新待接入数量
-const updatePendingCount = async () => {
-  if (!currentUser.value || !token.value) return;
-  
   try {
-    const response = await customerServiceApi.getSessions(currentUser.value.id, token.value, 'pending');
-    if (response.success) {
-      pendingCount.value = response.sessions.length;
-    }
+    // 订阅我的会话列表
+    await websocketClient.subscribeSessions('my');
+    // 订阅待接入会话列表
+    await websocketClient.subscribePendingSessions();
   } catch (error) {
-    console.error('获取待接入数量失败:', error);
+    console.error('订阅会话列表失败:', error);
   }
 };
 
@@ -736,8 +724,6 @@ const selectSession = async (id: string) => {
   
   activeSessionId.value = id;
   await loadMessages(id);
-  // 切换会话时重新启动轮询
-  startMessagePolling();
 };
 
 // 接入会话（从待接入移到我的会话）
@@ -745,39 +731,26 @@ const acceptSession = async (sessionId: string) => {
   if (!currentUser.value || !token.value) return;
 
   try {
-    const response = await customerServiceApi.acceptSession(currentUser.value.id, sessionId, token.value);
-    if (response.success) {
-      // 立即更新待接入数量（减1）
-      if (pendingCount.value > 0) {
-        pendingCount.value -= 1;
-      }
-      
-      // 接入成功，切换到我的会话tab并刷新列表
-      activeTab.value = 'my';
-      await loadSessions();
-      // 再次更新待接入数量（确保同步）
-      await updatePendingCount();
-      // 选择刚接入的会话
-      activeSessionId.value = sessionId;
-      await loadMessages(sessionId);
-      
-      // 接入会话成功后，连接 WebSocket 进行实时通信
-      try {
-        await connectWebSocket();
-        console.log('接入会话后，WebSocket 连接成功');
-      } catch (error) {
-        console.error('接入会话后，WebSocket 连接失败:', error);
-        // WebSocket 连接失败不影响接入流程，消息将通过轮询获取
-      }
-      
-      // 接入会话后启动轮询（作为备用方案）
-      startMessagePolling();
-    } else {
-      alert(response.message || '接入失败');
+    // 确保 WebSocket 连接
+    if (!websocketClient.isConnected()) {
+      await connectWebSocket();
     }
+
+    const response = await websocketClient.acceptSession(sessionId);
+    if (response.success === false) {
+      throw new Error(response.message || '接入失败');
+    }
+
+    if (pendingCount.value > 0) {
+      pendingCount.value -= 1;
+    }
+
+    activeTab.value = 'my';
+    activeSessionId.value = sessionId;
+    await loadMessages(sessionId);
   } catch (error: any) {
     console.error('接入会话失败:', error);
-    alert(error.response?.data?.message || '接入失败，请稍后重试');
+    alert(error?.message || error.response?.data?.message || '接入失败，请稍后重试');
   }
 };
 
@@ -1137,11 +1110,17 @@ const showMessageContextMenu = async (event: MouseEvent, msg: ChatMessage) => {
   }, 0);
 };
 
-// 撤回消息
+// 撤回消息（使用WebSocket）
 const recallMessage = async (msg: ChatMessage) => {
   if (!currentUser.value || !token.value) {
     // 不弹窗，静默处理
     console.warn('未登录，无法撤回消息');
+    return;
+  }
+
+  // 检查WebSocket连接状态
+  if (!websocketClient.isConnected()) {
+    console.warn('WebSocket 未连接，无法撤回消息');
     return;
   }
 
@@ -1170,100 +1149,84 @@ const recallMessage = async (msg: ChatMessage) => {
       return;
     }
 
-    const response = await customerServiceApi.recallMessage({
-      message_id: msgId,
-      user_id: currentUser.value.id,
-      token: token.value
-    });
-
-    if (response.success) {
-      // 更新消息显示为撤回状态
-      const index = messages.value.findIndex(m => m.id === msg.id);
-      if (index !== -1) {
-        messages.value[index].isRecalled = true;
-        // 保留用户名用于显示撤回提示（如果是自己撤回的，显示"你"）
-        if (!messages.value[index].fromUsername) {
-          messages.value[index].fromUsername = currentUser.value?.username || '客服';
-        }
-        // 确保 userId 正确（用于判断是否是自己撤回的）
-        if (!messages.value[index].userId) {
-          messages.value[index].userId = currentUser.value?.id;
-        }
-        messages.value[index].text = '';
-        messages.value[index].richText = undefined;
-        messages.value[index].isRich = false;
-      }
-    } else {
-      // 撤回失败，不弹窗，只记录日志
-      console.warn('撤回消息失败:', response.message || '撤回失败');
-    }
+    // 使用WebSocket撤回消息
+    await websocketClient.recallMessage(msgId);
+    
+    // 注意：消息撤回状态会通过WebSocket的message_recalled事件自动更新
+    // 这里不需要手动更新UI，因为WebSocket会推送撤回事件
   } catch (error: any) {
     // 不弹窗，只记录日志
     console.error('撤回消息失败:', error);
   }
 };
 
-// 加载消息
+// 加载消息（通过 WebSocket 获取历史消息）
 const loadMessages = async (sessionId: string) => {
   if (!currentUser.value || !token.value) return;
 
+  // 确保 WebSocket 已连接
+  if (!websocketClient.isConnected()) {
+    try {
+      await connectWebSocket();
+    } catch (error) {
+      console.error('WebSocket 连接失败，无法加载历史消息:', error);
+      alert('实时通信未连接，无法加载会话历史消息，请稍后重试或刷新页面。');
+      return;
+    }
+  }
+
   try {
-    const response = await customerServiceApi.getMessages(sessionId, currentUser.value.id, token.value);
+    const response = await websocketClient.getSessionMessages(sessionId, 200);
     if (response.success) {
-      // 先创建消息列表，然后异步加载引用消息
-      const mapped = await Promise.all((response.messages || []).map(async (m: any) => {
+      const mapped = (response.messages || []).map((m: any) => {
         const text = m.text || '';
         const richTextResult = processMessageRichText(text);
-        
-        // 异步加载引用消息内容（如果有）
+
+        // 使用后端返回的引用消息摘要信息（如果存在）
         let replyToMessage = null;
         let replyToUsername = null;
         let replyToMessageType: 'text' | 'image' | 'file' | undefined = undefined;
-        if (m.reply_to_message_id) {
-          try {
-            const replyResp = await customerServiceApi.getReplyMessage({
-              message_id: m.reply_to_message_id,
-              token: token.value
-            });
-            if (replyResp.success && replyResp.message) {
-              // 检查引用消息是否已被撤回
-              if (replyResp.message.is_recalled) {
-                const senderName = replyResp.message.from_username || '用户';
-                replyToMessage = `${senderName}: 该引用消息已被撤回`;
-              } else {
-                replyToMessage = replyResp.message.message || '';
-                replyToUsername = replyResp.message.from_username || null;
-                replyToMessageType = replyResp.message.message_type || 'text';
-              }
-            }
-          } catch (error) {
-            console.error('获取引用消息失败:', error);
+        if (m.reply_to_message) {
+          const replyInfo = m.reply_to_message;
+          if (replyInfo.is_recalled) {
+            const senderName = replyInfo.from_username || '用户';
+            replyToMessage = `${senderName}: 该引用消息已被撤回`;
+          } else {
+            replyToMessage = replyInfo.message || '';
+            replyToUsername = replyInfo.from_username || null;
+            replyToMessageType = replyInfo.message_type || 'text';
           }
+        } else if (m.reply_to_message_id) {
+          // 兼容旧数据：如果没有 reply_to_message，但有 reply_to_message_id，显示占位符
+          replyToMessage = '引用消息加载中...';
         }
-        
+
         return {
-        id: m.id,
-        from: m.from || 'user',
+          id: m.id,
+          from: m.from || 'user',
           text: m.is_recalled ? '' : text,
-        time: m.time || '刚刚',
-        created_at: m.created_at, // 使用后端返回的创建时间（ISO 格式）
-        userId: m.userId,
-        avatar: m.avatar,
-        messageType: (m.message_type || 'text') as ChatMessage['messageType'],
+          time: m.time || '刚刚',
+          created_at: m.created_at,
+          userId: m.userId,
+          avatar: m.avatar,
+          messageType: (m.message_type || 'text') as ChatMessage['messageType'],
           richText: richTextResult.richText,
           isRich: richTextResult.isRich,
           linkUrls: richTextResult.linkUrls,
           isRecalled: m.is_recalled || false,
+          isEdited: m.is_edited || false,
+          editedAt: m.edited_at || undefined,
           reply_to_message_id: m.reply_to_message_id,
-          replyToMessage: replyToMessage, // 已加载
-          replyToUsername: replyToUsername, // 已加载
-          replyToMessageType: replyToMessageType, // 引用消息类型
-          fromUsername: m.username || (m.from === 'agent' ? '客服' : '用户'), // 用户名用于撤回提示
-        };
-      }));
+          replyToMessage: replyToMessage,
+          replyToUsername: replyToUsername,
+          replyToMessageType: replyToMessageType,
+          fromUsername: m.username || (m.from === 'agent' ? '客服' : '用户'),
+        } as ChatMessage;
+      });
+
       messages.value = mapped;
 
-      // 同步已接收消息ID，避免HTTP轮询重复追加
+      // 同步已接收消息ID，避免重复追加
       receivedMessageIds.clear();
       for (const m of mapped) {
         if (m.id) {
@@ -1273,21 +1236,9 @@ const loadMessages = async (sessionId: string) => {
       scrollToBottom();
     } else {
       console.error('加载消息失败:', response.message);
-      // 如果是 token 失效，跳转到登录页
-      if (response.message?.includes('Token') || response.message?.includes('无效')) {
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
-        router.push('/login');
-      }
     }
   } catch (error: any) {
     console.error('加载消息失败:', error);
-    // 如果是 401 或 403，跳转到登录页
-    if (error.response?.status === 401 || error.response?.status === 403) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      router.push('/login');
-    }
   }
 };
 
@@ -1315,20 +1266,132 @@ const connectWebSocket = async (): Promise<void> => {
     handleWebSocketMessage(message);
   });
 
-  websocketClient.on('onConnect', () => {
+  websocketClient.on('onConnect', async () => {
     console.log('WebSocket 连接成功');
-    // 连接成功后可以停止消息轮询，改为使用 WebSocket 实时推送
-    // stopMessagePolling();
+    // 连接成功后订阅会话列表
+    await subscribeToSessions();
+    // 设置在线状态
+    if (currentUser.value && token.value) {
+      try {
+        await websocketClient.updateAgentStatus('online');
+      } catch (error) {
+        console.error('设置在线状态失败:', error);
+      }
+    }
   });
 
   websocketClient.on('onDisconnect', () => {
     console.warn('WebSocket 连接断开');
-    // 连接断开后恢复消息轮询
-    // startMessagePolling();
   });
 
   websocketClient.on('onError', (error: any) => {
     console.error('WebSocket 错误:', error);
+  });
+
+  // 会话列表更新
+  websocketClient.on('onSessionListUpdated', (data: { sessions: any[]; type: string }) => {
+    if (data.type === 'my') {
+      sessions.value = data.sessions.map((s: any) => ({
+        id: s.id,
+        userName: s.userName,
+        userId: s.userId,
+        isVip: s.isVip,
+        category: s.category || '待分类',
+        lastMessage: s.lastMessage || '',
+        lastTime: s.lastTime || '刚刚',
+        duration: s.duration || '00:00',
+        unread: s.unread || 0,
+        avatar: s.avatar,
+        status: s.status || 'active'
+      }));
+
+      // 自动选择第一个会话（仅在我的会话tab且当前没有选中会话）
+      if (activeTab.value === 'my' && sessions.value.length > 0 && !activeSessionId.value) {
+        selectSession(sessions.value[0].id);
+      }
+    } else if (data.type === 'pending') {
+      // 更新待接入数量
+      pendingCount.value = data.sessions.length;
+    }
+  });
+
+  // 新待接入会话
+  websocketClient.on('onNewPendingSession', (data: { session: any }) => {
+    pendingCount.value++;
+    // 如果当前在待接入tab，可以添加到列表（但通常通过 session_list_updated 更新）
+  });
+
+  // 待接入会话被接入
+  websocketClient.on('onPendingSessionAccepted', (data: { session_id: string; agent_id: number }) => {
+    if (pendingCount.value > 0) {
+      pendingCount.value--;
+    }
+    // 如果当前用户是接入的客服，切换到我的会话tab
+    if (data.agent_id === currentUser.value?.id) {
+      activeTab.value = 'my';
+      // 会话列表会通过 session_list_updated 更新
+    }
+  });
+
+  // 客服状态变化
+  websocketClient.on('onAgentStatusChanged', (data: { agent_id: number; status: string }) => {
+    // 可以在这里更新其他客服的状态显示（如果有相关UI）
+    console.log(`客服 ${data.agent_id} 状态变化: ${data.status}`);
+  });
+
+  // 用户资料更新
+  websocketClient.on('onUserProfileUpdated', (data: { user_id: number; profile: any }) => {
+    if (data.user_id === currentUser.value?.id) {
+      // 更新当前用户信息
+      if (data.profile?.user) {
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            Object.assign(user, data.profile.user);
+            localStorage.setItem('user', JSON.stringify(user));
+            currentUser.value = user;
+          } catch (e) {
+            console.error('更新用户资料失败:', e);
+          }
+        }
+      }
+    }
+  });
+
+  // 消息编辑
+  websocketClient.on('onMessageEdited', (data: { message_id: number; session_id: string; new_content: string; edited_at: string }) => {
+    if (data.session_id === activeSessionId.value) {
+      // 更新消息内容
+      const messageIndex = messages.value.findIndex(m => m.id === data.message_id);
+      if (messageIndex !== -1) {
+        messages.value[messageIndex].text = data.new_content;
+        messages.value[messageIndex].isEdited = true;
+        messages.value[messageIndex].editedAt = data.edited_at;
+      }
+    }
+  });
+
+  // 会话状态更新
+  websocketClient.on('onSessionStatusUpdated', (data: { session_id: string; status: string; user_id: number; agent_id: number }) => {
+    if (data.session_id === activeSessionId.value) {
+      // 更新当前会话状态
+      const sessionIndex = sessions.value.findIndex(s => s.id === data.session_id);
+      if (sessionIndex !== -1) {
+        sessions.value[sessionIndex].status = data.status;
+        if (data.status === 'closed') {
+          // 会话已关闭，可以选择提示用户或切换到其他会话
+          alert('会话已关闭');
+          if (sessions.value.length > 1) {
+            // 切换到其他会话
+            const nextSession = sessions.value.find(s => s.id !== data.session_id);
+            if (nextSession) {
+              selectSession(nextSession.id);
+            }
+          }
+        }
+      }
+    }
   });
 
   // 获取设备信息
@@ -1602,6 +1665,26 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
     // 如果消息不存在，可能是新收到的撤回消息，仍然需要显示撤回提示
   }
   
+  // 处理引用消息信息（使用后端提供的引用消息摘要）
+  let replyToMessage = null;
+  let replyToUsername = null;
+  let replyToMessageType: 'text' | 'image' | 'file' | undefined = undefined;
+  if ((message as any).reply_to_message) {
+    // 后端已包含引用消息摘要
+    const replyInfo = (message as any).reply_to_message;
+    if (replyInfo.is_recalled) {
+      const senderName = replyInfo.from_username || '用户';
+      replyToMessage = `${senderName}: 该引用消息已被撤回`;
+    } else {
+      replyToMessage = replyInfo.message || '';
+      replyToUsername = replyInfo.from_username || null;
+      replyToMessageType = replyInfo.message_type || 'text';
+    }
+  } else if (message.reply_to_message_id) {
+    // 兼容旧数据：如果没有 reply_to_message，但有 reply_to_message_id，显示占位符
+    replyToMessage = '引用消息加载中...';
+  }
+  
   const chatMessage: ChatMessage = {
     id: message.id,
     from: isFromSelf ? 'agent' : 'user',
@@ -1615,64 +1698,21 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
     isRich: isRich,
     linkUrls: linkUrls,
     isRecalled: isRecalled,
+    isEdited: message.is_edited || false,
+    editedAt: message.edited_at || undefined,
     reply_to_message_id: message.reply_to_message_id || null,
+    replyToMessage: replyToMessage, // 使用后端提供的引用消息摘要
+    replyToUsername: replyToUsername, // 使用后端提供的引用消息摘要
+    replyToMessageType: replyToMessageType, // 引用消息类型
     fromUsername: message.username || (message.from === 'agent' ? '客服' : '用户'),
   };
 
-  // 如果是引用消息，需要获取引用消息的详情
-  if (message.reply_to_message_id) {
-    console.log(`收到引用消息: message_id=${message.id}, reply_to_message_id=${message.reply_to_message_id}`);
-    loadReplyMessage(message.reply_to_message_id)
-      .then(replyMsg => {
-        if (replyMsg) {
-          // 检查引用消息是否已被撤回
-          if (replyMsg.is_recalled) {
-            const senderName = replyMsg.from_username || '用户';
-            chatMessage.replyToMessage = `${senderName}: 该引用消息已被撤回`;
-          } else {
-            chatMessage.replyToMessage = replyMsg.message;
-            chatMessage.replyToUsername = replyMsg.from_username || '用户';
-            chatMessage.replyToMessageType = replyMsg.message_type || 'text';
-          }
-          console.log(`引用消息加载成功: replyToMessage=${chatMessage.replyToMessage}, replyToUsername=${chatMessage.replyToUsername}`);
-        } else {
-          console.warn(`引用消息加载失败: message_id=${message.reply_to_message_id} 不存在`);
-        }
-        messages.value.push(chatMessage);
-        scrollToBottom();
-      })
-      .catch((error) => {
-        console.error(`加载引用消息失败: message_id=${message.reply_to_message_id}`, error);
-        messages.value.push(chatMessage);
-        scrollToBottom();
-      });
-  } else {
-    messages.value.push(chatMessage);
-    scrollToBottom();
-  }
+  // 引用消息信息已由后端自动包含在 reply_to_message 字段中，无需额外请求
+  messages.value.push(chatMessage);
+  scrollToBottom();
 };
 
-// 加载引用消息详情
-const loadReplyMessage = async (messageId: number): Promise<any> => {
-  try {
-    const response = await customerServiceApi.getReplyMessage({
-      message_id: messageId,
-      token: token.value || '',
-    });
-    if (response.success && response.message) {
-      // 返回消息详情，包括是否已撤回和消息类型
-      return {
-        message: response.message.message || '',
-        from_username: response.message.from_username || '用户',
-        is_recalled: response.message.is_recalled || false,
-        message_type: response.message.message_type || 'text',
-      };
-    }
-  } catch (error) {
-    console.error('加载引用消息失败:', error);
-  }
-  return null;
-};
+// 注意：loadReplyMessage 函数已删除，引用消息信息现在由后端自动包含在消息的 reply_to_message 字段中
 
 // 格式化时间
 const formatTime = (timeStr: string): string => {
@@ -1783,10 +1823,10 @@ const appendQuickReply = (content: string) => {
 };
 
 const handleLogout = async () => {
-  // 退出前设置为离线状态
-  if (currentUser.value && token.value) {
+  // 退出前设置为离线状态（通过 WebSocket）
+  if (websocketClient.isConnected() && currentUser.value && token.value) {
     try {
-      await customerServiceApi.updateStatus(currentUser.value.id, 'offline', token.value);
+      await websocketClient.updateAgentStatus('offline');
     } catch (error) {
       console.error('设置离线状态失败:', error);
     }
@@ -1794,9 +1834,6 @@ const handleLogout = async () => {
   
   // 停止心跳
   stopHeartbeat();
-
-  // 停止消息轮询
-  stopMessagePolling();
   
   // 断开 WebSocket 连接
   disconnectWebSocket();
@@ -1807,191 +1844,6 @@ const handleLogout = async () => {
   router.push('/login');
 };
 
-// 启动消息轮询（HTTP轮询获取新消息）
-const startMessagePolling = () => {
-  if (!token.value || !currentUser.value) return;
-
-  // 清除旧的定时器
-  stopMessagePolling();
-
-  // 轮询函数：检查当前活动会话是否有新消息
-  const pollMessages = async () => {
-    if (!activeSessionId.value || !currentUser.value || !token.value) return;
-
-    try {
-      const response = await customerServiceApi.getMessages(
-        activeSessionId.value,
-        currentUser.value.id,
-        token.value
-      );
-
-      if (response.success && response.messages) {
-        const currentSessionId = activeSessionId.value; // 保存当前会话ID，避免在异步过程中变化
-        
-        // 检查是否有新消息
-        for (const msg of response.messages) {
-          const msgId = String(msg.id || '');
-          if (!msgId) {
-            continue;
-          }
-
-          // 检查是否是已存在的消息
-          const existingMsg = messages.value.find((m) => m.id === msgId);
-          if (existingMsg) {
-            // 更新撤回状态
-            if (msg.is_recalled && !existingMsg.isRecalled) {
-              existingMsg.isRecalled = true;
-              existingMsg.text = '';
-              existingMsg.replyToMessage = null;
-              existingMsg.replyToUsername = null;
-              existingMsg.fromUsername = msg.username || existingMsg.fromUsername || (msg.from === 'agent' ? '客服' : '用户');
-              
-              // 当消息被撤回时，更新所有引用这条消息的其他消息的引用内容
-              const recalledMsgId = parseInt(msgId);
-              messages.value.forEach((otherMsg) => {
-                if (otherMsg.id !== msgId && otherMsg.reply_to_message_id === recalledMsgId) {
-                  // 找到引用这条被撤回消息的消息，更新引用内容
-                  otherMsg.replyToMessage = '该引用消息已被撤回';
-                }
-              });
-            }
-
-            // 如果消息已存在，检查是否需要更新引用信息
-            // 需要检查引用消息的状态，即使当前消息没有被撤回
-            if (msg.reply_to_message_id) {
-              // 如果引用信息不存在，或者需要检查引用消息是否被撤回
-              if (!existingMsg.replyToMessage || !existingMsg.replyToUsername || 
-                  (existingMsg.replyToMessage && existingMsg.replyToMessage !== '该引用消息已被撤回')) {
-                // 异步加载引用消息内容
-                (async () => {
-                  try {
-                    const replyResp = await customerServiceApi.getReplyMessage({
-                      message_id: msg.reply_to_message_id,
-                      token: token.value
-                    });
-                    if (replyResp.success && replyResp.message) {
-                      // 检查引用消息是否被撤回
-                      if (replyResp.message.is_recalled || replyResp.message.message === '[消息已撤回]') {
-                        existingMsg.replyToMessage = '该引用消息已被撤回';
-                      } else {
-                        existingMsg.replyToMessage = replyResp.message.message || '';
-                      }
-                      existingMsg.replyToUsername = replyResp.message.from_username || null;
-                    }
-                  } catch (error) {
-                    console.error('获取引用消息失败:', error);
-                  }
-                })();
-              }
-            }
-
-            // 更新时间、头像等基础信息（防止后端有更新）
-            existingMsg.time = msg.time || existingMsg.time;
-            existingMsg.avatar = msg.avatar || existingMsg.avatar;
-            existingMsg.fromUsername = msg.username || existingMsg.fromUsername || (msg.from === 'agent' ? '客服' : '用户');
-
-            // 记录到receivedMessageIds
-            if (!receivedMessageIds.has(msgId)) {
-              receivedMessageIds.add(msgId);
-            }
-            continue;
-          }
-
-          // 标记为已接收
-          receivedMessageIds.add(msgId);
-
-          // 添加新消息到列表
-          const msgType = (msg.message_type || 'text') as ChatMessage['messageType'];
-          const displayText =
-            msgType === 'image'
-              ? '[图片]'
-              : msgType === 'file'
-                ? msg.text || '[文件]'
-                : msg.text || '';
-
-          const text = msg.text || '';
-          const richTextResult = processMessageRichText(text);
-
-          // 获取引用消息内容（如果有）
-          let replyToMessage = null;
-          let replyToUsername = null;
-          let replyToMessageType: 'text' | 'image' | 'file' | undefined = undefined;
-          if (msg.reply_to_message_id) {
-            try {
-              const replyResp = await customerServiceApi.getReplyMessage({
-                message_id: msg.reply_to_message_id,
-                token: token.value
-              });
-              if (replyResp.success && replyResp.message) {
-                // 检查引用消息是否被撤回
-                if (replyResp.message.is_recalled || replyResp.message.message === '[消息已撤回]') {
-                  replyToMessage = '该引用消息已被撤回';
-                } else {
-                  replyToMessage = replyResp.message.message || '';
-                  replyToMessageType = replyResp.message.message_type || 'text';
-                }
-                replyToUsername = replyResp.message.from_username || null;  // 获取引用消息的发送者用户名
-              }
-            } catch (error) {
-              console.error('获取引用消息失败:', error);
-            }
-          }
-
-          const chatMsg: ChatMessage = {
-            id: msgId,
-            from: msg.from === 'agent' ? 'agent' : 'user',
-            text: msg.is_recalled ? '' : text,
-            time: msg.time || '刚刚',
-            userId: msg.userId,
-            avatar: msg.avatar,
-            messageType: msgType,
-            richText: richTextResult.richText,
-            isRich: richTextResult.isRich,
-            linkUrls: richTextResult.linkUrls,
-            isRecalled: msg.is_recalled || false,
-            reply_to_message_id: msg.reply_to_message_id,
-            replyToMessage: replyToMessage,
-            replyToUsername: replyToUsername,  // 添加引用消息的发送者用户名
-            replyToMessageType: replyToMessageType, // 引用消息类型
-            fromUsername: msg.username || (msg.from === 'agent' ? '客服' : (msg.userId === currentUser.value?.id ? currentUser.value?.username : '用户')),
-          };
-
-          // 更新会话概览
-          const session = sessions.value.find((s) => s.id === currentSessionId);
-          if (session) {
-            session.lastMessage = displayText;
-            session.lastTime = chatMsg.time;
-            if (chatMsg.from === 'user' && currentSessionId === activeSessionId.value) {
-              // 如果是用户消息且是当前会话，不增加未读数（因为正在查看）
-            }
-          }
-
-          // 如果是当前会话，添加到消息列表
-          if (currentSessionId === activeSessionId.value) {
-            messages.value.push(chatMsg);
-            scrollToBottom();
-          }
-        }
-      }
-    } catch (error) {
-      console.error('轮询消息失败:', error);
-    }
-  };
-
-  // 立即执行一次
-  pollMessages();
-
-  // 每1秒轮询一次
-  messagePollTimer = window.setInterval(pollMessages, 1000);
-};
-
-// 停止消息轮询
-const stopMessagePolling = () => {
-  if (messagePollTimer !== null) {
-    clearInterval(messagePollTimer);
-    messagePollTimer = null;
-  }
-};
 </script>
 
 <style scoped>
@@ -2735,6 +2587,169 @@ const stopMessagePolling = () => {
   font-size: 10px;
   color: rgba(15, 23, 42, 0.55);
   text-align: right;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.edited-badge {
+  font-size: 10px;
+  color: #9ca3af;
+  font-style: italic;
+}
+
+.msg-bubble.editable {
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    opacity: 0.9;
+  }
+}
+
+/* 编辑消息模态框 */
+.edit-message-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+}
+
+.edit-message-dialog {
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  border-radius: 16px;
+  padding: 0;
+  width: 90%;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.edit-message-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+
+  h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #0f172a;
+  }
+
+  .close-btn {
+    background: none;
+    border: none;
+    font-size: 24px;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 0;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      background: rgba(0, 0, 0, 0.05);
+      color: #0f172a;
+    }
+  }
+}
+
+.edit-message-body {
+  padding: 20px;
+}
+
+.edit-message-input {
+  width: 100%;
+  min-height: 120px;
+  padding: 12px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+  outline: none;
+  transition: border-color 0.2s ease;
+
+  &:focus {
+    border-color: #4f8bff;
+  }
+}
+
+.edit-message-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(0, 0, 0, 0.1);
+
+  button {
+    padding: 8px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: none;
+
+    &.cancel-btn {
+      background: rgba(0, 0, 0, 0.05);
+      color: #0f172a;
+
+      &:hover {
+        background: rgba(0, 0, 0, 0.1);
+      }
+    }
+
+    &.save-btn {
+      background: #4f8bff;
+      color: white;
+
+      &:hover {
+        background: #3b7ae8;
+      }
+    }
+  }
+}
+
+.close-session-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.5);
+  }
+
+  svg {
+    width: 14px;
+    height: 14px;
+  }
 }
 
 /* 引用消息预览：毛玻璃效果 */
