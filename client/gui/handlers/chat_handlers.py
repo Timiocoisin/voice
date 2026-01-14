@@ -390,28 +390,8 @@ def handle_chat_send(main_window: "MainWindow"):
                                 except Exception:
                                     pass
                                 
-                                if not local_exists:
-                                    # 如果本地没有，调用后端验证；失败则按普通消息发送
-                                    try:
-                                        from client.api_client import get_reply_message
-                                        from client.login.token_storage import read_token
-                                        reply_token = read_token()
-                                        if not reply_token:
-                                            logging.warning(f"无法获取token，跳过引用消息验证")
-                                            reply_to_id = None
-                                        else:
-                                            reply_resp = get_reply_message(reply_to_id_int, reply_token)
-                                            if not reply_resp.get("success") or not reply_resp.get("message"):
-                                                logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
-                                                reply_to_id = None
-                                    except Exception as e:
-                                        # 如果是404错误，说明消息不存在，将按普通消息发送
-                                        error_str = str(e)
-                                        if "404" in error_str or "NOT FOUND" in error_str:
-                                            logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
-                                        else:
-                                            logging.warning(f"验证引用消息失败: {e}，将按普通消息发送")
-                                        reply_to_id = None
+                                # 如果本地没有该消息，交由服务端在收到 reply_to_message_id 后自行校验，
+                                # 这里不再通过已废弃的 HTTP 接口进行验证
                         except (ValueError, TypeError):
                             logging.warning(f"引用消息ID格式错误: {reply_to_id}，将按普通消息发送")
                             reply_to_id = None
@@ -906,7 +886,7 @@ def append_chat_message(
                                                 reply_container.setProperty("reply_label", new_reply_label)
                                                 reply_label = new_reply_label
                                         else:
-                                            # 如果没有 thumbnail_layout，直接更新 reply_label
+                                            # 如果没有 thumbnail_layout，直接更新或创建 reply_label
                                             if reply_label:
                                                 reply_label.setText(new_text)
                                             else:
@@ -1178,7 +1158,7 @@ def append_chat_message(
                                                                                 sub_widget.setVisible(False)
                                                                                 sub_widget.setParent(None)
                                                                                 sub_widget.deleteLater()
-                                                                        sub_layout.deleteLater()
+                                                                    sub_layout.deleteLater()
                                                         
                                                         # 从 reply_content_layout 中移除 thumbnail_layout
                                                         reply_content_layout.removeItem(thumbnail_layout)
@@ -1584,25 +1564,42 @@ def append_chat_message(
 
     v_layout.addLayout(row)
     
-    # 处理引用消息显示（微信风格）：在主布局中单独一行显示引用块，放在正文气泡下方
+    # 处理引用消息显示（引用卡片）：在主布局中单独一行显示引用块，放在正文气泡下方
     if reply_to_message_id and reply_to_message and not is_recalled:
-        # 创建引用消息容器（微信风格，灰底）
+        # 创建引用消息容器（浅灰卡片 + 左侧色条），注意：样式只作用于容器本身，避免子控件“各自被包裹”
         reply_container = QWidget()
+        reply_container.setObjectName("reply_container")
         reply_container.setStyleSheet("""
-            QWidget {
-                background-color: #e5e5e5;
-                border-radius: 4px;
-                padding: 6px 10px;
+            QWidget#reply_container {
+                background-color: #f3f4f6;
+                border-radius: 10px;
                 margin-top: 6px;
+                border: 1px solid #e5e7eb;
             }
         """)
+        # 保证整体有一个合理的最小高度，不会被上下压扁（图片引用会在创建缩略图后再抬高）
+        reply_container.setMinimumHeight(30)
         reply_layout = QHBoxLayout(reply_container)
-        reply_layout.setContentsMargins(0, 0, 0, 0)
-        reply_layout.setSpacing(0)
+        # 给引用卡片留足内边距，避免“字顶到边/溢出”的观感，并让内部内容在气泡内垂直居中
+        reply_layout.setContentsMargins(10, 8, 10, 8)
+        reply_layout.setSpacing(8)
+        reply_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        # 左侧竖色条，增强层次感
+        left_bar = QLabel()
+        left_bar.setFixedWidth(3)
+        left_bar.setMinimumHeight(26)
+        left_bar.setStyleSheet("""
+            QLabel {
+                background-color: #60a5fa;
+                border-radius: 999px;
+            }
+        """)
+        reply_layout.addWidget(left_bar)
 
         reply_content_layout = QVBoxLayout()
-        reply_content_layout.setContentsMargins(4, 4, 4, 4)
-        reply_content_layout.setSpacing(4)
+        reply_content_layout.setContentsMargins(0, 0, 0, 0)
+        reply_content_layout.setSpacing(2)
 
         # 获取引用消息的发送者信息
         reply_sender_name = reply_to_username or "用户"
@@ -1617,55 +1614,75 @@ def append_chat_message(
         reply_text = reply_to_message
         if reply_text == "[消息已撤回]":
             reply_text = "该引用消息已被撤回"
-        
+
+        # 尝试为图片引用查找原始 base64 内容（data:image/...），用于生成缩略图
+        original_image_data: str | None = None
+        if reply_to_message_type == "image" and reply_to_message_id is not None:
+            try:
+                msg_map = getattr(main_window, "_message_widgets_map", None)
+                if isinstance(msg_map, dict) and reply_to_message_id in msg_map:
+                    original_widget = msg_map[reply_to_message_id][0]
+                    raw_image = original_widget.property("raw_image_message")
+                    if isinstance(raw_image, str) and raw_image.startswith("data:image"):
+                        original_image_data = raw_image
+            except Exception:
+                original_image_data = None
+
         # 初始化 reply_label，确保在所有分支中都有定义
         reply_label = None
         thumbnail_label = None  # 初始化缩略图标签变量
         
         # 如果是图片消息，显示更美观的“左文右图”缩略图布局
-        if reply_to_message_type == "image" and reply_text and reply_text.startswith("data:image"):
+        # 优先使用 original_image_data（从原消息控件里取出的 data:image/...），
+        # 如果没有，再尝试使用 reply_text 本身。
+        if reply_to_message_type == "image" and (original_image_data or (reply_text and reply_text.startswith("data:image"))):
             try:
                 # 解析base64图片
-                b64_part = reply_text.split(",", 1)[1] if "," in reply_text else ""
+                data_source = original_image_data or reply_text
+                b64_part = data_source.split(",", 1)[1] if "," in data_source else ""
                 raw = base64.b64decode(b64_part)
                 image = QImage.fromData(raw)
                 if not image.isNull():
                     pixmap = QPixmap.fromImage(image)
-                    # 创建 40x40 的略大缩略图，效果更清晰
-                    thumbnail = pixmap.scaled(40, 40, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    # 创建 60x60 的缩略图（紧凑且不撑破引用块）
+                    thumbnail = pixmap.scaled(60, 60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                     
                     # 创建缩略图标签
                     thumbnail_label = QLabel()
-                    thumbnail_label.setFixedSize(40, 40)
+                    thumbnail_label.setFixedSize(60, 60)
+                    thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     thumbnail_label.setPixmap(thumbnail)
                     thumbnail_label.setStyleSheet("""
                         QLabel {
-                            border-radius: 4px;
+                            border-radius: 6px;
                             background-color: transparent;
+                            border: 1px solid #d1d5db;
                         }
                     """)
+                    # 图片引用块高度至少能容纳缩略图
+                    reply_container.setMinimumHeight(68)
                     # 立即保存缩略图标签到属性中，方便撤回时隐藏
                     reply_container.setProperty("reply_thumbnail_label", thumbnail_label)
                     
                     # 创建文本标签（显示发送者名称），这个标签也作为 reply_label 用于撤回时更新
                     # 样式参考你给的示例：仅显示 "用户名:"，不再额外加"图片"文字
-                    sender_label = QLabel(f"{reply_sender_name}:")
+                    sender_label = QLabel(f"{reply_sender_name}：")
                     sender_label.setStyleSheet("""
                         QLabel {
                             font-family: "Microsoft YaHei", "SimHei", "Arial";
-                        font-size: 12px;
-                        color: #4b5563;
+                            font-size: 12px;
+                            color: #111827;  /* 深色文字，保证清晰可见 */
                             background-color: transparent;
                         }
                     """)
                     sender_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-                    sender_label.setMaximumWidth(200)  # 限制发送者名称的最大宽度
+                    sender_label.setMaximumWidth(220)  # 稍微放宽，避免“用户名：”太容易被截断
                     reply_label = sender_label  # 使用 sender_label 作为 reply_label
                     
                     # 水平布局：发送者名称 + 缩略图（紧凑排列，中间不要太大空白）
                     thumbnail_layout = QHBoxLayout()
                     thumbnail_layout.setContentsMargins(0, 0, 0, 0)
-                    thumbnail_layout.setSpacing(6)
+                    thumbnail_layout.setSpacing(8)
                     thumbnail_layout.addWidget(sender_label)
                     thumbnail_layout.addWidget(thumbnail_label)
                     # 保存 thumbnail_layout 到属性中，方便撤回时处理
@@ -1679,7 +1696,7 @@ def append_chat_message(
                         QLabel {
                             font-family: "Microsoft YaHei", "SimHei", "Arial";
                             font-size: 12px;
-                            color: #4b5563;
+                            color: #111827;
                             background-color: transparent;
                         }
                     """)
@@ -1693,7 +1710,7 @@ def append_chat_message(
                     QLabel {
                         font-family: "Microsoft YaHei", "SimHei", "Arial";
                         font-size: 12px;
-                        color: #4b5563;
+                        color: #111827;
                         background-color: transparent;
                     }
                 """)
@@ -1701,22 +1718,27 @@ def append_chat_message(
                 reply_label.setMaximumWidth(300)  # 限制最大宽度
                 reply_content_layout.addWidget(reply_label)
         else:
-            # 文本消息，显示文本内容
-            if reply_text and len(reply_text) > 50:
-                reply_text = reply_text[:50] + "..."
+            # 文本消息，单行显示：`用户名: 内容预览`
+            if reply_text and len(reply_text) > 80:
+                reply_text = reply_text[:80] + "..."
 
-            reply_label = QLabel(f"{reply_sender_name}: {reply_text}")
+            display_text = f"{reply_sender_name}: {reply_text}"
+            reply_label = QLabel(display_text)
             reply_label.setStyleSheet("""
                 QLabel {
                     font-family: "Microsoft YaHei", "SimHei", "Arial";
                     font-size: 12px;
-                    color: #4b5563;
+                    color: #111827;  /* 深色文字 */
                     background-color: transparent;
                 }
             """)
+            # 文本引用允许换行（更像微信的引用卡片），避免长文本挤出气泡
             reply_label.setWordWrap(True)
-            # 设置文本标签的最大宽度，确保表情符号等宽内容不会导致气泡过长
-            reply_label.setMaximumWidth(300)  # 限制最大宽度为300px
+            reply_label.setMinimumHeight(20)
+            reply_label.setMaximumWidth(320)
+            # 在引用气泡内部左对齐、垂直方向居中
+            reply_label.setAlignment(Qt.AlignmentFlag.AlignLeft | Qt.AlignmentFlag.AlignVCenter)
+            reply_label.setTextInteractionFlags(Qt.TextInteractionFlag.NoTextInteraction)
             reply_content_layout.addWidget(reply_label)
 
         # 把引用信息存到容器属性里，方便后续在被引用消息撤回时更新文案/缩略图
@@ -1727,15 +1749,9 @@ def append_chat_message(
 
         reply_layout.addLayout(reply_content_layout)
 
-        # 让引用卡片宽度自适应内容（但不超过正文气泡最大宽度）
-        # 对于包含表情符号的内容，限制最大宽度避免气泡过长
-        reply_container.adjustSize()
-        content_width = reply_container.sizeHint().width()
-        # 降低最大宽度限制，从420改为300，避免表情符号导致气泡过长
-        desired_width = max(120, min(content_width, 300))  # 保底宽度 120，封顶 300
-        reply_container.setFixedWidth(desired_width)
-        # 确保容器不会超出最大宽度
-        reply_container.setMaximumWidth(300)
+        # 让引用卡片宽度更“饱满”，但封顶避免横向太长
+        reply_container.setMinimumWidth(160)
+        reply_container.setMaximumWidth(380)
 
         # 引用块单独占一行，与消息气泡左对齐（放在正文气泡下方）
         reply_row = QHBoxLayout()
@@ -1920,26 +1936,8 @@ def append_chat_message(
                     try:
                         msg_id_int = int(current_msg_id)
                         # 数据库ID从1开始，所以允许 >= 1
-                        # 但是，如果 message_id 是 1，可能是默认值，需要验证是否真的存在
                         if msg_id_int > 0:
-                            # 特别检查：如果 message_id 是 1，可能是默认值，需要验证
-                            if msg_id_int == 1:
-                                # 验证消息是否真的存在
-                                try:
-                                    from client.api_client import get_reply_message
-                                    from client.login.token_storage import read_token
-                                    reply_token = read_token()
-                                    if reply_token:
-                                        reply_resp = get_reply_message(msg_id_int, reply_token)
-                                        if not reply_resp.get("success") or not reply_resp.get("message"):
-                                            valid_msg_id = None
-                                        else:
-                                            valid_msg_id = msg_id_int
-                                    else:
-                                        valid_msg_id = None
-                                except Exception:
-                                    valid_msg_id = None
-                            else:
+                            # 不再通过 HTTP 接口验证是否存在，由服务端在收到引用 ID 后自行校验
                                 valid_msg_id = msg_id_int
                     except (ValueError, TypeError):
                         pass
@@ -2489,41 +2487,22 @@ def match_human_service(main_window: "MainWindow"):
                 widget.deleteLater()
         
         if response and response.get("success") and response.get("matched"):
-            # 匹配成功 - 清除所有对话
+            # 一旦匹配到在线客服，用户端立即进入对话模式
+            from gui.handlers.chat_handlers import clear_all_chat_messages, add_connected_separator
+
+            # 清空原有聊天内容
             clear_all_chat_messages(main_window)
             
-            # 添加已连接客服的分隔线提示
-            add_connected_separator(main_window)
-            
-            # 设置已连接状态
+            # 标记为已连接人工客服
             main_window._human_service_connected = True
             main_window._matched_agent_id = response.get("agent_id")
             
-            # 注意：WebSocket 连接已在用户点击"匹配客服"时建立（request_human_service）
-            # 这里只需要检查连接状态，如果连接失败则提示用户
-            try:
-                from client.utils.websocket_helper import get_or_create_websocket_client
-                ws_client = get_or_create_websocket_client(main_window)
-                if ws_client and ws_client.status.value == "connected":
-                    logging.info("匹配成功，WebSocket 连接已就绪")
-                else:
-                    # 如果连接未建立，尝试重新连接
-                    logging.warning("匹配成功但 WebSocket 未连接，尝试重新连接")
-                    from client.utils.websocket_helper import connect_websocket
-                    if not connect_websocket(main_window, main_window.user_id, token):
-                        # WebSocket 连接失败时显示提示
-                        from PyQt6.QtCore import QTimer
-                        QTimer.singleShot(0, lambda: append_chat_message(
-                            main_window,
-                            "⚠️ 实时通信连接失败，请检查网络连接或稍后重试。",
-                            from_self=False,
-                            is_html=False,
-                            streaming=False
-                        ))
-            except Exception as e:
-                logging.error(f"检查 WebSocket 连接状态失败: {e}", exc_info=True)
+            # 添加“已连接客服，可以开始对话”的分隔线
+            add_connected_separator(main_window)
+
+            logging.info("已为用户匹配到在线客服，已进入对话模式")
         else:
-            # 匹配失败，加入等待队列
+            # 匹配失败或暂无在线客服，加入等待队列
             safe_response = response or {}
             wait_message = safe_response.get("message", "暂无在线客服，您的请求已加入等待队列，客服接入后会主动联系您。")
             append_chat_message(
@@ -2990,12 +2969,13 @@ def send_image(main_window: "MainWindow"):
         return
     
     scaled = pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-    append_image_message(main_window, scaled, from_self=True)
+    # 先在界面上乐观展示图片；raw_message 会在真正发送时设置为 data_url
+    append_image_message(main_window, scaled, from_self=True, raw_message=None)
 
-    # 如果已连接人工客服，走HTTP接口发送图片
+    # 如果已连接人工客服，使用 WebSocket 发送图片
     if getattr(main_window, "_human_service_connected", False) and getattr(main_window, "_chat_session_id", None):
         from client.login.token_storage import read_token
-        from client.api_client import send_chat_message
+        from client.utils.websocket_helper import get_or_create_websocket_client
         
         token = read_token()
         session_id = getattr(main_window, "_chat_session_id", None)
@@ -3037,40 +3017,21 @@ def send_image(main_window: "MainWindow"):
                 if reply_to_id_int <= 0:
                     logging.warning(f"引用消息ID无效: {reply_to_id}（ID必须大于0），将按普通消息发送")
                     reply_to_id = None
-                else:
-                    # 验证引用消息是否真的存在（通过API检查）
-                    try:
-                        from client.api_client import get_reply_message
-                        from client.login.token_storage import read_token
-                        reply_token = read_token()
-                        if not reply_token:
-                            logging.warning(f"无法获取token，跳过引用消息验证")
-                            reply_to_id = None
-                        else:
-                            reply_resp = get_reply_message(reply_to_id_int, reply_token)
-                            if not reply_resp.get("success") or not reply_resp.get("message"):
-                                logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
-                                reply_to_id = None
-                    except Exception as e:
-                        # 如果是404错误，说明消息不存在，将按普通消息发送
-                        error_str = str(e)
-                        if "404" in error_str or "NOT FOUND" in error_str:
-                            logging.warning(f"引用消息不存在: message_id={reply_to_id_int}，将按普通消息发送")
-                        else:
-                            logging.warning(f"验证引用消息失败: {e}，将按普通消息发送")
-                        reply_to_id = None
             except (ValueError, TypeError):
                 logging.warning(f"引用消息ID格式错误: {reply_to_id}，将按普通消息发送")
                 reply_to_id = None
         
         # 使用 WebSocket 客户端发送消息（异步，不阻塞UI）
-        success = ws_client.send_message(
-            session_id=session_id,
-            message=data_url,
-            role="user",
-            message_type="image",
-            reply_to_message_id=reply_to_id
-        )
+        ws_client = get_or_create_websocket_client(main_window)
+        success = False
+        if ws_client and ws_client.is_connected():
+            success = ws_client.send_message(
+                session_id=session_id,
+                message=data_url,
+                role="user",
+                message_type="image",
+                reply_to_message_id=reply_to_id
+            )
         
         # 清除引用状态
         if hasattr(main_window, "_reply_to_message_id"):
@@ -3110,8 +3071,25 @@ def send_image(main_window: "MainWindow"):
         QTimer.singleShot(delay, send_reply_and_enable)
 
 
-def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: bool = True, message_id: Optional[int] = None, message_created_time: Optional[str] = None, from_user_id: Optional[int] = None, from_username: Optional[str] = None, reply_to_message_id: Optional[int] = None, reply_to_message: Optional[str] = None, reply_to_username: Optional[str] = None, reply_to_message_type: Optional[str] = None, is_recalled: bool = False):
-    """发送图片消息，不使用气泡，直接显示圆角图片 + 头像"""
+def append_image_message(
+    main_window: "MainWindow",
+    pixmap: QPixmap,
+    from_self: bool = True,
+    message_id: Optional[int] = None,
+    message_created_time: Optional[str] = None,
+    from_user_id: Optional[int] = None,
+    from_username: Optional[str] = None,
+    reply_to_message_id: Optional[int] = None,
+    reply_to_message: Optional[str] = None,
+    reply_to_username: Optional[str] = None,
+    reply_to_message_type: Optional[str] = None,
+    is_recalled: bool = False,
+    raw_message: Optional[str] = None,
+):
+    """发送图片消息，不使用气泡，直接显示圆角图片 + 头像。
+
+    raw_message: 原始消息内容（例如 data:image/... 的 base64 串），用于后续“引用图片”时生成 40x40 缩略图。
+    """
     if not hasattr(main_window, "chat_layout"):
         return
 
@@ -3302,7 +3280,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                                                             widget.setVisible(False)
                                                             if isinstance(widget, QLabel):
                                                                 widget.setPixmap(QPixmap())
-                                                                widget.clear()
+                                                            widget.clear()
                                                             widget.setFixedSize(0, 0)
                                                             widget.setParent(None)
                                                             widget.deleteLater()
@@ -3423,15 +3401,17 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
     
     # 处理引用消息显示（如果有）
     if reply_to_message_id and reply_to_message and not is_recalled:
-        # 创建引用消息容器（微信风格，灰底）
+        # 创建引用消息容器（微信风格，灰底），注意：样式只作用于容器本身，避免子控件“各自被包裹”
         reply_container = QWidget()
+        reply_container.setObjectName("reply_container")
         reply_container.setStyleSheet("""
-            QWidget {
-                background-color: #e5e5e5;
+            QWidget#reply_container {
+                background-color: #f3f4f6;
                 border-left: 3px solid #8dcf7d;
-                border-radius: 4px;
+                border-radius: 6px;
                 padding: 6px 10px;
                 margin-top: 6px;
+                border: 1px solid #e5e7eb;
             }
         """)
         reply_layout = QHBoxLayout(reply_container)
@@ -3448,7 +3428,7 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
         if reply_text == "[消息已撤回]":
             reply_text = "该引用消息已被撤回"
         
-        # 如果是图片消息，显示缩略图
+        # 如果是图片消息，显示缩略图（40x40）
         if reply_to_message_type == "image" and reply_text and reply_text.startswith("data:image"):
             try:
                 # 解析base64图片
@@ -3459,24 +3439,26 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                 image = QImage.fromData(raw)
                 if not image.isNull():
                     thumb_pixmap = QPixmap.fromImage(image)
-                    # 创建30*30的缩略图
-                    thumbnail = thumb_pixmap.scaled(30, 30, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                    # 创建 60x60 的缩略图
+                    thumbnail = thumb_pixmap.scaled(60, 60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
                     
                     # 创建缩略图标签
                     thumbnail_label = QLabel()
-                    thumbnail_label.setFixedSize(30, 30)
+                    thumbnail_label.setFixedSize(60, 60)
+                    thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
                     thumbnail_label.setPixmap(thumbnail)
                     thumbnail_label.setStyleSheet("""
                         QLabel {
-                            border-radius: 4px;
+                            border-radius: 6px;
                             background-color: transparent;
+                            border: 1px solid #d1d5db;
                         }
                     """)
                     # 立即保存缩略图标签到属性中，方便撤回时隐藏
                     reply_container.setProperty("reply_thumbnail_label", thumbnail_label)
                     
-                    # 创建文本标签（显示发送者名称）
-                    sender_label = QLabel(f"{reply_sender_name}: [图片]")
+                    # 创建文本标签（只显示发送者名称，后面直接跟缩略图）
+                    sender_label = QLabel(f"{reply_sender_name}：")
                     sender_label.setStyleSheet("""
                         QLabel {
                             font-family: "Microsoft YaHei", "SimHei", "Arial";
@@ -3677,6 +3659,10 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
         main_window._message_widgets_map[None] = (message_widget, img_label)
         # 设置一个标记，表示这是乐观展示的消息
         message_widget.setProperty("message_id", None)
+
+    # 保存原始消息内容，方便后续“引用图片”时生成缩略图
+    if raw_message and isinstance(raw_message, str):
+        message_widget.setProperty("raw_image_message", raw_message)
     
     # 保存消息创建时间（用于撤回时间检查）
     if message_created_time:
@@ -3727,31 +3713,14 @@ def append_image_message(main_window: "MainWindow", pixmap: QPixmap, from_self: 
                     pass
             
             main_window._reply_to_message_id = valid_msg_id  # 可能为 None
-            # 如果是图片消息且已拿到有效ID，尝试从后端获取完整 data URL
-            if valid_msg_id:
-                try:
-                    from client.api_client import get_reply_message
-                    from client.login.token_storage import read_token
-                    reply_token = read_token()
-                    reply_resp = get_reply_message(valid_msg_id, reply_token)
-                    if reply_resp.get("success"):
-                        reply_msg = reply_resp.get("message", {})
-                        if reply_msg.get("message_type") == "image":
-                            # 图片消息，保存完整的data URL
-                            main_window._reply_to_message_text = reply_msg.get("message", "[图片]")
-                            main_window._reply_to_message_type = "image"
-                        else:
-                            main_window._reply_to_message_text = "[图片]"  # 如果不是图片，显示文本
-                            main_window._reply_to_message_type = "text"
-                    else:
-                        main_window._reply_to_message_text = "[图片]"
-                        main_window._reply_to_message_type = "image"
-                except Exception as e:
-                    logging.error(f"获取引用图片消息失败: {e}", exc_info=True)
-                    main_window._reply_to_message_text = "[图片]"
-                    main_window._reply_to_message_type = "image"
+            # 直接使用本地信息设置引用内容，不再通过 HTTP 获取详情。
+            # 优先从当前图片消息控件中读取原始 data:image/... 内容，方便引用时生成 40x40 缩略图
+            raw_image_message = message_widget.property("raw_image_message")
+            if isinstance(raw_image_message, str) and raw_image_message.startswith("data:image"):
+                main_window._reply_to_message_text = raw_image_message
+                main_window._reply_to_message_type = "image"
             else:
-                # 未拿到有效ID时，仅作为普通消息发送，但前端保留引用样式
+                # 回退：如果没有保存原始内容，则仍然使用占位文本
                 main_window._reply_to_message_text = "[图片]"
                 main_window._reply_to_message_type = "image"
             

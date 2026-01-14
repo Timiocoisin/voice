@@ -885,15 +885,18 @@ def _match_agent_logic(user_id: int, session_id: str) -> Dict[str, Any]:
             min_sessions = session_count
             best_agent = agent
 
+    # 无论是否已匹配到具体客服，先创建为待接入会话，并推送到“待接入”队列
     db.create_pending_session(session_id, user_id)
     pending_sessions = db.get_pending_sessions()
     target_session = next((s for s in pending_sessions if s['session_id'] == session_id), None)
     if target_session:
         formatted_session = _format_session_list([target_session], include_duration=False)
         if formatted_session:
+            # 推送一条新的待接入会话卡片给客服端，用于更新待接入列表和右上角排队数量
             ws_manager.push_new_pending_session(formatted_session[0])
 
     if best_agent:
+        # 返回“已为您匹配到在线客服”，用于用户侧 UI 切换为对话模式
         return {
             "success": True,
             "matched": True,
@@ -919,7 +922,9 @@ def _accept_session_logic(user_id: int, session_id: str) -> Dict[str, Any]:
 
     session_info = db.get_pending_sessions()
     target_session = next((s for s in session_info if s['session_id'] == session_id), None)
+    user_side_id = None
     if target_session:
+        user_side_id = target_session.get('user_id')
         db.insert_chat_message(
             session_id,
             user_id,
@@ -927,7 +932,17 @@ def _accept_session_logic(user_id: int, session_id: str) -> Dict[str, Any]:
             "您好，我是客服，有什么可以帮您的吗？"
         )
 
+    # 推送给所有客服：该待接入会话已被接入
     ws_manager.push_pending_session_accepted(session_id, user_id)
+
+    # 推送给最终用户：会话已被客服接入
+    if user_side_id:
+        try:
+            agent_row = db.get_user_by_id(user_id)
+            agent_name = agent_row.get("username") if agent_row else None
+        except Exception:
+            agent_name = None
+        ws_manager.push_session_accepted_for_user(user_side_id, session_id, user_id, agent_name)
 
     sessions = db.get_agent_sessions(user_id, include_pending=False)
     formatted_sessions = _format_session_list(sessions)

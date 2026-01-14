@@ -53,8 +53,8 @@ const router = createRouter({
 
 // 路由守卫：检查登录状态
 router.beforeEach((to, from, next) => {
-  const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
+  const token = sessionStorage.getItem('token');
+  const user = sessionStorage.getItem('user');
   const isAuthenticated = !!(token && user);
 
   // 如果访问需要认证的页面

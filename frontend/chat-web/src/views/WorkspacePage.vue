@@ -138,7 +138,6 @@
               <div 
                 class="msg-bubble" 
                 :class="{ 'editable': msg.userId === currentUser?.id && msg.messageType === 'text' && !msg.isRecalled && !msg.isEdited && canEditMessage(msg) }"
-                @dblclick="handleMessageDoubleClick(msg)"
               >
                 <div class="msg-text">
                   <template v-if="msg.messageType === 'image'">
@@ -222,7 +221,7 @@
         </div>
 
         <!-- 编辑消息模态框 -->
-        <div v-if="editingMessage" class="edit-message-modal" @click.self="cancelEditMessage">
+        <div v-if="editingMessage" class="edit-message-modal">
           <div class="edit-message-dialog">
             <div class="edit-message-header">
               <h3>编辑消息</h3>
@@ -541,6 +540,34 @@ const quickReplies = ref<QuickReply[]>([
 ]);
 
 const activeSessionId = ref<string>('');
+// 编辑消息相关状态
+const editingMessage = ref<ChatMessage | null>(null);
+const editingContent = ref<string>('');
+const editMessageInputRef = ref<HTMLTextAreaElement | null>(null);
+
+// 是否可以编辑某条消息（例如只允许在一定时间内编辑自己的文本消息）
+const canEditMessage = (msg: ChatMessage): boolean => {
+  // 只允许编辑自己发送的、未撤回的文本消息
+  if (!currentUser.value || msg.from !== 'agent' || msg.messageType !== 'text' || msg.isRecalled) {
+    return false;
+  }
+  // 可选：限制时间窗口，例如 10 分钟内
+  if (msg.created_at) {
+    try {
+      const createdTime = new Date(msg.created_at);
+      const now = new Date();
+      const diffMs = now.getTime() - createdTime.getTime();
+      const diffMinutes = diffMs / (1000 * 60);
+      if (diffMinutes > 10) {
+        return false;
+      }
+    } catch (e) {
+      console.warn('解析消息创建时间失败，禁止编辑:', e, msg.created_at);
+      return false;
+    }
+  }
+  return true;
+};
 const inputText = ref('');
 const messagesRef = ref<HTMLDivElement | null>(null);
 const emojiPanelVisible = ref(false);
@@ -560,13 +587,17 @@ const emojis = ref<string[]>([
 const imageInputRef = ref<HTMLInputElement | null>(null);
 const activeTab = ref<'my' | 'pending'>('my');
 
+// 我的会话列表 / 待接入会话列表分开维护
+const mySessions = ref<any[]>([]);
+const pendingSessions = ref<any[]>([]);
+
 const activeSession = computed(() =>
-  sessions.value.find((s) => s.id === activeSessionId.value)
+  (activeTab.value === 'my' ? mySessions.value : pendingSessions.value).find((s) => s.id === activeSessionId.value)
 );
 
-// 根据当前标签过滤会话列表（现在直接从API获取，不需要过滤）
+// 根据当前标签过滤会话列表
 const filteredSessions = computed(() => {
-  return sessions.value;
+  return activeTab.value === 'my' ? mySessions.value : pendingSessions.value;
 });
 
 // 切换标签
@@ -584,8 +615,8 @@ const switchTab = async (tab: 'my' | 'pending') => {
 
 // 检查登录状态并验证 token
 onMounted(async () => {
-  const storedUser = localStorage.getItem('user');
-  const storedToken = localStorage.getItem('token');
+  const storedUser = sessionStorage.getItem('user');
+  const storedToken = sessionStorage.getItem('token');
   
   if (!storedUser || !storedToken) {
     router.push('/login');
@@ -607,15 +638,15 @@ onMounted(async () => {
       const verifyResponse = await customerServiceApi.verifyToken(token.value);
       if (!verifyResponse.success) {
         // Token 无效，清除并跳转登录
-        localStorage.removeItem('token');
-        localStorage.removeItem('user');
+        sessionStorage.removeItem('token');
+        sessionStorage.removeItem('user');
         router.push('/login');
         return;
       }
       // 更新用户信息（以防后端有更新）
       if (verifyResponse.user) {
         currentUser.value = verifyResponse.user;
-        localStorage.setItem('user', JSON.stringify(verifyResponse.user));
+        sessionStorage.setItem('user', JSON.stringify(verifyResponse.user));
       }
       
         // 登录成功后自动设置为在线状态（通过 WebSocket）
@@ -628,8 +659,8 @@ onMounted(async () => {
     } catch (error) {
       console.error('Token 验证失败:', error);
       // Token 验证失败，清除并跳转登录
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
+      sessionStorage.removeItem('token');
+      sessionStorage.removeItem('user');
       router.push('/login');
       return;
     }
@@ -645,12 +676,11 @@ onMounted(async () => {
     // 启动心跳机制（仅发送心跳，不更新状态）
     startHeartbeat();
     
-    // 监听浏览器关闭/刷新事件，清除 localStorage
+    // 监听浏览器关闭/刷新事件：
     const handleBeforeUnload = () => {
-      // 断开 WebSocket 连接
+      // 仅断开 WebSocket 连接，不清除 sessionStorage，
+      // 这样刷新页面仍然保持登录状态，关闭浏览器由 sessionStorage 自动清空
       disconnectWebSocket();
-      // 清除所有 localStorage 数据（包括 token、user、device_id、agent_status 等）
-      localStorage.clear();
     };
     
     // 监听页面卸载前事件
@@ -668,8 +698,8 @@ onMounted(async () => {
   } catch (error) {
     console.error('解析用户信息失败:', error);
     // 清除无效数据
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem('user');
     router.push('/login');
   }
 });
@@ -1291,7 +1321,7 @@ const connectWebSocket = async (): Promise<void> => {
   // 会话列表更新
   websocketClient.on('onSessionListUpdated', (data: { sessions: any[]; type: string }) => {
     if (data.type === 'my') {
-      sessions.value = data.sessions.map((s: any) => ({
+      mySessions.value = data.sessions.map((s: any) => ({
         id: s.id,
         userName: s.userName,
         userId: s.userId,
@@ -1306,12 +1336,25 @@ const connectWebSocket = async (): Promise<void> => {
       }));
 
       // 自动选择第一个会话（仅在我的会话tab且当前没有选中会话）
-      if (activeTab.value === 'my' && sessions.value.length > 0 && !activeSessionId.value) {
-        selectSession(sessions.value[0].id);
+      if (activeTab.value === 'my' && mySessions.value.length > 0 && !activeSessionId.value) {
+        selectSession(mySessions.value[0].id);
       }
     } else if (data.type === 'pending') {
-      // 更新待接入数量
-      pendingCount.value = data.sessions.length;
+      // 更新待接入会话列表与数量
+      pendingSessions.value = data.sessions.map((s: any) => ({
+        id: s.id,
+        userName: s.userName,
+        userId: s.userId,
+        isVip: s.isVip,
+        category: s.category || '待分类',
+        lastMessage: s.lastMessage || '',
+        lastTime: s.lastTime || '刚刚',
+        duration: s.duration || '00:00',
+        unread: s.unread || 0,
+        avatar: s.avatar,
+        status: s.status || 'pending',
+      }));
+      pendingCount.value = pendingSessions.value.length;
     }
   });
 
@@ -1319,6 +1362,25 @@ const connectWebSocket = async (): Promise<void> => {
   websocketClient.on('onNewPendingSession', (data: { session: any }) => {
     pendingCount.value++;
     // 如果当前在待接入tab，可以添加到列表（但通常通过 session_list_updated 更新）
+  if (data?.session) {
+    // 尽量避免重复插入，最终以 session_list_updated 为准
+    const exists = pendingSessions.value.some((s: any) => s.id === data.session.id);
+    if (!exists) {
+      pendingSessions.value.unshift({
+        id: data.session.id,
+        userName: data.session.userName,
+        userId: data.session.userId,
+        isVip: data.session.isVip,
+        category: data.session.category || '待分类',
+        lastMessage: data.session.lastMessage || '',
+        lastTime: data.session.lastTime || '刚刚',
+        duration: data.session.duration || '00:00',
+        unread: data.session.unread || 0,
+        avatar: data.session.avatar,
+        status: data.session.status || 'pending',
+      });
+    }
+  }
   });
 
   // 待接入会话被接入
@@ -1326,6 +1388,10 @@ const connectWebSocket = async (): Promise<void> => {
     if (pendingCount.value > 0) {
       pendingCount.value--;
     }
+  // 从待接入列表移除该会话（最终也会被 session_list_updated 覆盖）
+  if (data?.session_id) {
+    pendingSessions.value = pendingSessions.value.filter((s: any) => s.id !== data.session_id);
+  }
     // 如果当前用户是接入的客服，切换到我的会话tab
     if (data.agent_id === currentUser.value?.id) {
       activeTab.value = 'my';
@@ -1639,7 +1705,9 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
   
   // 如果是撤回消息，更新现有消息而不是添加新消息
   if (isRecalled) {
-    const existingIndex = messages.value.findIndex(m => m.id === message.id);
+    // 注意：历史消息里 m.id 可能是 number，WebSocket 推送的 message.id 一般是 string
+    // 这里统一转成字符串再比较，避免因为类型不同导致找不到原消息
+    const existingIndex = messages.value.findIndex(m => String(m.id) === String(message.id));
     if (existingIndex !== -1) {
       // 更新现有消息为撤回状态
       messages.value[existingIndex].isRecalled = true;

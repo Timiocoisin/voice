@@ -413,6 +413,28 @@ class WebSocketManager:
             logger.debug(f"推送待接入会话被接入: session_id={session_id}, agent_id={agent_id}")
         except Exception as e:
             logger.error(f"推送待接入会话被接入失败: {e}", exc_info=True)
+
+    def push_session_accepted_for_user(self, user_id: int, session_id: str, agent_id: int, agent_name: Optional[str] = None):
+        """
+        推送“会话已被客服接入”事件给最终用户
+        
+        Args:
+            user_id: 用户ID（最终用户）
+            session_id: 会话ID
+            agent_id: 接入的客服ID
+            agent_name: 客服名称（可选）
+        """
+        try:
+            data = {
+                "user_id": user_id,
+                "session_id": session_id,
+                "agent_id": agent_id,
+                "agent_name": agent_name,
+            }
+            self.send_message_to_user(user_id, "session_accepted_for_user", data)
+            logger.debug(f"推送会话已被客服接入给用户 {user_id}: session_id={session_id}, agent_id={agent_id}")
+        except Exception as e:
+            logger.error(f"推送会话已被客服接入事件失败: {e}", exc_info=True)
     
     def push_agent_status_changed(self, agent_id: int, status: str):
         """

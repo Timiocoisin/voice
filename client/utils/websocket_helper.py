@@ -100,6 +100,48 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                 dispatcher.trigger.emit(_on_disconnect)
             else:
                 _on_disconnect()
+
+        def on_session_accepted_for_user(data):
+            """会话已被客服接入（用户侧事件）"""
+            def _on_session_accepted_for_user():
+                try:
+                    session_id = data.get("session_id")
+                    agent_id = data.get("agent_id")
+                    agent_name = data.get("agent_name")
+
+                    # 仅当当前窗口存在对应的会话时才处理
+                    current_session_id = getattr(main_window, "_chat_session_id", None)
+                    if not current_session_id or (session_id and current_session_id != session_id):
+                        return
+
+                    # 如果已经处于“已连接客服”状态，则不重复处理，避免重复清空界面
+                    if getattr(main_window, "_human_service_connected", False):
+                        return
+
+                    from gui.handlers.chat_handlers import clear_all_chat_messages, add_connected_separator
+
+                    # 清空原有聊天内容，进入对话模式
+                    clear_all_chat_messages(main_window)
+
+                    # 标记为已连接人工客服
+                    main_window._human_service_connected = True
+                    if agent_id is not None:
+                        main_window._matched_agent_id = agent_id
+
+                    # 添加“已连接客服，可以开始对话”的分隔线
+                    add_connected_separator(main_window)
+
+                    logger.info(
+                        f"会话已被客服接入: session_id={session_id}, agent_id={agent_id}, agent_name={agent_name}"
+                    )
+                except Exception as e:
+                    logger.error(f"处理会话已被客服接入事件失败: {e}", exc_info=True)
+
+            dispatcher = _get_ui_dispatcher(main_window)
+            if dispatcher:
+                dispatcher.trigger.emit(_on_session_accepted_for_user)
+            else:
+                _on_session_accepted_for_user()
         
         def on_message(data):
             # 处理收到的新消息
@@ -118,6 +160,10 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         avatar = data.get('avatar')
                         message_type = data.get('message_type', 'text')
                         reply_to_message_id = data.get('reply_to_message_id')
+                        # 引用消息摘要信息由服务端随消息一起推送
+                        reply_to_message = data.get('reply_to_message')
+                        reply_to_username = data.get('reply_to_username')
+                        reply_to_message_type = data.get('reply_to_message_type')
                         is_recalled = data.get('is_recalled', False)
                         offline = data.get('offline', False)
                         message_time = data.get('time') or data.get('created_at') or data.get('timestamp')
@@ -380,27 +426,8 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         # 根据消息类型显示消息
                         if message_type == 'image' and text and text.startswith('data:image'):
                             # 图片消息
-                            # 获取引用消息信息（如果有）
-                            reply_to_message = None
-                            reply_to_username = None
-                            reply_to_message_type = None
-                            if reply_to_message_id:
-                                try:
-                                    from client.api_client import get_reply_message
-                                    from client.login.token_storage import read_token
-                                    reply_token = read_token()
-                                    reply_resp = get_reply_message(int(reply_to_message_id), reply_token)
-                                    if reply_resp.get("success"):
-                                        reply_msg = reply_resp.get("message", {})
-                                        if reply_msg.get("is_recalled", False) or reply_msg.get("message") == "[消息已撤回]":
-                                            reply_to_message = "该引用消息已被撤回"
-                                        else:
-                                            reply_to_message = reply_msg.get("message", "")
-                                            reply_to_message_type = reply_msg.get("message_type", "text")
-                                        reply_to_username = reply_msg.get("from_username")
-                                except Exception:
-                                    pass
-                            
+                            # 引用信息直接使用服务端推送的摘要（reply_to_message / reply_to_username / reply_to_message_type），
+                            # 不再通过已废弃的 HTTP 接口获取
                             try:
                                 b64_part = text.split(",", 1)[1] if "," in text else ""
                                 raw = base64.b64decode(b64_part)
@@ -429,7 +456,8 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                             reply_to_message=reply_to_message,
                                             reply_to_username=reply_to_username,
                                             reply_to_message_type=reply_to_message_type,
-                                            is_recalled=is_recalled
+                                            is_recalled=is_recalled,
+                                            raw_message=text,  # 保存原始 data:image/...，用于后续引用生成缩略图
                                         )
                                     except Exception as e:
                                         logger.error(f"显示图片消息失败: message_id={message_id}, error={e}", exc_info=True)
@@ -478,27 +506,7 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                                 )
                         else:
                             # 文本消息或表情消息（表情也是文本）
-                            # 获取引用消息信息
-                            reply_to_message = None
-                            reply_to_username = None
-                            reply_to_message_type = None
-                            if reply_to_message_id:
-                                try:
-                                    from client.api_client import get_reply_message
-                                    from client.login.token_storage import read_token
-                                    reply_token = read_token()
-                                    reply_resp = get_reply_message(int(reply_to_message_id), reply_token)
-                                    if reply_resp.get("success"):
-                                        reply_msg = reply_resp.get("message", {})
-                                        if reply_msg.get("is_recalled", False) or reply_msg.get("message") == "[消息已撤回]":
-                                            reply_to_message = "该引用消息已被撤回"
-                                        else:
-                                            reply_to_message = reply_msg.get("message", "")
-                                            reply_to_message_type = reply_msg.get("message_type", "text")
-                                        reply_to_username = reply_msg.get("from_username")
-                                except Exception as e:
-                                    logger.debug(f"获取引用消息失败: {e}")
-                            
+                            # 引用信息同样直接使用服务端推送的数据
                             # 检查是否在主线程中
                             from PyQt6.QtCore import QThread
                             from PyQt6.QtWidgets import QApplication
@@ -688,6 +696,7 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
         ws_client.on_user_profile_updated(on_user_profile_updated)
         ws_client.on_message_edited(on_message_edited)
         ws_client.on_session_status_updated(on_session_status_updated)
+        ws_client.on_session_accepted_for_user(on_session_accepted_for_user)
         
         # 注册撤回消息事件处理器（通过 WebSocketClient 的 message_recalled 事件）
         # WebSocketClient 会将 message_recalled 事件转换为消息格式并调用 on_message_callback

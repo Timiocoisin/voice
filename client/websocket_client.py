@@ -273,6 +273,18 @@ class WebSocketClient:
                         logging.error(f"会话状态更新回调异常: {e}", exc_info=True)
             except Exception as e:
                 logging.error(f"处理会话状态更新失败: {e}", exc_info=True)
+
+        @self.sio.on("session_accepted_for_user")
+        def on_session_accepted_for_user(data):
+            """会话已被客服接入（用户侧事件）"""
+            try:
+                if hasattr(self, 'on_session_accepted_for_user_callback') and self.on_session_accepted_for_user_callback:
+                    try:
+                        self.on_session_accepted_for_user_callback(data)
+                    except Exception as e:
+                        logging.error(f"会话已被接入回调异常: {e}", exc_info=True)
+            except Exception as e:
+                logging.error(f"处理会话已被接入事件失败: {e}", exc_info=True)
         
         @self.sio.on("message_recalled")
         def on_message_recalled(data):
@@ -958,6 +970,10 @@ class WebSocketClient:
     def on_diamond_balance_updated(self, callback: Callable):
         """注册钻石余额更新回调"""
         self.on_diamond_balance_updated_callback = callback
+
+    def on_session_accepted_for_user(self, callback: Callable):
+        """注册会话被客服接入（用户侧）回调"""
+        self.on_session_accepted_for_user_callback = callback
     
     def subscribe_vip_info(self) -> bool:
         """

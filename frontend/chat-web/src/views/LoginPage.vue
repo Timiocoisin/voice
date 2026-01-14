@@ -78,8 +78,8 @@ const passwordValidation = computed(() => validatePassword(form.password));
 
 // 检查是否已登录
 onMounted(() => {
-  const token = localStorage.getItem('token');
-  const user = localStorage.getItem('user');
+  const token = sessionStorage.getItem('token');
+  const user = sessionStorage.getItem('user');
   if (token && user) {
     // 已登录，跳转到工作台
     router.push('/workspace');
@@ -127,12 +127,12 @@ const handleLogin = async () => {
     });
 
     if (response.success) {
-      // 保存 token 和用户信息
+      // 保存 token 和用户信息到 sessionStorage（刷新页面不丢失，关闭浏览器清空）
       if (response.token) {
-        localStorage.setItem('token', response.token);
+        sessionStorage.setItem('token', response.token);
       }
       if (response.user) {
-        localStorage.setItem('user', JSON.stringify(response.user));
+        sessionStorage.setItem('user', JSON.stringify(response.user));
       }
       // 跳转到工作台
       router.push('/workspace');
