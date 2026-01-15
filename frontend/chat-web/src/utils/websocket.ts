@@ -236,11 +236,31 @@ class WebSocketClient {
         const messageId = String(rawId);
         const fromUserId: number | undefined = data.from_user_id;
 
+        // 判断被撤回的消息是否是自己发送的
+        // fromUserId 是被撤回消息的发送者ID
+        // 如果 fromUserId === this.userId，说明被撤回的消息是我自己发送的
+        // 在客服端，客服发送的消息 from 是 'agent'，用户发送的消息 from 是 'user'
+        // 在用户端，用户发送的消息 from 是 'user'，客服发送的消息 from 是 'agent'
+        // 这里需要根据 fromUserId 来判断被撤回消息的发送者
+        let fromField: 'agent' | 'user' = 'user';
+        if (this.userId && fromUserId) {
+          // 如果 fromUserId === this.userId，说明被撤回的消息是我自己发送的
+          // 在客服端，this.userId 是客服ID，所以 from 应该是 'agent'
+          // 在用户端，this.userId 是用户ID，所以 from 应该是 'user'
+          // 但是，我们需要知道当前是客服端还是用户端
+          // 由于 Web 端是客服端，所以如果 fromUserId === this.userId，from 应该是 'agent'
+          if (fromUserId === this.userId) {
+            fromField = 'agent';
+          } else {
+            fromField = 'user';
+          }
+        }
+
         // 推送给上层的统一消息结构
         const recalledMessage: WebSocketMessage = {
           id: messageId,
           session_id: data.session_id || '',
-          from: this.userId && fromUserId === this.userId ? 'agent' : 'user',
+          from: fromField,
           from_user_id: fromUserId || 0,
           to_user_id: undefined,
           text: '',
@@ -314,7 +334,7 @@ class WebSocketClient {
       if (this.status === ConnectionStatus.CONNECTED) {
         this.sendHeartbeat();
       }
-    }, 30000); // 30秒
+    }, 20000); // 20秒：略微提高心跳频率，减少因为浏览器降频导致的误判掉线
   }
 
   /**

@@ -886,7 +886,7 @@ def _match_agent_logic(user_id: int, session_id: str) -> Dict[str, Any]:
             best_agent = agent
 
     # 无论是否已匹配到具体客服，先创建为待接入会话，并推送到“待接入”队列
-    db.create_pending_session(session_id, user_id)
+        db.create_pending_session(session_id, user_id)
     pending_sessions = db.get_pending_sessions()
     target_session = next((s for s in pending_sessions if s['session_id'] == session_id), None)
     if target_session:
@@ -907,10 +907,10 @@ def _match_agent_logic(user_id: int, session_id: str) -> Dict[str, Any]:
         }
 
     return {
-        "success": False,
-        "message": "暂无在线客服，您的请求已加入等待队列",
-        "matched": False,
-        "session_id": session_id
+            "success": False,
+            "message": "暂无在线客服，您的请求已加入等待队列",
+            "matched": False,
+            "session_id": session_id
     }
 
 
@@ -1829,6 +1829,7 @@ def handle_recall_message(data):
                     session_id = message.get("session_id")
                     from_user_id = message.get("from_user_id")
                     to_user_id = message.get("to_user_id")
+                    chat_session = None
                     
                     # 如果数据库中的 to_user_id 为空，但会话已经有客服/用户绑定，尝试补全接收方，确保 Web 端也能收到撤回事件
                     if not to_user_id and session_id:
@@ -1885,16 +1886,57 @@ def handle_recall_message(data):
                         "message_id": str(message_id),
                         "session_id": session_id,
                         "from_user_id": from_user_id,
+                        "to_user_id": to_user_id,
                         "username": from_username,
                         "is_recalled": True,
                         "time": _format_time(datetime.now()),
                     }
                     
-                    # 发送给接收方
+                    # 发送给接收方（对端）
                     if to_user_id:
                         ws_manager.send_message_to_user(to_user_id, "message_recalled", recall_data)
                     else:
-                        logger.warning(f"撤回消息时 to_user_id 为 None: message_id={message_id}, from_user_id={from_user_id}, session_id={session_id}")
+                        # 关键兜底：若仍无法确定对端
+                        # - 已分配客服/用户：尽量根据会话绑定推送
+                        # - 待接入阶段（agent_id 为空）：广播给所有在线客服（用于 Web 端待接入列表/预览同步）
+                        logger.warning(
+                            f"撤回消息时 to_user_id 为 None，将执行兜底推送: "
+                            f"message_id={message_id}, from_user_id={from_user_id}, session_id={session_id}"
+                        )
+                        try:
+                            if chat_session is None and session_id:
+                                chat_session = db.get_chat_session_by_id(session_id)
+                            if chat_session:
+                                cs_user_id = chat_session.get("user_id")
+                                cs_agent_id = chat_session.get("agent_id")
+                                # 已接入：给对端发
+                                other_id = None
+                                if cs_user_id and cs_agent_id and from_user_id:
+                                    try:
+                                        other_id = cs_agent_id if int(from_user_id) == int(cs_user_id) else cs_user_id
+                                    except Exception:
+                                        other_id = cs_agent_id if from_user_id == cs_user_id else cs_user_id
+                                if other_id:
+                                    ws_manager.send_message_to_user(other_id, "message_recalled", recall_data)
+                                else:
+                                    # 待接入：广播给在线客服
+                                    online_agents = db.get_online_agents()
+                                    for agent in online_agents:
+                                        agent_id = agent.get("id")
+                                        if agent_id:
+                                            ws_manager.send_message_to_user(agent_id, "message_recalled", recall_data)
+                            else:
+                                # 无会话信息：广播给在线客服
+                                online_agents = db.get_online_agents()
+                                for agent in online_agents:
+                                    agent_id = agent.get("id")
+                                    if agent_id:
+                                        ws_manager.send_message_to_user(agent_id, "message_recalled", recall_data)
+                        except Exception as e:
+                            logger.error(
+                                f"撤回消息兜底推送失败: message_id={message_id}, session_id={session_id}, error={e}",
+                                exc_info=True,
+                            )
                     
                     # 发送给发送方（多设备同步）
                     ws_manager.send_message_to_user(from_user_id, "message_recalled", recall_data)
@@ -2401,7 +2443,7 @@ def handle_process_rich_text_ws(data):
                 "html": "",
                 "is_rich": False,
                 "urls": [],
-                "mentions": []
+                "mentions": [],
             }
 
         if token:

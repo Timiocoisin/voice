@@ -296,11 +296,20 @@ class WebSocketClient:
                     logging.warning(f"撤回消息事件缺少 message_id: {data}")
                     return
                 
+                # 判断被撤回的消息是否是自己发送的
+                from_user_id = data.get("from_user_id")
+                is_from_self = False
+                if from_user_id and self.user_id:
+                    try:
+                        is_from_self = (int(from_user_id) == int(self.user_id))
+                    except (ValueError, TypeError):
+                        is_from_self = (from_user_id == self.user_id)
+                
                 # 将撤回事件转换为与 new_message 接近的结构，统一通过 on_message_callback 分发
                 payload = {
                     "id": str(message_id),
                     "session_id": data.get("session_id"),
-                    "from_user_id": data.get("from_user_id"),
+                    "from_user_id": from_user_id,
                     "to_user_id": None,
                     "text": "",
                     "time": data.get("time"),
@@ -308,6 +317,7 @@ class WebSocketClient:
                     "message_type": "text",
                     "reply_to_message_id": None,
                     "is_recalled": True,
+                    "is_from_self": is_from_self,  # 标记被撤回的消息是否是自己发送的
                     # 可选用户名字段，供前端判断"谁撤回了消息"
                     "username": data.get("username"),
                 }

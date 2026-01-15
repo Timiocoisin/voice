@@ -140,6 +140,28 @@
                 :class="{ 'editable': msg.userId === currentUser?.id && msg.messageType === 'text' && !msg.isRecalled && !msg.isEdited && canEditMessage(msg) }"
               >
                 <div class="msg-text">
+                  <!-- 引用消息预览：所有消息类型（文本/图片/文件）统一展示 -->
+                  <div 
+                    v-if="msg.replyToMessage" 
+                    class="reply-message-preview"
+                  >
+                    <!-- 如果是图片引用，显示缩略图 -->
+                    <div v-if="msg.replyToMessageType === 'image' && msg.replyToMessage && msg.replyToMessage.startsWith('data:image')" class="reply-image-container">
+                      <span class="reply-sender-name">{{ (msg.replyToUsername || '用户') }}:</span>
+                      <img 
+                        :src="msg.replyToMessage" 
+                        alt="引用图片"
+                        class="reply-image-thumbnail"
+                        @error="(e) => { e.target.style.display = 'none'; }"
+                      />
+                    </div>
+                    <!-- 文本消息或其他类型 -->
+                    <div v-else class="reply-text">
+                      <span class="reply-sender-name">{{ (msg.replyToUsername || '用户') }}:</span>
+                      <span class="reply-content">{{ msg.replyToMessage === '该引用消息已被撤回' ? '该引用消息已被撤回' : (msg.replyToMessage.length > 50 ? msg.replyToMessage.substring(0, 50) + '...' : msg.replyToMessage) }}</span>
+                    </div>
+                  </div>
+
                   <template v-if="msg.messageType === 'image'">
                     <img 
                       class="msg-image" 
@@ -169,27 +191,6 @@
                     </div>
                   </template>
                   <template v-else>
-                    <!-- 引用消息显示（毛玻璃风格） -->
-                    <div 
-                      v-if="msg.replyToMessage" 
-                      class="reply-message-preview"
-                    >
-                      <!-- 如果是图片消息，显示缩略图 -->
-                      <div v-if="msg.replyToMessageType === 'image' && msg.replyToMessage && msg.replyToMessage.startsWith('data:image')" class="reply-image-container">
-                        <span class="reply-sender-name">{{ (msg.replyToUsername || '用户') }}:</span>
-                        <img 
-                          :src="msg.replyToMessage" 
-                          alt="引用图片"
-                          class="reply-image-thumbnail"
-                          @error="(e) => { e.target.style.display = 'none'; }"
-                        />
-                      </div>
-                      <!-- 文本消息或其他类型 -->
-                      <div v-else class="reply-text">
-                        <span class="reply-sender-name">{{ (msg.replyToUsername || '用户') }}:</span>
-                        <span class="reply-content">{{ msg.replyToMessage === '该引用消息已被撤回' ? '该引用消息已被撤回' : (msg.replyToMessage.length > 50 ? msg.replyToMessage.substring(0, 50) + '...' : msg.replyToMessage) }}</span>
-                      </div>
-                    </div>
                     <!-- 消息内容 -->
                     <div>
                       <div 
@@ -651,11 +652,11 @@ onMounted(async () => {
       
         // 登录成功后自动设置为在线状态（通过 WebSocket）
         // 注意：需要在 WebSocket 连接成功后设置
-        const onlineStatus = statusOptions.find(s => s.type === 'online');
-        if (onlineStatus) {
-          currentStatus.value = onlineStatus;
-          saveStatus('online');
-        }
+            const onlineStatus = statusOptions.find(s => s.type === 'online');
+            if (onlineStatus) {
+              currentStatus.value = onlineStatus;
+              saveStatus('online');
+            }
     } catch (error) {
       console.error('Token 验证失败:', error);
       // Token 验证失败，清除并跳转登录
@@ -771,13 +772,13 @@ const acceptSession = async (sessionId: string) => {
       throw new Error(response.message || '接入失败');
     }
 
-    if (pendingCount.value > 0) {
-      pendingCount.value -= 1;
-    }
-
-    activeTab.value = 'my';
-    activeSessionId.value = sessionId;
-    await loadMessages(sessionId);
+      if (pendingCount.value > 0) {
+        pendingCount.value -= 1;
+      }
+      
+      activeTab.value = 'my';
+      activeSessionId.value = sessionId;
+      await loadMessages(sessionId);
   } catch (error: any) {
     console.error('接入会话失败:', error);
     alert(error?.message || error.response?.data?.message || '接入失败，请稍后重试');
@@ -1211,7 +1212,7 @@ const loadMessages = async (sessionId: string) => {
       const mapped = (response.messages || []).map((m: any) => {
         const text = m.text || '';
         const richTextResult = processMessageRichText(text);
-
+        
         // 使用后端返回的引用消息摘要信息（如果存在）
         let replyToMessage = null;
         let replyToUsername = null;
@@ -1220,26 +1221,26 @@ const loadMessages = async (sessionId: string) => {
           const replyInfo = m.reply_to_message;
           if (replyInfo.is_recalled) {
             const senderName = replyInfo.from_username || '用户';
-            replyToMessage = `${senderName}: 该引用消息已被撤回`;
-          } else {
+                replyToMessage = `${senderName}: 该引用消息已被撤回`;
+              } else {
             replyToMessage = replyInfo.message || '';
             replyToUsername = replyInfo.from_username || null;
             replyToMessageType = replyInfo.message_type || 'text';
-          }
+            }
         } else if (m.reply_to_message_id) {
           // 兼容旧数据：如果没有 reply_to_message，但有 reply_to_message_id，显示占位符
           replyToMessage = '引用消息加载中...';
         }
-
+        
         return {
-          id: m.id,
-          from: m.from || 'user',
+        id: m.id,
+        from: m.from || 'user',
           text: m.is_recalled ? '' : text,
-          time: m.time || '刚刚',
+        time: m.time || '刚刚',
           created_at: m.created_at,
-          userId: m.userId,
-          avatar: m.avatar,
-          messageType: (m.message_type || 'text') as ChatMessage['messageType'],
+        userId: m.userId,
+        avatar: m.avatar,
+        messageType: (m.message_type || 'text') as ChatMessage['messageType'],
           richText: richTextResult.richText,
           isRich: richTextResult.isRich,
           linkUrls: richTextResult.linkUrls,
@@ -1655,18 +1656,31 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
     // 如果不是当前会话的消息，更新会话列表的未读数量
     const session = sessions.value.find(s => s.id === message.session_id);
     if (session) {
-      session.unread = (session.unread || 0) + 1;
-      // 更新最后一条消息
-      session.lastMessage = (message.text || '').substring(0, 50);
-      session.lastTime = formatTime(message.time || new Date().toISOString());
+      // 撤回消息：不应增加未读数，但需要更新预览，保证列表能同步显示“撤回”
+      if ((message as any).is_recalled) {
+        session.lastMessage = '对方撤回了一条消息';
+        session.lastTime = formatTime(message.time || new Date().toISOString());
+      } else {
+        session.unread = (session.unread || 0) + 1;
+        // 更新最后一条消息
+        session.lastMessage = (message.text || '').substring(0, 50);
+        session.lastTime = formatTime(message.time || new Date().toISOString());
+      }
     }
     return;
   }
 
+  // 先判断是否为撤回事件
+  const isRecalled = (message as any).is_recalled || false;
+
   // 检查消息是否已显示（去重）
-  if (receivedMessageIds.has(message.id)) {
+  // 说明：
+  // - 普通消息：首次收到时加入集合，后续相同 ID 的重复推送直接丢弃
+  // - 撤回消息：需要使用相同的 message.id 去更新已存在的消息，不能因为去重直接 return
+  if (!isRecalled && receivedMessageIds.has(message.id)) {
     return;
   }
+  // 撤回事件也加入集合，以防服务端重复推送，但不会阻止本次处理
   receivedMessageIds.add(message.id);
 
   // 限制集合大小
@@ -1701,8 +1715,6 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
   }
 
   // 添加消息到列表
-  const isRecalled = (message as any).is_recalled || false;
-  
   // 如果是撤回消息，更新现有消息而不是添加新消息
   if (isRecalled) {
     // 注意：历史消息里 m.id 可能是 number，WebSocket 推送的 message.id 一般是 string
@@ -1757,7 +1769,7 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
     id: message.id,
     from: isFromSelf ? 'agent' : 'user',
     text: isRecalled ? '[消息已撤回]' : processedMessage,
-    time: formatTime(message.time),
+    time: formatTime(message.time || message.created_at || message.timestamp),
     created_at: message.created_at || message.time, // 添加创建时间（用于判断撤回时限）
     userId: message.from_user_id,
     avatar: message.avatar,
@@ -1776,18 +1788,36 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
   };
 
   // 引用消息信息已由后端自动包含在 reply_to_message 字段中，无需额外请求
-  messages.value.push(chatMessage);
-  scrollToBottom();
+        messages.value.push(chatMessage);
+        scrollToBottom();
 };
 
 // 注意：loadReplyMessage 函数已删除，引用消息信息现在由后端自动包含在消息的 reply_to_message 字段中
 
 // 格式化时间
-const formatTime = (timeStr: string): string => {
+const formatTime = (timeStr: string | undefined | null): string => {
+  // 如果时间字符串为空或无效，返回默认值
+  if (!timeStr) {
+    return '刚刚';
+  }
+  
   try {
     const date = new Date(timeStr);
+    
+    // 检查日期是否有效
+    if (isNaN(date.getTime())) {
+      // 如果日期无效，返回默认值
+      return '刚刚';
+    }
+    
     const now = new Date();
     const diff = now.getTime() - date.getTime();
+    
+    // 如果时间差是负数（未来时间），返回默认值
+    if (diff < 0) {
+      return '刚刚';
+    }
+    
     const minutes = Math.floor(diff / 60000);
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
@@ -1800,7 +1830,8 @@ const formatTime = (timeStr: string): string => {
     return date.toLocaleDateString('zh-CN', { month: '2-digit', day: '2-digit' }) + 
            ' ' + date.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
   } catch {
-    return timeStr;
+    // 如果解析失败，返回默认值而不是原始字符串
+    return '刚刚';
   }
 };
 
@@ -2828,7 +2859,7 @@ const handleLogout = async () => {
   border-left: 3px solid rgba(59, 130, 246, 0.6);
   border-radius: 8px;
   padding: 8px 12px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   max-width: 100%;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(15, 23, 42, 0.05);

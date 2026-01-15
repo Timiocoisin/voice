@@ -161,9 +161,33 @@ def get_or_create_websocket_client(main_window, server_url: str = "http://127.0.
                         message_type = data.get('message_type', 'text')
                         reply_to_message_id = data.get('reply_to_message_id')
                         # 引用消息摘要信息由服务端随消息一起推送
-                        reply_to_message = data.get('reply_to_message')
-                        reply_to_username = data.get('reply_to_username')
-                        reply_to_message_type = data.get('reply_to_message_type')
+                        # 后端可能推送 reply_to_message 为字典（包含 id, message, message_type 等字段）
+                        # 也可能直接推送字符串，需要兼容处理
+                        reply_to_message_raw = data.get('reply_to_message')
+                        if isinstance(reply_to_message_raw, dict):
+                            # 如果是字典，优先使用字典中的 id 字段作为 reply_to_message_id
+                            # 如果没有提供单独的 reply_to_message_id，则使用字典中的 id
+                            if not reply_to_message_id and reply_to_message_raw.get('id'):
+                                try:
+                                    reply_to_message_id = int(reply_to_message_raw.get('id'))
+                                except (ValueError, TypeError):
+                                    reply_to_message_id = reply_to_message_raw.get('id')
+                            # 提取其中的 message 字段
+                            reply_to_message = reply_to_message_raw.get('message', '')
+                            # 如果字典中没有单独提供 reply_to_username 和 reply_to_message_type，也从字典中提取
+                            if not data.get('reply_to_username'):
+                                reply_to_username = reply_to_message_raw.get('from_username')
+                            else:
+                                reply_to_username = data.get('reply_to_username')
+                            if not data.get('reply_to_message_type'):
+                                reply_to_message_type = reply_to_message_raw.get('message_type', 'text')
+                            else:
+                                reply_to_message_type = data.get('reply_to_message_type')
+                        else:
+                            # 如果是字符串，直接使用
+                            reply_to_message = reply_to_message_raw
+                            reply_to_username = data.get('reply_to_username')
+                            reply_to_message_type = data.get('reply_to_message_type')
                         is_recalled = data.get('is_recalled', False)
                         offline = data.get('offline', False)
                         message_time = data.get('time') or data.get('created_at') or data.get('timestamp')

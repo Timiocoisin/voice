@@ -39,8 +39,11 @@ class WebSocketManager:
         
         # 心跳检测线程
         self.heartbeat_thread = None
+        # 每 30 秒检查一次心跳
         self.heartbeat_interval = 30  # 秒
-        self.heartbeat_timeout = 120  # 秒，超过此时间未收到心跳则断开
+        # 心跳超时时间适当放宽，避免浏览器 Tab 被暂挂或短暂网络抖动时误判掉线
+        # 300 秒 = 5 分钟，需与数据库中在线客服/连接超时规则保持一致
+        self.heartbeat_timeout = 300  # 秒，超过此时间未收到心跳则断开
         self.running = False
         
         # 锁
@@ -179,6 +182,9 @@ class WebSocketManager:
                 logger.warning("断开连接失败：未找到连接ID")
                 return False
             
+            # 标记该用户是否还有其他活跃连接，用于决定是否自动标记为离线
+            no_more_connections = False
+            
             with self.lock:
                 conn_info = self.connections.get(connection_id)
                 if not conn_info:
@@ -197,9 +203,16 @@ class WebSocketManager:
                 if user_id in self.user_connections:
                     self.user_connections[user_id].discard(connection_id)
                     if not self.user_connections[user_id]:
+                        # 该用户已经没有任何活跃连接
                         del self.user_connections[user_id]
+                        no_more_connections = True
+                    else:
+                        no_more_connections = False
+                else:
+                    # 理论上不应该出现，如果出现则视为无其他连接
+                    no_more_connections = True
             
-            # 更新数据库
+            # 更新数据库中的连接状态
             self.db.disconnect_user_connection(connection_id)
             
             # 离开用户房间
@@ -208,6 +221,25 @@ class WebSocketManager:
                 self.socketio.server.leave_room(socket_id, f"user_{user_id}", namespace="/")
             except Exception as e:
                 logger.error(f"将 socket {socket_id} 从房间 user_{user_id} 移除失败: {e}", exc_info=True)
+            
+            # 如果这是客服账号，并且已经没有任何活跃连接，则自动将其状态标记为 offline
+            if no_more_connections:
+                try:
+                    user_row = self.db.get_user_by_id(user_id)
+                except Exception as e:
+                    logger.error(f"获取用户 {user_id} 信息失败: {e}", exc_info=True)
+                    user_row = None
+                
+                if user_row:
+                    role = user_row.get("role", "user")
+                    if role in ("customer_service", "admin"):
+                        # 后台线程中更新客服状态，避免阻塞断开流程
+                        threading.Thread(
+                            target=self.db.update_agent_status,
+                            args=(user_id, "offline"),
+                            daemon=True,
+                        ).start()
+                        logger.info(f"客服 {user_id} 所有连接已断开，状态自动置为 offline")
             
             logger.debug(f"用户 {user_id} 断开连接: {connection_id}")
             return True

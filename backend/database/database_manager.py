@@ -1155,7 +1155,14 @@ class DatabaseManager:
             logging.error(f"创建消息队列表失败: {e}")
 
     def get_online_agents(self) -> list:
-        """获取所有在线的客服列表（独立连接）"""
+        """
+        获取所有在线的客服列表（独立连接）
+
+        调整逻辑：
+        - 仅根据 agent_status.status 是否为 online/away 判断是否在线
+        - 不再依赖 last_heartbeat 时间窗口，这样客服登录后如果不主动修改状态，
+          将一直被视为在线，直到显式下线或所有连接断开时被标记为 offline
+        """
         conn = None
         cursor = None
         try:
@@ -1167,7 +1174,6 @@ class DatabaseManager:
             JOIN agent_status as_table ON u.id = as_table.agent_id
             WHERE u.role = 'customer_service'
             AND as_table.status IN ('online', 'away')
-            AND as_table.last_heartbeat > DATE_SUB(NOW(), INTERVAL 5 MINUTE)
             ORDER BY as_table.last_heartbeat DESC
             """
             cursor.execute(query)
@@ -1527,6 +1533,8 @@ class DatabaseManager:
             WHERE status = 'connected'
             AND last_heartbeat < DATE_SUB(NOW(), INTERVAL %s MINUTE)
             """
+            # 这里默认使用 6 分钟而不是 5 分钟，以便与 WebSocket 300 秒心跳超时
+            # 稍微错开一点阈值，避免边界情况下刚好被数据库清理掉
             cursor.execute(update_query, (timeout_minutes,))
             conn.commit()
             cleaned = cursor.rowcount

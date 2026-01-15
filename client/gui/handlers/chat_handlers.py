@@ -1176,7 +1176,7 @@ def append_chat_message(
                                                             }
                                                         """)
                                                         new_reply_label.setWordWrap(True)
-                                                        new_reply_label.setMaximumWidth(300)  # 限制最大宽度
+                                                        new_reply_label.setMaximumWidth(300)
                                                         reply_content_layout.insertWidget(layout_index, new_reply_label)
                                                         
                                                         # 更新 reply_label 属性
@@ -1614,20 +1614,42 @@ def append_chat_message(
         reply_text = reply_to_message
         if reply_text == "[消息已撤回]":
             reply_text = "该引用消息已被撤回"
-
+        
         # 尝试为图片引用查找原始 base64 内容（data:image/...），用于生成缩略图
         original_image_data: str | None = None
         if reply_to_message_type == "image" and reply_to_message_id is not None:
             try:
                 msg_map = getattr(main_window, "_message_widgets_map", None)
-                if isinstance(msg_map, dict) and reply_to_message_id in msg_map:
-                    original_widget = msg_map[reply_to_message_id][0]
-                    raw_image = original_widget.property("raw_image_message")
-                    if isinstance(raw_image, str) and raw_image.startswith("data:image"):
-                        original_image_data = raw_image
+                if isinstance(msg_map, dict):
+                    # 优先从 _message_widgets_map 中查找
+                    # 注意：需要同时尝试整数和字符串键，因为存储时可能类型不一致
+                    original_widget = None
+                    
+                    # 先尝试直接查找（整数或字符串键）
+                    if reply_to_message_id in msg_map:
+                        original_widget = msg_map[reply_to_message_id][0]
+                    # 如果没找到，尝试字符串键
+                    elif isinstance(reply_to_message_id, int):
+                        str_key = str(reply_to_message_id)
+                        if str_key in msg_map:
+                            original_widget = msg_map[str_key][0]
+                    # 如果还没找到，尝试整数键
+                    elif isinstance(reply_to_message_id, str):
+                        try:
+                            int_key = int(reply_to_message_id)
+                            if int_key in msg_map:
+                                original_widget = msg_map[int_key][0]
+                        except (ValueError, TypeError):
+                            pass
+                    
+                    # 如果找到了原始消息控件，尝试获取原始图片数据
+                    if original_widget:
+                        raw_image = original_widget.property("raw_image_message")
+                        if isinstance(raw_image, str) and raw_image.startswith("data:image"):
+                            original_image_data = raw_image
             except Exception:
                 original_image_data = None
-
+        
         # 初始化 reply_label，确保在所有分支中都有定义
         reply_label = None
         thumbnail_label = None  # 初始化缩略图标签变量
@@ -1670,13 +1692,14 @@ def append_chat_message(
                     sender_label.setStyleSheet("""
                         QLabel {
                             font-family: "Microsoft YaHei", "SimHei", "Arial";
-                            font-size: 12px;
+                        font-size: 12px;
                             color: #111827;  /* 深色文字，保证清晰可见 */
                             background-color: transparent;
                         }
                     """)
                     sender_label.setAlignment(Qt.AlignmentFlag.AlignVCenter | Qt.AlignmentFlag.AlignLeft)
-                    sender_label.setMaximumWidth(220)  # 稍微放宽，避免“用户名：”太容易被截断
+                    # 限制最大宽度，避免整块引用气泡被用户名拉得太长
+                    sender_label.setMaximumWidth(160)
                     reply_label = sender_label  # 使用 sender_label 作为 reply_label
                     
                     # 水平布局：发送者名称 + 缩略图（紧凑排列，中间不要太大空白）
@@ -1751,7 +1774,7 @@ def append_chat_message(
 
         # 让引用卡片宽度更“饱满”，但封顶避免横向太长
         reply_container.setMinimumWidth(160)
-        reply_container.setMaximumWidth(380)
+        reply_container.setMaximumWidth(320)
 
         # 引用块单独占一行，与消息气泡左对齐（放在正文气泡下方）
         reply_row = QHBoxLayout()
@@ -2497,7 +2520,7 @@ def match_human_service(main_window: "MainWindow"):
             main_window._human_service_connected = True
             main_window._matched_agent_id = response.get("agent_id")
             
-            # 添加“已连接客服，可以开始对话”的分隔线
+            # 添加"已连接客服，可以开始对话"的分隔线
             add_connected_separator(main_window)
 
             logging.info("已为用户匹配到在线客服，已进入对话模式")
@@ -2970,8 +2993,6 @@ def send_image(main_window: "MainWindow"):
     
     scaled = pix.scaled(160, 160, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
     # 先在界面上乐观展示图片；raw_message 会在真正发送时设置为 data_url
-    append_image_message(main_window, scaled, from_self=True, raw_message=None)
-
     # 如果已连接人工客服，使用 WebSocket 发送图片
     if getattr(main_window, "_human_service_connected", False) and getattr(main_window, "_chat_session_id", None):
         from client.login.token_storage import read_token
@@ -2987,6 +3008,31 @@ def send_image(main_window: "MainWindow"):
             data_url = f"data:image/png;base64,{b64}"
         except Exception:
             data_url = "[图片发送失败]"
+
+        # 乐观展示：生成 data_url 后再插入到聊天区，这样引用自己发送的图片时可以读到 raw_image_message
+        raw_for_widget = data_url if isinstance(data_url, str) and data_url.startswith("data:image") else None
+
+        # 读取当前的引用信息，用于本地预览时就显示引用气泡
+        reply_to_id_preview = getattr(main_window, "_reply_to_message_id", None)
+        reply_to_text_preview = getattr(main_window, "_reply_to_message_text", None)
+        reply_to_username_preview = getattr(main_window, "_reply_to_username", None)
+        reply_to_type_preview = getattr(main_window, "_reply_to_message_type", None)
+
+        append_image_message(
+            main_window,
+            scaled,
+            from_self=True,
+            message_id=None,
+            message_created_time=None,
+            from_user_id=main_window.user_id,
+            from_username=getattr(main_window, "username", None),
+            reply_to_message_id=reply_to_id_preview,
+            reply_to_message=reply_to_text_preview,
+            reply_to_username=reply_to_username_preview,
+            reply_to_message_type=reply_to_type_preview,
+            is_recalled=False,
+            raw_message=raw_for_widget,
+        )
 
         def restore():
             main_window.chat_input.setEnabled(True)
@@ -3026,12 +3072,12 @@ def send_image(main_window: "MainWindow"):
         success = False
         if ws_client and ws_client.is_connected():
             success = ws_client.send_message(
-                session_id=session_id,
-                message=data_url,
-                role="user",
-                message_type="image",
-                reply_to_message_id=reply_to_id
-            )
+            session_id=session_id,
+            message=data_url,
+            role="user",
+            message_type="image",
+            reply_to_message_id=reply_to_id
+        )
         
         # 清除引用状态
         if hasattr(main_window, "_reply_to_message_id"):
@@ -3266,7 +3312,7 @@ def append_image_message(
                                                     if item and item.layout() == thumbnail_layout:
                                                         layout_index = i
                                                         break
-                                                
+
                                                 if layout_index >= 0:
                                                     # 先删除 thumbnail_layout 中的所有控件
                                                     while thumbnail_layout.count() > 0:
@@ -3280,7 +3326,7 @@ def append_image_message(
                                                             widget.setVisible(False)
                                                             if isinstance(widget, QLabel):
                                                                 widget.setPixmap(QPixmap())
-                                                            widget.clear()
+                                                                widget.clear()
                                                             widget.setFixedSize(0, 0)
                                                             widget.setParent(None)
                                                             widget.deleteLater()
@@ -3315,7 +3361,7 @@ def append_image_message(
                                                         }
                                                     """)
                                                     new_reply_label.setWordWrap(True)
-                                                    new_reply_label.setMaximumWidth(300)  # 限制最大宽度
+                                                    new_reply_label.setMaximumWidth(300)
                                                     reply_content_layout.insertWidget(layout_index, new_reply_label)
                                                     
                                                     # 更新 reply_label 属性
@@ -3398,171 +3444,6 @@ def append_image_message(
     v_layout = QVBoxLayout(message_widget)
     v_layout.setContentsMargins(4, 0, 4, 0)
     v_layout.setSpacing(2)
-    
-    # 处理引用消息显示（如果有）
-    if reply_to_message_id and reply_to_message and not is_recalled:
-        # 创建引用消息容器（微信风格，灰底），注意：样式只作用于容器本身，避免子控件“各自被包裹”
-        reply_container = QWidget()
-        reply_container.setObjectName("reply_container")
-        reply_container.setStyleSheet("""
-            QWidget#reply_container {
-                background-color: #f3f4f6;
-                border-left: 3px solid #8dcf7d;
-                border-radius: 6px;
-                padding: 6px 10px;
-                margin-top: 6px;
-                border: 1px solid #e5e7eb;
-            }
-        """)
-        reply_layout = QHBoxLayout(reply_container)
-        reply_layout.setContentsMargins(0, 0, 0, 0)
-        reply_layout.setSpacing(0)
-
-        reply_content_layout = QVBoxLayout()
-        reply_content_layout.setContentsMargins(0, 0, 0, 0)
-        reply_content_layout.setSpacing(2)
-
-        # 获取引用消息的发送者信息
-        reply_sender_name = reply_to_username or "用户"
-        reply_text = reply_to_message
-        if reply_text == "[消息已撤回]":
-            reply_text = "该引用消息已被撤回"
-        
-        # 如果是图片消息，显示缩略图（40x40）
-        if reply_to_message_type == "image" and reply_text and reply_text.startswith("data:image"):
-            try:
-                # 解析base64图片
-                import base64
-                from PyQt6.QtGui import QImage
-                b64_part = reply_text.split(",", 1)[1] if "," in reply_text else ""
-                raw = base64.b64decode(b64_part)
-                image = QImage.fromData(raw)
-                if not image.isNull():
-                    thumb_pixmap = QPixmap.fromImage(image)
-                    # 创建 60x60 的缩略图
-                    thumbnail = thumb_pixmap.scaled(60, 60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                    
-                    # 创建缩略图标签
-                    thumbnail_label = QLabel()
-                    thumbnail_label.setFixedSize(60, 60)
-                    thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-                    thumbnail_label.setPixmap(thumbnail)
-                    thumbnail_label.setStyleSheet("""
-                        QLabel {
-                            border-radius: 6px;
-                            background-color: transparent;
-                            border: 1px solid #d1d5db;
-                        }
-                    """)
-                    # 立即保存缩略图标签到属性中，方便撤回时隐藏
-                    reply_container.setProperty("reply_thumbnail_label", thumbnail_label)
-                    
-                    # 创建文本标签（只显示发送者名称，后面直接跟缩略图）
-                    sender_label = QLabel(f"{reply_sender_name}：")
-                    sender_label.setStyleSheet("""
-                        QLabel {
-                            font-family: "Microsoft YaHei", "SimHei", "Arial";
-                            font-size: 12px;
-                            color: #4b5563;
-                            background-color: transparent;
-                        }
-                    """)
-                    reply_label = sender_label  # 使用 sender_label 作为 reply_label
-                    
-                    # 水平布局：发送者名称 + 缩略图
-                    thumbnail_layout = QHBoxLayout()
-                    thumbnail_layout.setContentsMargins(0, 0, 0, 0)
-                    thumbnail_layout.setSpacing(6)
-                    thumbnail_layout.addWidget(sender_label)
-                    thumbnail_layout.addWidget(thumbnail_label)
-                    thumbnail_layout.addStretch()
-                    # 保存 thumbnail_layout 到属性中，方便撤回时处理
-                    reply_container.setProperty("reply_thumbnail_layout", thumbnail_layout)
-                    
-                    reply_content_layout.addLayout(thumbnail_layout)
-                else:
-                    # 图片解析失败，显示文本
-                    reply_label = QLabel(f"{reply_sender_name}: [图片]")
-                    reply_label.setStyleSheet("""
-                        QLabel {
-                            font-family: "Microsoft YaHei", "SimHei", "Arial";
-                            font-size: 12px;
-                            color: #4b5563;
-                            background-color: transparent;
-                        }
-                    """)
-                    reply_label.setWordWrap(True)
-                    reply_content_layout.addWidget(reply_label)
-            except Exception as e:
-                logging.error(f"解析引用图片失败: {e}", exc_info=True)
-                # 解析失败，显示文本
-                reply_label = QLabel(f"{reply_sender_name}: [图片]")
-                reply_label.setStyleSheet("""
-                    QLabel {
-                        font-family: "Microsoft YaHei", "SimHei", "Arial";
-                        font-size: 12px;
-                        color: #4b5563;
-                        background-color: transparent;
-                    }
-                """)
-                reply_label.setWordWrap(True)
-                reply_label.setMaximumWidth(300)  # 限制最大宽度
-                reply_content_layout.addWidget(reply_label)
-        else:
-            # 文本消息，显示文本内容
-            if reply_text and len(reply_text) > 50:
-                reply_text = reply_text[:50] + "..."
-            reply_label = QLabel(f"{reply_sender_name}: {reply_text}")
-            reply_label.setStyleSheet("""
-                QLabel {
-                    font-family: "Microsoft YaHei", "SimHei", "Arial";
-                    font-size: 12px;
-                    color: #4b5563;
-                    background-color: transparent;
-                }
-            """)
-            reply_label.setWordWrap(True)
-            reply_content_layout.addWidget(reply_label)
-
-        reply_layout.addLayout(reply_content_layout)
-        v_layout.addWidget(reply_container)
-        
-        # 保存引用块相关属性到 message_widget，便于撤回时更新
-        message_widget.setProperty("reply_container", reply_container)
-        # 查找 reply_label（可能是 sender_label 或文本 reply_label）
-        reply_label_to_save = None
-        # 首先尝试从 reply_content_layout 中查找文字标签（没有 pixmap 的 QLabel）
-        for i in range(reply_content_layout.count()):
-            item = reply_content_layout.itemAt(i)
-            if item:
-                layout = item.layout()
-                if layout:
-                    # 如果是布局（如 thumbnail_layout），查找其中的文字 QLabel
-                    for j in range(layout.count()):
-                        sub_item = layout.itemAt(j)
-                        if sub_item and sub_item.widget():
-                            w = sub_item.widget()
-                            if isinstance(w, QLabel) and not w.pixmap():
-                                reply_label_to_save = w
-                                break
-                    if reply_label_to_save:
-                        break
-                else:
-                    widget = item.widget()
-                    if widget and isinstance(widget, QLabel) and not widget.pixmap():
-                        reply_label_to_save = widget
-                        break
-        # 如果还没找到，使用 findChildren 查找所有没有图片的 QLabel
-        if not reply_label_to_save:
-            all_labels = reply_container.findChildren(QLabel)
-            for label in all_labels:
-                if not label.pixmap():
-                    reply_label_to_save = label
-                    break
-        if reply_label_to_save:
-            reply_container.setProperty("reply_label", reply_label_to_save)
-        reply_container.setProperty("reply_sender_name", reply_sender_name)
-        message_widget.setProperty("reply_to_message_id", reply_to_message_id)
 
     time_label = None
     if from_self:
@@ -3645,6 +3526,248 @@ def append_image_message(
         row.addStretch()
 
     v_layout.addLayout(row)
+
+    # 处理引用消息显示（如果有）：放在图片下方，让整体更自然，样式与文本消息的引用气泡保持一致
+    if reply_to_message_id and reply_to_message and not is_recalled:
+        # 创建引用消息容器（浅灰卡片 + 左侧色条），与文本消息的引用样式保持一致
+        reply_container = QWidget()
+        reply_container.setObjectName("reply_container")
+        reply_container.setStyleSheet("""
+            QWidget#reply_container {
+                background-color: #f3f4f6;
+                border-radius: 10px;
+                margin-top: 6px;
+                border: 1px solid #e5e7eb;
+            }
+        """)
+        # 宽度自适应但不铺满整行，避免像输入框一样太长
+        from PyQt6.QtWidgets import QSizePolicy
+        reply_container.setSizePolicy(QSizePolicy.Policy.Maximum, QSizePolicy.Policy.Fixed)
+        reply_layout = QHBoxLayout(reply_container)
+        # 给引用卡片留足内边距，避免“字顶到边/溢出”的观感，并让内部内容在气泡内垂直居中
+        reply_layout.setContentsMargins(10, 8, 10, 8)
+        reply_layout.setSpacing(8)
+        reply_layout.setAlignment(Qt.AlignmentFlag.AlignVCenter)
+
+        # 左侧竖色条，增强层次感（与文本引用统一）
+        left_bar = QLabel()
+        left_bar.setFixedWidth(3)
+        left_bar.setMinimumHeight(26)
+        left_bar.setStyleSheet("""
+            QLabel {
+                background-color: #60a5fa;
+                border-radius: 999px;
+            }
+        """)
+        reply_layout.addWidget(left_bar)
+
+        reply_content_layout = QVBoxLayout()
+        reply_content_layout.setContentsMargins(0, 0, 0, 0)
+        reply_content_layout.setSpacing(2)
+
+        # 获取引用消息的发送者信息
+        reply_sender_name = reply_to_username or "用户"
+        reply_text = reply_to_message
+        if reply_text == "[消息已撤回]":
+            reply_text = "该引用消息已被撤回"
+
+        # 尝试为图片引用查找原始 base64 内容（data:image/...），用于生成缩略图
+        original_image_data: str | None = None
+        if reply_to_message_type == "image" and reply_to_message_id is not None:
+            try:
+                msg_map = getattr(main_window, "_message_widgets_map", None)
+                if isinstance(msg_map, dict) and reply_to_message_id in msg_map:
+                    original_widget = msg_map[reply_to_message_id][0]
+                    raw_image = original_widget.property("raw_image_message")
+                    if isinstance(raw_image, str) and raw_image.startswith("data:image"):
+                        original_image_data = raw_image
+                # 如果没找到，尝试字符串键
+                if not original_image_data and isinstance(reply_to_message_id, int):
+                    if isinstance(msg_map, dict) and str(reply_to_message_id) in msg_map:
+                        original_widget = msg_map[str(reply_to_message_id)][0]
+                        raw_image = original_widget.property("raw_image_message")
+                        if isinstance(raw_image, str) and raw_image.startswith("data:image"):
+                            original_image_data = raw_image
+                # 如果还没找到，尝试整数键
+                if not original_image_data and isinstance(reply_to_message_id, str):
+                    try:
+                        msg_id_int = int(reply_to_message_id)
+                        if isinstance(msg_map, dict) and msg_id_int in msg_map:
+                            original_widget = msg_map[msg_id_int][0]
+                            raw_image = original_widget.property("raw_image_message")
+                            if isinstance(raw_image, str) and raw_image.startswith("data:image"):
+                                original_image_data = raw_image
+                    except (ValueError, TypeError):
+                        pass
+            except Exception:
+                original_image_data = None
+
+        # 如果是图片消息，显示缩略图
+        # 优先使用 original_image_data（从原消息控件里取出的 data:image/...），
+        # 如果没有，再尝试使用 reply_text 本身。
+        if reply_to_message_type == "image" and (original_image_data or (reply_text and reply_text.startswith("data:image"))):
+            try:
+                # 解析base64图片
+                import base64
+                from PyQt6.QtGui import QImage
+                data_source = original_image_data or reply_text
+                b64_part = data_source.split(",", 1)[1] if "," in data_source else ""
+                raw = base64.b64decode(b64_part)
+                image = QImage.fromData(raw)
+                if not image.isNull():
+                    thumb_pixmap = QPixmap.fromImage(image)
+                    # 创建 60x60 的缩略图
+                    thumbnail = thumb_pixmap.scaled(60, 60, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+
+                    # 创建缩略图标签
+                    thumbnail_label = QLabel()
+                    thumbnail_label.setFixedSize(60, 60)
+                    thumbnail_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+                    thumbnail_label.setPixmap(thumbnail)
+                    thumbnail_label.setStyleSheet("""
+                        QLabel {
+                            border-radius: 6px;
+                            background-color: transparent;
+                            border: 1px solid #d1d5db;
+                        }
+                    """)
+                    # 立即保存缩略图标签到属性中，方便撤回时隐藏
+                    reply_container.setProperty("reply_thumbnail_label", thumbnail_label)
+
+                    # 创建文本标签（只显示发送者名称，后面直接跟缩略图）
+                    sender_label = QLabel(f"{reply_sender_name}：")
+                    sender_label.setStyleSheet("""
+                        QLabel {
+                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                            font-size: 12px;
+                            color: #4b5563;
+                            background-color: transparent;
+                        }
+                    """)
+                    reply_label = sender_label  # 使用 sender_label 作为 reply_label
+
+                    # 水平布局：发送者名称 + 缩略图
+                    thumbnail_layout = QHBoxLayout()
+                    thumbnail_layout.setContentsMargins(0, 0, 0, 0)
+                    thumbnail_layout.setSpacing(6)
+                    thumbnail_layout.addWidget(sender_label)
+                    thumbnail_layout.addWidget(thumbnail_label)
+                    thumbnail_layout.addStretch()
+                    # 保存 thumbnail_layout 到属性中，方便撤回时处理
+                    reply_container.setProperty("reply_thumbnail_layout", thumbnail_layout)
+
+                    reply_content_layout.addLayout(thumbnail_layout)
+                else:
+                    # 图片解析失败，显示文本
+                    reply_label = QLabel(f"{reply_sender_name}: [图片]")
+                    reply_label.setStyleSheet("""
+                        QLabel {
+                            font-family: "Microsoft YaHei", "SimHei", "Arial";
+                            font-size: 12px;
+                            color: #4b5563;
+                            background-color: transparent;
+                        }
+                    """)
+                    reply_label.setWordWrap(True)
+                    reply_content_layout.addWidget(reply_label)
+            except Exception as e:
+                logging.error(f"解析引用图片失败: {e}", exc_info=True)
+                # 解析失败，显示文本
+                reply_label = QLabel(f"{reply_sender_name}: [图片]")
+                reply_label.setStyleSheet("""
+                    QLabel {
+                        font-family: "Microsoft YaHei", "SimHei", "Arial";
+                        font-size: 12px;
+                        color: #4b5563;
+                        background-color: transparent;
+                    }
+                """)
+                reply_label.setWordWrap(True)
+                reply_label.setMaximumWidth(300)  # 限制最大宽度
+                reply_content_layout.addWidget(reply_label)
+        else:
+            # 文本消息，显示文本内容
+            if reply_text and len(reply_text) > 50:
+                reply_text = reply_text[:50] + "..."
+            reply_label = QLabel(f"{reply_sender_name}: {reply_text}")
+            reply_label.setStyleSheet("""
+                QLabel {
+                    font-family: "Microsoft YaHei", "SimHei", "Arial";
+                    font-size: 12px;
+                    color: #4b5563;
+                    background-color: transparent;
+                }
+            """)
+            reply_label.setWordWrap(True)
+            reply_content_layout.addWidget(reply_label)
+
+        reply_layout.addLayout(reply_content_layout)
+
+        # 使用单独一行的水平布局控制引用块对齐方式，
+        # 让引用气泡的边缘与图片边缘对齐（用户侧右对齐，客服侧左对齐）
+        reply_row = QHBoxLayout()
+        reply_row.setContentsMargins(0, 0, 0, 0)
+        reply_row.setSpacing(6)
+
+        if from_self:
+            # 用户消息：引用气泡的右边缘应该与图片的右边缘对齐
+            # 图片行的布局是：[stretch] + img_label + avatar_label
+            # 所以引用行应该是：[stretch] + reply_container + [spacer for avatar]
+            reply_row.addStretch()
+            reply_row.addWidget(reply_container)
+            # 添加一个固定宽度的 spacer，宽度等于头像宽度（32px）+ 间距（6px）
+            avatar_spacer = QWidget()
+            avatar_spacer.setFixedWidth(38)  # 32px 头像 + 6px 间距
+            reply_row.addWidget(avatar_spacer)
+        else:
+            # 客服消息：引用气泡的左边缘应该与图片的左边缘对齐
+            # 图片行的布局是：avatar_label + img_label + [stretch]
+            # 所以引用行应该是：[spacer for avatar] + reply_container + [stretch]
+            # 添加一个固定宽度的 spacer，宽度等于头像宽度（32px）+ 间距（6px）
+            avatar_spacer = QWidget()
+            avatar_spacer.setFixedWidth(38)  # 32px 头像 + 6px 间距
+            reply_row.addWidget(avatar_spacer)
+            reply_row.addWidget(reply_container)
+            reply_row.addStretch()
+
+        v_layout.addLayout(reply_row)
+
+        # 保存引用块相关属性到 message_widget，便于撤回时更新
+        message_widget.setProperty("reply_container", reply_container)
+        # 查找 reply_label（可能是 sender_label 或文本 reply_label）
+        reply_label_to_save = None
+        # 首先尝试从 reply_content_layout 中查找文字标签（没有 pixmap 的 QLabel）
+        for i in range(reply_content_layout.count()):
+            item = reply_content_layout.itemAt(i)
+            if item:
+                layout = item.layout()
+                if layout:
+                    # 如果是布局（如 thumbnail_layout），查找其中的文字 QLabel
+                    for j in range(layout.count()):
+                        sub_item = layout.itemAt(j)
+                        if sub_item and sub_item.widget():
+                            w = sub_item.widget()
+                            if isinstance(w, QLabel) and not w.pixmap():
+                                reply_label_to_save = w
+                                break
+                    if reply_label_to_save:
+                        break
+                else:
+                    widget = item.widget()
+                    if widget and isinstance(widget, QLabel) and not widget.pixmap():
+                        reply_label_to_save = widget
+                        break
+        # 如果还没找到，使用 findChildren 查找所有没有图片的 QLabel
+        if not reply_label_to_save:
+            all_labels = reply_container.findChildren(QLabel)
+            for label in all_labels:
+                if not label.pixmap():
+                    reply_label_to_save = label
+                    break
+        if reply_label_to_save:
+            reply_container.setProperty("reply_label", reply_label_to_save)
+        reply_container.setProperty("reply_sender_name", reply_sender_name)
+        message_widget.setProperty("reply_to_message_id", reply_to_message_id)
     
     # 存储消息ID和控件引用，用于更新撤回状态和引用功能
     # 即使 message_id 是 None（乐观展示），也要注册到 _message_widgets_map，以便后续更新
@@ -3714,7 +3837,7 @@ def append_image_message(
             
             main_window._reply_to_message_id = valid_msg_id  # 可能为 None
             # 直接使用本地信息设置引用内容，不再通过 HTTP 获取详情。
-            # 优先从当前图片消息控件中读取原始 data:image/... 内容，方便引用时生成 40x40 缩略图
+            # 优先从当前图片消息控件中读取原始 data:image/... 内容，方便引用时生成缩略图
             raw_image_message = message_widget.property("raw_image_message")
             if isinstance(raw_image_message, str) and raw_image_message.startswith("data:image"):
                 main_window._reply_to_message_text = raw_image_message
