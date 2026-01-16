@@ -67,20 +67,26 @@
 
 ```text
 change_voice/
-├── backend/                     # 后端服务（HTTP API）
-│   ├── api_server.py            # Flask API 服务器入口
+├── backend/                     # 后端服务（FastAPI + WebSocket）
+│   ├── api_server.py              # FastAPI API 服务器入口（HTTP + WebSocket）
 │   ├── config/                  # 配置（邮件、加密、数据库、文案等）
 │   ├── customer_service/        # 客服关键词匹配与知识库（后端版本）
-│   ├── database/                # MySQL 连接与线程封装
+│   ├── database/                # 数据库相关
+│   │   ├── models.py              # SQLAlchemy ORM 模型定义
+│   │   └── async_database_manager.py  # 异步数据库管理器
+│   ├── websocket/                # WebSocket 相关
+│   │   └── async_websocket_manager.py  # 异步 WebSocket 管理器
+│   ├── api/                     # API 相关
+│   │   └── schemas.py             # Pydantic 数据模型（请求/响应）
 │   ├── email/                   # 邮件发送工具
 │   ├── encryption/              # 加解密工具
 │   ├── login/                   # 登录 / Token 生成与验证
-│   ├── membership_service.py    # VIP 会员业务逻辑
+│   ├── async_membership_service.py  # VIP 会员业务逻辑（异步）
 │   ├── resources/               # 资源加载（后端版本）
 │   ├── timer/                   # 定时任务相关
-│   └── utils / validation ...   # 通用工具与校验
+│   └── utils/                   # 通用工具与校验
 │       ├── rich_text_processor.py  # 富文本处理模块
-│       └── link_preview.py         # 链接预览模块
+│       └── async_link_preview.py   # 链接预览模块（异步）
 │
 ├── client/                      # 客户端（PyQt6 UI）
 │   ├── main.py                  # 程序入口，初始化 QApplication 与主窗口
@@ -129,12 +135,17 @@ change_voice/
 - **Python**：建议 `Python 3.9+`  
 - **数据库**：MySQL 5.7 / 8.x
 - **依赖库（核心）**：
-  - `Flask` - Web 框架
-  - `PyMySQL` - MySQL 数据库连接
+  - `FastAPI` - 异步 Web 框架
+  - `uvicorn[standard]` - ASGI 服务器
+  - `python-socketio` - WebSocket 服务器（异步）
+  - `sqlalchemy[asyncio]` - 异步 ORM 框架
+  - `aiomysql` - 异步 MySQL 驱动
+  - `pydantic` - 数据验证和序列化
   - `bcrypt` - 密码加密
   - `cryptography` - Token 加密
-  - `requests` - HTTP 客户端（用于测试）
+  - `httpx` - 异步 HTTP 客户端（用于链接预览）
   - `beautifulsoup4` - HTML 解析（用于链接预览）
+  - `email-validator` - 邮箱验证
 
 ### 桌面客户端
 - **操作系统**：Windows 10 / 11（其他平台需自行测试）  
@@ -173,15 +184,6 @@ cd change_voice
 
 建议使用虚拟环境（如 `venv` / `conda`），然后安装依赖：
 
-```bash
-# 后端依赖
-pip install Flask pymysql bcrypt cryptography requests beautifulsoup4
-
-# 客户端依赖
-pip install PyQt6 requests cryptography
-```
-
-或根据你实际维护的 `requirements.txt` 执行：
 
 ```bash
 # 安装所有依赖（推荐）
@@ -201,36 +203,50 @@ pip install -r client/requirements.txt   # 客户端依赖
 CREATE DATABASE voice DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-3. 确认 `backend/config/database_config.py` 中的连接配置与实际一致（主机 / 端口 / 用户名 / 密码 / 数据库名）。  
+3. 配置数据库连接信息：
+   - 在 `backend/` 目录下修改 `.env` 文件
+   - 配置数据库连接信息：`DB_HOST`、`DB_PORT`、`DB_USER`、`DB_PASSWORD`、`DB_NAME`
+   - 或修改 `backend/config/env_loader.py` 中的默认配置
 4. 首次启动后端服务时会自动创建以下表：
-   - `users`：用户基础信息（邮箱、用户名、密码、头像等）
+   - `users`：用户基础信息（邮箱、用户名、密码、头像、角色等）
    - `user_vip`：会员信息（是否 VIP、到期时间、钻石数量等）
    - `announcements`：系统公告
+   - `chat_sessions`：客服会话信息
+   - `chat_messages`：聊天消息记录
+   - `agent_status`：客服在线状态
+   - `user_connections`：用户连接信息
+   - `user_devices`：用户设备信息
+   - `message_queue`：消息队列
 
 > 如需初始化一些测试用户 / VIP / 公告数据，可自行编写 SQL 脚本导入。
 
-### 4. 配置邮件与加密（可选但推荐）
-
-打开 `backend/config/config.py`：
-
-- 修改 `email_config` 中的 `sender_email` / `sender_password` / `sender_name` 为你的发信邮箱  
-- 如有安全要求，请替换 `SECRET_KEY` 与 `ENCRYPTION_KEY`
-- 确保 `client/config/config.py` 中的 `ENCRYPTION_KEY` 与后端一致
 
 ### 5. 启动后端服务
 
 在项目根目录下运行：
 
 ```bash
-# 方式一：使用模块方式运行（推荐）
-python -m backend.api_server
-
-# 方式二：直接运行（需要确保在正确的路径下）
+# 方式一：直接运行 FastAPI 应用（推荐）
 cd backend
 python api_server.py
+
+# 方式二：使用 Uvicorn 运行（从项目根目录）
+python -m uvicorn backend.api_server:socketio_app --host 0.0.0.0 --port 8000
+
+# 方式三：从 backend 目录运行
+cd backend
+python -m uvicorn api_server:socketio_app --host 0.0.0.0 --port 8000
+
+# 方式四：开发模式（自动重载）
+cd backend
+python api_server.py
+# 或使用 uvicorn 的 --reload 参数
+python -m uvicorn api_server:socketio_app --host 0.0.0.0 --port 8000 --reload
 ```
 
 后端服务默认运行在 `http://127.0.0.1:8000`，你可以在浏览器访问 `http://127.0.0.1:8000/api/health` 检查服务是否正常。
+
+> **注意**：后端已从 Flask 迁移到 FastAPI，采用异步架构，支持 WebSocket 实时通信。所有 HTTP 路由和 WebSocket 事件处理器均已转换为异步实现。
 
 ### 6. 启动桌面客户端
 
@@ -322,6 +338,8 @@ npm run dev
 - ✅ **消息富文本功能**（Markdown 格式、@提及、链接预览）
 - ✅ **消息操作功能**（消息撤回、消息引用回复）
 - ✅ **WebSocket 实时通信完善**（消息推送、心跳检测、自动重连、离线消息、消息队列）
+- ✅ **FastAPI 异步架构**（从 Flask 迁移到 FastAPI，全面异步化）
+- ✅ **SQLAlchemy 2.0 异步 ORM**（异步数据库操作，提升性能）
 
 **功能差距分析：**
 当前系统实现了客服对话的基础框架，以下详细列出待完成的功能模块。

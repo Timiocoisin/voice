@@ -1,0 +1,55 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 环境变量文件
+.env
+backend/.env
+*.env
+!*.env.example
+
+# IDE
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*~
+
+# 日志文件
+*.log
+logs/
+backend/logs/*.log
+
+# 操作系统
+.DS_Store
+Thumbs.db
+
+# 加密文件
+*.enc
+tokens/
+client/tokens/
+
+# 临时文件
+*.tmp
+*.bak
+

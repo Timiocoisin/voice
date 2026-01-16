@@ -988,43 +988,85 @@ const showMessageContextMenu = async (event: MouseEvent, msg: ChatMessage) => {
     let canRecall = false; // 默认不允许撤回，必须有有效时间才能撤回
     let recallTooltip = '';
     
-    if (msg.created_at) {
+    // 调试：输出消息对象，查看时间字段
+    console.log('撤回消息检查 - 消息对象:', {
+      id: msg.id,
+      from: msg.from,
+      created_at: msg.created_at,
+      time: msg.time,
+      fullMsg: msg
+    });
+    
+    // 优先使用 created_at（ISO 格式），如果没有则尝试从 time 推断（不推荐）
+    const timeStr = msg.created_at || msg.time;
+    
+    if (timeStr) {
       try {
-        // 处理不同的时间格式
-        let createdTime: Date;
-        if (typeof msg.created_at === 'string') {
-          // 如果是 ISO 格式字符串，直接解析
-          createdTime = new Date(msg.created_at);
+        let createdTime: Date | null = null;
+        
+        // 尝试解析时间字符串
+        if (typeof timeStr === 'string') {
+          // 如果是 ISO 格式（包含 'T'），直接解析
+          // 注意：即使没有时区信息（Z 或 +），也尝试解析为本地时间
+          if (timeStr.includes('T')) {
+            // 如果缺少时区信息，假设是 UTC 时间
+            let isoStr = timeStr;
+            if (!timeStr.includes('Z') && !timeStr.includes('+') && !timeStr.includes('-', 10)) {
+              // 没有时区信息，添加 'Z' 表示 UTC
+              isoStr = timeStr + 'Z';
+            }
+            createdTime = new Date(isoStr);
+            console.log('解析时间:', { original: timeStr, parsed: isoStr, date: createdTime, isValid: !isNaN(createdTime.getTime()) });
+          } else if (timeStr.match(/^\d{4}-\d{2}-\d{2}/)) {
+            // 如果是日期格式（YYYY-MM-DD），也尝试解析
+            createdTime = new Date(timeStr);
+          } else {
+            // 如果是格式化后的时间（如 "14:30"），无法准确解析，不允许撤回
+            canRecall = false;
+            recallTooltip = '消息时间格式无效，无法撤回';
+            console.warn('消息时间格式无效（可能是格式化后的时间字符串）:', timeStr, msg);
+          }
         } else {
-          // 如果是其他格式，尝试转换
-          createdTime = new Date(msg.created_at);
+          // 如果是其他类型，尝试转换
+          createdTime = new Date(timeStr);
         }
         
         // 检查日期是否有效
-        if (isNaN(createdTime.getTime())) {
-          // 如果日期无效，不允许撤回
-          canRecall = false;
-          recallTooltip = '消息时间无效，无法撤回';
-        } else {
+        if (createdTime && !isNaN(createdTime.getTime())) {
           const now = new Date();
           const diffMs = now.getTime() - createdTime.getTime();
           const diffMinutes = diffMs / (1000 * 60);
-          canRecall = diffMinutes <= 2;
+          console.log('时间差计算:', {
+            now: now.toISOString(),
+            created: createdTime.toISOString(),
+            diffMs: diffMs,
+            diffMinutes: diffMinutes,
+            canRecall: diffMinutes <= 2
+          });
+          canRecall = diffMinutes <= 2 && diffMinutes >= 0; // 确保时间差为正（消息不能是未来的）
           if (!canRecall) {
-            recallTooltip = '消息已超过2分钟，无法撤回';
+            if (diffMinutes < 0) {
+              recallTooltip = '消息时间异常，无法撤回';
+            } else {
+              recallTooltip = `消息已超过2分钟，无法撤回（已过 ${Math.floor(diffMinutes)} 分钟）`;
+            }
           }
+        } else {
+          canRecall = false;
+          recallTooltip = '消息时间无效，无法撤回';
+          console.warn('解析后的时间无效:', createdTime, timeStr);
         }
       } catch (e) {
-        console.error('解析消息创建时间失败:', e, msg.created_at);
+        console.error('解析消息创建时间失败:', e, timeStr, msg);
         // 如果解析失败，不允许撤回
         canRecall = false;
         recallTooltip = '无法解析消息时间，无法撤回';
       }
     } else {
-      // 如果没有 created_at 字段，不允许撤回
+      // 如果没有时间信息，不允许撤回
       canRecall = false;
       recallTooltip = '消息时间信息缺失，无法撤回';
-      console.warn('消息缺少 created_at 字段:', msg.id, msg);
+      console.warn('消息缺少时间字段:', msg.id, msg);
     }
     
     const recallItem = document.createElement('div');
@@ -1661,10 +1703,10 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
         session.lastMessage = '对方撤回了一条消息';
         session.lastTime = formatTime(message.time || new Date().toISOString());
       } else {
-        session.unread = (session.unread || 0) + 1;
-        // 更新最后一条消息
-        session.lastMessage = (message.text || '').substring(0, 50);
-        session.lastTime = formatTime(message.time || new Date().toISOString());
+      session.unread = (session.unread || 0) + 1;
+      // 更新最后一条消息
+      session.lastMessage = (message.text || '').substring(0, 50);
+      session.lastTime = formatTime(message.time || new Date().toISOString());
       }
     }
     return;
@@ -1765,12 +1807,21 @@ const handleWebSocketMessage = (message: WebSocketMessage): void => {
     replyToMessage = '引用消息加载中...';
   }
   
+  // 调试：输出接收到的消息对象
+  console.log('handleWebSocketMessage - 接收到的消息:', {
+    id: message.id,
+    created_at: message.created_at,
+    time: message.time,
+    from: message.from,
+    is_from_self: message.is_from_self
+  });
+  
   const chatMessage: ChatMessage = {
     id: message.id,
     from: isFromSelf ? 'agent' : 'user',
     text: isRecalled ? '[消息已撤回]' : processedMessage,
     time: formatTime(message.time || message.created_at || message.timestamp),
-    created_at: message.created_at || message.time, // 添加创建时间（用于判断撤回时限）
+    created_at: message.created_at || undefined, // 只使用 created_at，不使用 time（因为 time 是格式化后的字符串）
     userId: message.from_user_id,
     avatar: message.avatar,
     messageType: message.message_type || 'text',

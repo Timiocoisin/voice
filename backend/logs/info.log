@@ -517,3 +517,1192 @@
 2026-01-15 17:15:17,904 - INFO - root - 用户 2 的连接 1768468517843-1ksaigvek 已创建
 2026-01-15 17:15:24,104 - INFO - root - 连接 1768468517843-1ksaigvek 已断开
 2026-01-15 17:15:24,119 - INFO - backend.websocket.websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 16:51:24,556 - INFO - __main__ - 正在初始化 AsyncDatabaseManager...
+2026-01-16 16:51:24,566 - ERROR - __main__ - ❌ AsyncDatabaseManager 初始化失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 62, in test_async_db_manager_init
+    db_manager = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 16:51:24,568 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,568 - INFO - __main__ - 测试 3: 异步数据库管理器方法检查
+2026-01-16 16:51:24,568 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,568 - ERROR - __main__ - ❌ 方法检查失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 84, in test_async_db_manager_methods
+    db_manager = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 16:51:24,569 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,569 - INFO - __main__ - 测试 4: 异步 WebSocket 管理器
+2026-01-16 16:51:24,569 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,585 - ERROR - __main__ - ❌ AsyncWebSocketManager 测试失败: No module named 'socketio'
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 133, in test_async_websocket_manager
+    from backend.websocket.async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 12, in <module>
+    import socketio
+ModuleNotFoundError: No module named 'socketio'
+2026-01-16 16:51:24,586 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,586 - INFO - __main__ - 测试 7: 数据库连接配置
+2026-01-16 16:51:24,586 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,586 - ERROR - __main__ - ❌ 数据库配置读取失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 260, in test_database_connection
+    config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 16:51:24,586 - INFO - __main__ - 
+==================================================
+2026-01-16 16:51:24,586 - INFO - __main__ - 测试结果汇总
+2026-01-16 16:51:24,587 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,587 - ERROR - __main__ - ❌ Pydantic Schemas: 失败
+2026-01-16 16:51:24,587 - ERROR - __main__ - ❌ FastAPI App: 失败
+2026-01-16 16:51:24,587 - INFO - __main__ - ✅ SQLAlchemy Models: 通过
+2026-01-16 16:51:24,587 - ERROR - __main__ - ❌ Async DB Manager Init: 失败
+2026-01-16 16:51:24,587 - ERROR - __main__ - ❌ Async DB Manager Methods: 失败
+2026-01-16 16:51:24,587 - ERROR - __main__ - ❌ Async WebSocket Manager: 失败
+2026-01-16 16:51:24,587 - ERROR - __main__ - ❌ Database Config: 失败
+2026-01-16 16:51:24,587 - INFO - __main__ - ==================================================
+2026-01-16 16:51:24,587 - INFO - __main__ - 总计: 7 个测试
+2026-01-16 16:51:24,587 - INFO - __main__ - 通过: 1
+2026-01-16 16:51:24,587 - INFO - __main__ - 失败: 6
+2026-01-16 16:51:24,587 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,171 - INFO - __main__ - 正在初始化 AsyncDatabaseManager...
+2026-01-16 16:52:38,171 - WARNING - __main__ - ⚠️  数据库配置缺失（需要 .env 文件），但代码结构正确
+2026-01-16 16:52:38,171 - INFO - __main__ - ✅ AsyncDatabaseManager 类定义正确
+2026-01-16 16:52:38,172 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,172 - INFO - __main__ - 测试 3: 异步数据库管理器方法检查
+2026-01-16 16:52:38,172 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,172 - INFO - __main__ - ✅ 所有关键方法存在且为异步
+2026-01-16 16:52:38,172 - INFO - __main__ -   - get_user_by_email() ✓
+2026-01-16 16:52:38,172 - INFO - __main__ -   - get_user_by_id() ✓
+2026-01-16 16:52:38,172 - INFO - __main__ -   - insert_user_info() ✓
+2026-01-16 16:52:38,172 - INFO - __main__ -   - get_user_vip_info() ✓
+2026-01-16 16:52:38,172 - INFO - __main__ -   - insert_chat_message() ✓
+2026-01-16 16:52:38,172 - INFO - __main__ -   - get_chat_messages() ✓
+2026-01-16 16:52:38,172 - INFO - __main__ -   - get_online_agents() ✓
+2026-01-16 16:52:38,173 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,173 - INFO - __main__ - 测试 4: 异步 WebSocket 管理器
+2026-01-16 16:52:38,173 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,180 - ERROR - __main__ - ❌ AsyncWebSocketManager 测试失败: partially initialized module 'socketio' from 'D:\anaconda3\Lib\site-packages\socketio\__init__.py' has no attribute 'AsyncServer' (most likely due to a circular import)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 144, in test_async_websocket_manager
+    from backend.websocket.async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\__init__.py", line 11, in <module>
+    from .async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 12, in <module>
+    import socketio
+  File "D:\anaconda3\Lib\site-packages\socketio\__init__.py", line 1, in <module>
+    from .client import Client
+  File "D:\anaconda3\Lib\site-packages\socketio\client.py", line 3, in <module>
+    import engineio
+  File "D:\anaconda3\Lib\site-packages\engineio\__init__.py", line 1, in <module>
+    from .client import Client
+  File "D:\anaconda3\Lib\site-packages\engineio\client.py", line 16, in <module>
+    import websocket
+  File "D:\Desktop\work\change_voice\backend\websocket\__init__.py", line 11, in <module>
+    from .async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 17, in <module>
+    class AsyncWebSocketManager:
+    ...<692 lines>...
+            }
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 20, in AsyncWebSocketManager
+    def __init__(self, socketio_server: socketio.AsyncServer, db_manager):
+                                        ^^^^^^^^^^^^^^^^^^^^
+AttributeError: partially initialized module 'socketio' from 'D:\anaconda3\Lib\site-packages\socketio\__init__.py' has no attribute 'AsyncServer' (most likely due to a circular import)
+2026-01-16 16:52:38,194 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,194 - INFO - __main__ - 测试 7: 数据库连接配置
+2026-01-16 16:52:38,194 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,194 - ERROR - __main__ - ❌ 数据库配置读取失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 271, in test_database_connection
+    config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 16:52:38,196 - INFO - __main__ - 
+==================================================
+2026-01-16 16:52:38,196 - INFO - __main__ - 测试结果汇总
+2026-01-16 16:52:38,196 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,196 - INFO - __main__ - ✅ Pydantic Schemas: 通过
+2026-01-16 16:52:38,196 - ERROR - __main__ - ❌ FastAPI App: 失败
+2026-01-16 16:52:38,196 - INFO - __main__ - ✅ SQLAlchemy Models: 通过
+2026-01-16 16:52:38,196 - INFO - __main__ - ✅ Async DB Manager Init: 通过
+2026-01-16 16:52:38,196 - INFO - __main__ - ✅ Async DB Manager Methods: 通过
+2026-01-16 16:52:38,196 - ERROR - __main__ - ❌ Async WebSocket Manager: 失败
+2026-01-16 16:52:38,196 - ERROR - __main__ - ❌ Database Config: 失败
+2026-01-16 16:52:38,197 - INFO - __main__ - ==================================================
+2026-01-16 16:52:38,197 - INFO - __main__ - 总计: 7 个测试
+2026-01-16 16:52:38,197 - INFO - __main__ - 通过: 4
+2026-01-16 16:52:38,197 - INFO - __main__ - 失败: 3
+2026-01-16 16:52:38,197 - INFO - __main__ - ==================================================
+2026-01-16 16:53:19,961 - INFO - __main__ - ✅ FastAPI 应用导入成功
+2026-01-16 16:53:19,961 - INFO - __main__ -   - FastAPI app: FastAPI
+2026-01-16 16:53:19,961 - INFO - __main__ -   - SocketIO server: AsyncServer
+2026-01-16 16:53:19,961 - INFO - __main__ -   - SocketIO app: ASGIApp
+2026-01-16 16:53:19,961 - INFO - __main__ -   - 已注册路由数: 5
+2026-01-16 16:53:19,961 - INFO - __main__ -     - /openapi.json
+2026-01-16 16:53:19,961 - INFO - __main__ -     - /docs
+2026-01-16 16:53:19,961 - INFO - __main__ -     - /docs/oauth2-redirect
+2026-01-16 16:53:19,961 - INFO - __main__ -     - /redoc
+2026-01-16 16:53:19,961 - INFO - __main__ -     - /api/health
+2026-01-16 16:53:19,961 - INFO - __main__ - ==================================================
+2026-01-16 16:53:19,961 - INFO - __main__ - 测试 1: SQLAlchemy 模型定义
+2026-01-16 16:53:19,962 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,153 - INFO - __main__ - ✅ 所有模型导入成功
+2026-01-16 16:53:20,153 - INFO - __main__ -   - User 表: users
+2026-01-16 16:53:20,153 - INFO - __main__ -   - UserVip 表: user_vip
+2026-01-16 16:53:20,153 - INFO - __main__ -   - ChatMessage 表: chat_messages
+2026-01-16 16:53:20,154 - INFO - __main__ -   - ChatSession 表: chat_sessions
+2026-01-16 16:53:20,154 - INFO - __main__ -   - 枚举类型: UserRole, MessageType, SessionStatus 等
+2026-01-16 16:53:20,154 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,154 - INFO - __main__ - 测试 2: 异步数据库管理器初始化
+2026-01-16 16:53:20,154 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,164 - INFO - __main__ - 正在初始化 AsyncDatabaseManager...
+2026-01-16 16:53:20,164 - WARNING - __main__ - ⚠️  数据库配置缺失（需要 .env 文件），但代码结构正确
+2026-01-16 16:53:20,164 - INFO - __main__ - ✅ AsyncDatabaseManager 类定义正确
+2026-01-16 16:53:20,164 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,164 - INFO - __main__ - 测试 3: 异步数据库管理器方法检查
+2026-01-16 16:53:20,164 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,165 - INFO - __main__ - ✅ 所有关键方法存在且为异步
+2026-01-16 16:53:20,165 - INFO - __main__ -   - get_user_by_email() ✓
+2026-01-16 16:53:20,165 - INFO - __main__ -   - get_user_by_id() ✓
+2026-01-16 16:53:20,165 - INFO - __main__ -   - insert_user_info() ✓
+2026-01-16 16:53:20,165 - INFO - __main__ -   - get_user_vip_info() ✓
+2026-01-16 16:53:20,165 - INFO - __main__ -   - insert_chat_message() ✓
+2026-01-16 16:53:20,165 - INFO - __main__ -   - get_chat_messages() ✓
+2026-01-16 16:53:20,165 - INFO - __main__ -   - get_online_agents() ✓
+2026-01-16 16:53:20,165 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,165 - INFO - __main__ - 测试 4: 异步 WebSocket 管理器
+2026-01-16 16:53:20,165 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,167 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 16:53:20,168 - INFO - __main__ - ✅ AsyncWebSocketManager 初始化成功
+2026-01-16 16:53:20,168 - INFO - __main__ - ✅ 所有关键方法为异步
+2026-01-16 16:53:20,168 - INFO - __main__ -   - connect() ✓
+2026-01-16 16:53:20,168 - INFO - __main__ -   - disconnect() ✓
+2026-01-16 16:53:20,168 - INFO - __main__ -   - update_heartbeat() ✓
+2026-01-16 16:53:20,168 - INFO - __main__ -   - send_message_to_user() ✓
+2026-01-16 16:53:20,168 - INFO - __main__ -   - push_vip_status_update() ✓
+2026-01-16 16:53:20,168 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,168 - INFO - __main__ - 测试 7: 数据库连接配置
+2026-01-16 16:53:20,168 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,168 - INFO - __main__ - ✅ 数据库配置模块导入成功
+2026-01-16 16:53:20,168 - INFO - __main__ -   - Host: None
+2026-01-16 16:53:20,169 - INFO - __main__ -   - Port: 3306
+2026-01-16 16:53:20,169 - INFO - __main__ -   - Database: None
+2026-01-16 16:53:20,169 - INFO - __main__ -   - User: None
+2026-01-16 16:53:20,169 - INFO - __main__ -   - Charset: utf8mb4
+2026-01-16 16:53:20,169 - WARNING - __main__ -   ⚠️  数据库配置缺失（需要 .env 文件），这是正常的
+2026-01-16 16:53:20,169 - INFO - __main__ - 
+==================================================
+2026-01-16 16:53:20,169 - INFO - __main__ - 测试结果汇总
+2026-01-16 16:53:20,169 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,169 - INFO - __main__ - ✅ Pydantic Schemas: 通过
+2026-01-16 16:53:20,169 - INFO - __main__ - ✅ FastAPI App: 通过
+2026-01-16 16:53:20,169 - INFO - __main__ - ✅ SQLAlchemy Models: 通过
+2026-01-16 16:53:20,169 - INFO - __main__ - ✅ Async DB Manager Init: 通过
+2026-01-16 16:53:20,169 - INFO - __main__ - ✅ Async DB Manager Methods: 通过
+2026-01-16 16:53:20,169 - INFO - __main__ - ✅ Async WebSocket Manager: 通过
+2026-01-16 16:53:20,169 - INFO - __main__ - ✅ Database Config: 通过
+2026-01-16 16:53:20,170 - INFO - __main__ - ==================================================
+2026-01-16 16:53:20,170 - INFO - __main__ - 总计: 7 个测试
+2026-01-16 16:53:20,170 - INFO - __main__ - 通过: 7
+2026-01-16 16:53:20,170 - INFO - __main__ - 失败: 0
+2026-01-16 16:53:20,170 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,399 - INFO - __main__ - 
+==================================================
+2026-01-16 18:09:17,399 - INFO - __main__ - 开始 FastAPI 迁移测试
+2026-01-16 18:09:17,399 - INFO - __main__ - ==================================================
+
+2026-01-16 18:09:17,399 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,399 - INFO - __main__ - 测试 6: SQLAlchemy 模型
+2026-01-16 18:09:17,399 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,399 - INFO - __main__ - ✅ 所有 SQLAlchemy 模型导入成功
+2026-01-16 18:09:17,400 - INFO - __main__ -   - User: users
+2026-01-16 18:09:17,400 - INFO - __main__ -   - UserVip: user_vip
+2026-01-16 18:09:17,400 - INFO - __main__ -   - ChatSession: chat_sessions
+2026-01-16 18:09:17,400 - INFO - __main__ -   - ChatMessage: chat_messages
+2026-01-16 18:09:17,400 - INFO - __main__ -   - Announcement: announcements
+2026-01-16 18:09:17,400 - INFO - __main__ -   - UserConnection: user_connections
+2026-01-16 18:09:17,400 - INFO - __main__ -   - UserDevice: user_devices
+2026-01-16 18:09:17,400 - INFO - __main__ -   - MessageQueue: message_queue
+2026-01-16 18:09:17,400 - INFO - __main__ -   - PasswordResetToken: password_reset_tokens
+2026-01-16 18:09:17,400 - INFO - __main__ -   - AgentStatus: agent_status
+2026-01-16 18:09:17,401 - INFO - __main__ - 
+2026-01-16 18:09:17,401 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,401 - INFO - __main__ - 测试 7: Pydantic Schemas
+2026-01-16 18:09:17,401 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,607 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'UserResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 206, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'UserResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:09:17,608 - INFO - __main__ - 
+2026-01-16 18:09:17,608 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,608 - INFO - __main__ - 测试 1: 数据库连接
+2026-01-16 18:09:17,608 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,608 - ERROR - __main__ - ❌ 数据库连接失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:17,609 - INFO - __main__ - 
+2026-01-16 18:09:17,609 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,610 - INFO - __main__ - 测试 2: 会员服务
+2026-01-16 18:09:17,610 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,610 - ERROR - __main__ - ❌ 会员服务测试失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 60, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:17,610 - INFO - __main__ - 
+2026-01-16 18:09:17,610 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,610 - INFO - __main__ - 测试 3: WebSocket 管理器
+2026-01-16 18:09:17,610 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,610 - ERROR - __main__ - ❌ WebSocket 管理器测试失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 85, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:17,611 - INFO - __main__ - 
+2026-01-16 18:09:17,611 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,611 - INFO - __main__ - 测试 5: 异步链接预览
+2026-01-16 18:09:17,611 - INFO - __main__ - ==================================================
+2026-01-16 18:09:17,930 - INFO - __main__ - ✅ 简单预览测试通过: example.com
+2026-01-16 18:09:18,810 - INFO - httpx - HTTP Request: GET https://example.com "HTTP/1.1 200 OK"
+2026-01-16 18:09:18,813 - INFO - __main__ - ✅ 异步链接预览测试通过: True
+2026-01-16 18:09:18,813 - INFO - __main__ - 
+2026-01-16 18:09:18,813 - INFO - __main__ - ==================================================
+2026-01-16 18:09:18,813 - INFO - __main__ - 测试 4: FastAPI 应用
+2026-01-16 18:09:18,813 - INFO - __main__ - ==================================================
+2026-01-16 18:09:19,119 - ERROR - __main__ - ❌ FastAPI 应用测试失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 114, in test_fastapi_app
+    from backend.api_server_fastapi import app, db, ws_manager
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:19,121 - INFO - __main__ - 
+2026-01-16 18:09:19,121 - INFO - __main__ - ==================================================
+2026-01-16 18:09:19,121 - INFO - __main__ - 测试结果汇总
+2026-01-16 18:09:19,121 - INFO - __main__ - ==================================================
+2026-01-16 18:09:19,121 - INFO - __main__ - ✅ 通过 - SQLAlchemy 模型
+2026-01-16 18:09:19,121 - INFO - __main__ - ❌ 失败 - Pydantic Schemas
+2026-01-16 18:09:19,121 - INFO - __main__ - ❌ 失败 - 数据库连接
+2026-01-16 18:09:19,121 - INFO - __main__ - ❌ 失败 - 会员服务
+2026-01-16 18:09:19,121 - INFO - __main__ - ❌ 失败 - WebSocket 管理器
+2026-01-16 18:09:19,121 - INFO - __main__ - ✅ 通过 - 异步链接预览
+2026-01-16 18:09:19,121 - INFO - __main__ - ❌ 失败 - FastAPI 应用
+2026-01-16 18:09:19,121 - INFO - __main__ - 
+2026-01-16 18:09:19,121 - INFO - __main__ - 总计: 2/7 测试通过
+2026-01-16 18:09:19,121 - WARNING - __main__ - ⚠️  有 5 个测试失败，请检查上述错误信息
+2026-01-16 18:11:23,703 - INFO - __main__ - 
+==================================================
+2026-01-16 18:11:23,703 - INFO - __main__ - 开始 FastAPI 迁移测试
+2026-01-16 18:11:23,703 - INFO - __main__ - ==================================================
+
+2026-01-16 18:11:23,703 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,703 - INFO - __main__ - 测试 6: SQLAlchemy 模型
+2026-01-16 18:11:23,703 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,703 - INFO - __main__ - ✅ 所有 SQLAlchemy 模型导入成功
+2026-01-16 18:11:23,703 - INFO - __main__ -   - User: users
+2026-01-16 18:11:23,703 - INFO - __main__ -   - UserVip: user_vip
+2026-01-16 18:11:23,703 - INFO - __main__ -   - ChatSession: chat_sessions
+2026-01-16 18:11:23,704 - INFO - __main__ -   - ChatMessage: chat_messages
+2026-01-16 18:11:23,704 - INFO - __main__ -   - Announcement: announcements
+2026-01-16 18:11:23,704 - INFO - __main__ -   - UserConnection: user_connections
+2026-01-16 18:11:23,704 - INFO - __main__ -   - UserDevice: user_devices
+2026-01-16 18:11:23,704 - INFO - __main__ -   - MessageQueue: message_queue
+2026-01-16 18:11:23,704 - INFO - __main__ -   - PasswordResetToken: password_reset_tokens
+2026-01-16 18:11:23,704 - INFO - __main__ -   - AgentStatus: agent_status
+2026-01-16 18:11:23,704 - INFO - __main__ - 
+2026-01-16 18:11:23,704 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,704 - INFO - __main__ - 测试 7: Pydantic Schemas
+2026-01-16 18:11:23,704 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,883 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'UserBase' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 227, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'UserBase' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:11:23,885 - INFO - __main__ - 
+2026-01-16 18:11:23,885 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,885 - INFO - __main__ - 测试 1: 数据库连接
+2026-01-16 18:11:23,885 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,885 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:23,887 - INFO - __main__ - 
+2026-01-16 18:11:23,887 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,887 - INFO - __main__ - 测试 2: 会员服务
+2026-01-16 18:11:23,887 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,887 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:23,888 - INFO - __main__ - 
+2026-01-16 18:11:23,888 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,888 - INFO - __main__ - 测试 3: WebSocket 管理器
+2026-01-16 18:11:23,888 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,889 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:23,889 - INFO - __main__ - 
+2026-01-16 18:11:23,889 - INFO - __main__ - ==================================================
+2026-01-16 18:11:23,889 - INFO - __main__ - 测试 5: 异步链接预览
+2026-01-16 18:11:23,889 - INFO - __main__ - ==================================================
+2026-01-16 18:11:24,039 - INFO - __main__ - ✅ 简单预览测试通过: example.com
+2026-01-16 18:11:24,735 - INFO - httpx - HTTP Request: GET https://example.com "HTTP/1.1 200 OK"
+2026-01-16 18:11:24,738 - INFO - __main__ - ✅ 异步链接预览测试通过: True
+2026-01-16 18:11:24,738 - INFO - __main__ - 
+2026-01-16 18:11:24,738 - INFO - __main__ - ==================================================
+2026-01-16 18:11:24,738 - INFO - __main__ - 测试 4: FastAPI 应用
+2026-01-16 18:11:24,738 - INFO - __main__ - ==================================================
+2026-01-16 18:11:24,978 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:24,979 - INFO - __main__ - 
+2026-01-16 18:11:24,980 - INFO - __main__ - ==================================================
+2026-01-16 18:11:24,980 - INFO - __main__ - 测试结果汇总
+2026-01-16 18:11:24,980 - INFO - __main__ - ==================================================
+2026-01-16 18:11:24,980 - INFO - __main__ - ✅ 通过 - SQLAlchemy 模型
+2026-01-16 18:11:24,980 - INFO - __main__ - ❌ 失败 - Pydantic Schemas
+2026-01-16 18:11:24,980 - INFO - __main__ - ❌ 失败 - 数据库连接
+2026-01-16 18:11:24,980 - INFO - __main__ - ❌ 失败 - 会员服务
+2026-01-16 18:11:24,980 - INFO - __main__ - ❌ 失败 - WebSocket 管理器
+2026-01-16 18:11:24,980 - INFO - __main__ - ✅ 通过 - 异步链接预览
+2026-01-16 18:11:24,980 - INFO - __main__ - ❌ 失败 - FastAPI 应用
+2026-01-16 18:11:24,980 - INFO - __main__ - 
+2026-01-16 18:11:24,980 - INFO - __main__ - 总计: 2 通过, 0 跳过, 5 失败 (共 7 个测试)
+2026-01-16 18:11:24,980 - WARNING - __main__ - ⚠️  有 5 个测试失败，请检查上述错误信息
+2026-01-16 18:11:51,902 - INFO - __main__ - 
+==================================================
+2026-01-16 18:11:51,902 - INFO - __main__ - 开始 FastAPI 迁移测试
+2026-01-16 18:11:51,902 - INFO - __main__ - ==================================================
+
+2026-01-16 18:11:51,902 - INFO - __main__ - ==================================================
+2026-01-16 18:11:51,902 - INFO - __main__ - 测试 6: SQLAlchemy 模型
+2026-01-16 18:11:51,902 - INFO - __main__ - ==================================================
+2026-01-16 18:11:51,902 - INFO - __main__ - ✅ 所有 SQLAlchemy 模型导入成功
+2026-01-16 18:11:51,902 - INFO - __main__ -   - User: users
+2026-01-16 18:11:51,902 - INFO - __main__ -   - UserVip: user_vip
+2026-01-16 18:11:51,902 - INFO - __main__ -   - ChatSession: chat_sessions
+2026-01-16 18:11:51,903 - INFO - __main__ -   - ChatMessage: chat_messages
+2026-01-16 18:11:51,903 - INFO - __main__ -   - Announcement: announcements
+2026-01-16 18:11:51,903 - INFO - __main__ -   - UserConnection: user_connections
+2026-01-16 18:11:51,903 - INFO - __main__ -   - UserDevice: user_devices
+2026-01-16 18:11:51,903 - INFO - __main__ -   - MessageQueue: message_queue
+2026-01-16 18:11:51,903 - INFO - __main__ -   - PasswordResetToken: password_reset_tokens
+2026-01-16 18:11:51,903 - INFO - __main__ -   - AgentStatus: agent_status
+2026-01-16 18:11:51,903 - INFO - __main__ - 
+2026-01-16 18:11:51,903 - INFO - __main__ - ==================================================
+2026-01-16 18:11:51,903 - INFO - __main__ - 测试 7: Pydantic Schemas
+2026-01-16 18:11:51,903 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,052 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'TokenResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 227, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'TokenResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:11:52,054 - INFO - __main__ - 
+2026-01-16 18:11:52,054 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,054 - INFO - __main__ - 测试 1: 数据库连接
+2026-01-16 18:11:52,054 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,054 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:52,055 - INFO - __main__ - 
+2026-01-16 18:11:52,055 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,055 - INFO - __main__ - 测试 2: 会员服务
+2026-01-16 18:11:52,055 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,055 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:52,056 - INFO - __main__ - 
+2026-01-16 18:11:52,056 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,056 - INFO - __main__ - 测试 3: WebSocket 管理器
+2026-01-16 18:11:52,056 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,056 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:52,057 - INFO - __main__ - 
+2026-01-16 18:11:52,057 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,057 - INFO - __main__ - 测试 5: 异步链接预览
+2026-01-16 18:11:52,057 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,195 - INFO - __main__ - ✅ 简单预览测试通过: example.com
+2026-01-16 18:11:52,951 - INFO - httpx - HTTP Request: GET https://example.com "HTTP/1.1 200 OK"
+2026-01-16 18:11:52,953 - INFO - __main__ - ✅ 异步链接预览测试通过: True
+2026-01-16 18:11:52,953 - INFO - __main__ - 
+2026-01-16 18:11:52,953 - INFO - __main__ - ==================================================
+2026-01-16 18:11:52,953 - INFO - __main__ - 测试 4: FastAPI 应用
+2026-01-16 18:11:52,954 - INFO - __main__ - ==================================================
+2026-01-16 18:11:53,269 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:53,270 - INFO - __main__ - 
+2026-01-16 18:11:53,270 - INFO - __main__ - ==================================================
+2026-01-16 18:11:53,270 - INFO - __main__ - 测试结果汇总
+2026-01-16 18:11:53,271 - INFO - __main__ - ==================================================
+2026-01-16 18:11:53,271 - INFO - __main__ - ✅ 通过 - SQLAlchemy 模型
+2026-01-16 18:11:53,271 - INFO - __main__ - ❌ 失败 - Pydantic Schemas
+2026-01-16 18:11:53,271 - INFO - __main__ - ❌ 失败 - 数据库连接
+2026-01-16 18:11:53,271 - INFO - __main__ - ❌ 失败 - 会员服务
+2026-01-16 18:11:53,271 - INFO - __main__ - ❌ 失败 - WebSocket 管理器
+2026-01-16 18:11:53,271 - INFO - __main__ - ✅ 通过 - 异步链接预览
+2026-01-16 18:11:53,271 - INFO - __main__ - ❌ 失败 - FastAPI 应用
+2026-01-16 18:11:53,271 - INFO - __main__ - 
+2026-01-16 18:11:53,271 - INFO - __main__ - 总计: 2 通过, 0 跳过, 5 失败 (共 7 个测试)
+2026-01-16 18:11:53,271 - WARNING - __main__ - ⚠️  有 5 个测试失败，请检查上述错误信息
+2026-01-16 18:12:13,697 - INFO - __main__ - 
+==================================================
+2026-01-16 18:12:13,698 - INFO - __main__ - 开始 FastAPI 迁移测试
+2026-01-16 18:12:13,698 - INFO - __main__ - ==================================================
+
+2026-01-16 18:12:13,698 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,698 - INFO - __main__ - 测试 6: SQLAlchemy 模型
+2026-01-16 18:12:13,698 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,698 - INFO - __main__ - ✅ 所有 SQLAlchemy 模型导入成功
+2026-01-16 18:12:13,698 - INFO - __main__ -   - User: users
+2026-01-16 18:12:13,698 - INFO - __main__ -   - UserVip: user_vip
+2026-01-16 18:12:13,698 - INFO - __main__ -   - ChatSession: chat_sessions
+2026-01-16 18:12:13,698 - INFO - __main__ -   - ChatMessage: chat_messages
+2026-01-16 18:12:13,698 - INFO - __main__ -   - Announcement: announcements
+2026-01-16 18:12:13,698 - INFO - __main__ -   - UserConnection: user_connections
+2026-01-16 18:12:13,698 - INFO - __main__ -   - UserDevice: user_devices
+2026-01-16 18:12:13,698 - INFO - __main__ -   - MessageQueue: message_queue
+2026-01-16 18:12:13,698 - INFO - __main__ -   - PasswordResetToken: password_reset_tokens
+2026-01-16 18:12:13,698 - INFO - __main__ -   - AgentStatus: agent_status
+2026-01-16 18:12:13,698 - INFO - __main__ - 
+2026-01-16 18:12:13,698 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,698 - INFO - __main__ - 测试 7: Pydantic Schemas
+2026-01-16 18:12:13,698 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,837 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'MessageResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 227, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'MessageResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:12:13,838 - INFO - __main__ - 
+2026-01-16 18:12:13,838 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,838 - INFO - __main__ - 测试 1: 数据库连接
+2026-01-16 18:12:13,838 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,838 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:13,840 - INFO - __main__ - 
+2026-01-16 18:12:13,840 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,840 - INFO - __main__ - 测试 2: 会员服务
+2026-01-16 18:12:13,840 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,840 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:13,841 - INFO - __main__ - 
+2026-01-16 18:12:13,841 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,841 - INFO - __main__ - 测试 3: WebSocket 管理器
+2026-01-16 18:12:13,841 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,841 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:13,842 - INFO - __main__ - 
+2026-01-16 18:12:13,842 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,842 - INFO - __main__ - 测试 5: 异步链接预览
+2026-01-16 18:12:13,842 - INFO - __main__ - ==================================================
+2026-01-16 18:12:13,975 - INFO - __main__ - ✅ 简单预览测试通过: example.com
+2026-01-16 18:12:14,707 - INFO - httpx - HTTP Request: GET https://example.com "HTTP/1.1 200 OK"
+2026-01-16 18:12:14,709 - INFO - __main__ - ✅ 异步链接预览测试通过: True
+2026-01-16 18:12:14,709 - INFO - __main__ - 
+2026-01-16 18:12:14,709 - INFO - __main__ - ==================================================
+2026-01-16 18:12:14,709 - INFO - __main__ - 测试 4: FastAPI 应用
+2026-01-16 18:12:14,709 - INFO - __main__ - ==================================================
+2026-01-16 18:12:14,950 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:14,952 - INFO - __main__ - 
+2026-01-16 18:12:14,952 - INFO - __main__ - ==================================================
+2026-01-16 18:12:14,952 - INFO - __main__ - 测试结果汇总
+2026-01-16 18:12:14,952 - INFO - __main__ - ==================================================
+2026-01-16 18:12:14,952 - INFO - __main__ - ✅ 通过 - SQLAlchemy 模型
+2026-01-16 18:12:14,952 - INFO - __main__ - ❌ 失败 - Pydantic Schemas
+2026-01-16 18:12:14,952 - INFO - __main__ - ❌ 失败 - 数据库连接
+2026-01-16 18:12:14,952 - INFO - __main__ - ❌ 失败 - 会员服务
+2026-01-16 18:12:14,952 - INFO - __main__ - ❌ 失败 - WebSocket 管理器
+2026-01-16 18:12:14,952 - INFO - __main__ - ✅ 通过 - 异步链接预览
+2026-01-16 18:12:14,952 - INFO - __main__ - ❌ 失败 - FastAPI 应用
+2026-01-16 18:12:14,952 - INFO - __main__ - 
+2026-01-16 18:12:14,952 - INFO - __main__ - 总计: 2 通过, 0 跳过, 5 失败 (共 7 个测试)
+2026-01-16 18:12:14,952 - WARNING - __main__ - ⚠️  有 5 个测试失败，请检查上述错误信息
+2026-01-16 18:42:52,843 - INFO - __main__ - 
+==================================================
+2026-01-16 18:42:52,843 - INFO - __main__ - 开始 FastAPI 迁移测试
+2026-01-16 18:42:52,843 - INFO - __main__ - ==================================================
+
+2026-01-16 18:42:52,843 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,843 - INFO - __main__ - 测试 6: SQLAlchemy 模型
+2026-01-16 18:42:52,843 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,844 - INFO - __main__ - ✅ 所有 SQLAlchemy 模型导入成功
+2026-01-16 18:42:52,844 - INFO - __main__ -   - User: users
+2026-01-16 18:42:52,844 - INFO - __main__ -   - UserVip: user_vip
+2026-01-16 18:42:52,844 - INFO - __main__ -   - ChatSession: chat_sessions
+2026-01-16 18:42:52,844 - INFO - __main__ -   - ChatMessage: chat_messages
+2026-01-16 18:42:52,844 - INFO - __main__ -   - Announcement: announcements
+2026-01-16 18:42:52,844 - INFO - __main__ -   - UserConnection: user_connections
+2026-01-16 18:42:52,844 - INFO - __main__ -   - UserDevice: user_devices
+2026-01-16 18:42:52,844 - INFO - __main__ -   - MessageQueue: message_queue
+2026-01-16 18:42:52,844 - INFO - __main__ -   - PasswordResetToken: password_reset_tokens
+2026-01-16 18:42:52,844 - INFO - __main__ -   - AgentStatus: agent_status
+2026-01-16 18:42:52,844 - INFO - __main__ - 
+2026-01-16 18:42:52,844 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,844 - INFO - __main__ - 测试 7: Pydantic Schemas
+2026-01-16 18:42:52,844 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,969 - INFO - __main__ - ✅ 所有 Pydantic schemas 导入成功
+2026-01-16 18:42:52,969 - INFO - __main__ - ✅ LoginRequest 模型创建成功: test@example.com
+2026-01-16 18:42:52,970 - INFO - __main__ - ✅ UserInfo 模型创建成功: test_user
+2026-01-16 18:42:52,970 - INFO - __main__ - 
+2026-01-16 18:42:52,970 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,970 - INFO - __main__ - 测试 1: 数据库连接
+2026-01-16 18:42:52,970 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,970 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:52,971 - INFO - __main__ - 
+2026-01-16 18:42:52,971 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,972 - INFO - __main__ - 测试 2: 会员服务
+2026-01-16 18:42:52,972 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,972 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:52,972 - INFO - __main__ - 
+2026-01-16 18:42:52,972 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,972 - INFO - __main__ - 测试 3: WebSocket 管理器
+2026-01-16 18:42:52,972 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,973 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:52,973 - INFO - __main__ - 
+2026-01-16 18:42:52,973 - INFO - __main__ - ==================================================
+2026-01-16 18:42:52,973 - INFO - __main__ - 测试 5: 异步链接预览
+2026-01-16 18:42:52,973 - INFO - __main__ - ==================================================
+2026-01-16 18:42:53,093 - INFO - __main__ - ✅ 简单预览测试通过: example.com
+2026-01-16 18:42:53,824 - INFO - httpx - HTTP Request: GET https://example.com "HTTP/1.1 200 OK"
+2026-01-16 18:42:53,826 - INFO - __main__ - ✅ 异步链接预览测试通过: True
+2026-01-16 18:42:53,827 - INFO - __main__ - 
+2026-01-16 18:42:53,827 - INFO - __main__ - ==================================================
+2026-01-16 18:42:53,827 - INFO - __main__ - 测试 4: FastAPI 应用
+2026-01-16 18:42:53,827 - INFO - __main__ - ==================================================
+2026-01-16 18:42:54,078 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:54,080 - INFO - __main__ - 
+2026-01-16 18:42:54,080 - INFO - __main__ - ==================================================
+2026-01-16 18:42:54,080 - INFO - __main__ - 测试结果汇总
+2026-01-16 18:42:54,080 - INFO - __main__ - ==================================================
+2026-01-16 18:42:54,080 - INFO - __main__ - ✅ 通过 - SQLAlchemy 模型
+2026-01-16 18:42:54,080 - INFO - __main__ - ✅ 通过 - Pydantic Schemas
+2026-01-16 18:42:54,080 - INFO - __main__ - ❌ 失败 - 数据库连接
+2026-01-16 18:42:54,080 - INFO - __main__ - ❌ 失败 - 会员服务
+2026-01-16 18:42:54,081 - INFO - __main__ - ❌ 失败 - WebSocket 管理器
+2026-01-16 18:42:54,081 - INFO - __main__ - ✅ 通过 - 异步链接预览
+2026-01-16 18:42:54,081 - INFO - __main__ - ❌ 失败 - FastAPI 应用
+2026-01-16 18:42:54,081 - INFO - __main__ - 
+2026-01-16 18:42:54,081 - INFO - __main__ - 总计: 3 通过, 0 跳过, 4 失败 (共 7 个测试)
+2026-01-16 18:42:54,081 - WARNING - __main__ - ⚠️  有 4 个测试失败，请检查上述错误信息
+2026-01-16 18:43:51,221 - INFO - __main__ - 
+==================================================
+2026-01-16 18:43:51,222 - INFO - __main__ - 开始 FastAPI 迁移测试
+2026-01-16 18:43:51,222 - INFO - __main__ - ==================================================
+
+2026-01-16 18:43:51,222 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,222 - INFO - __main__ - 测试 6: SQLAlchemy 模型
+2026-01-16 18:43:51,222 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,222 - INFO - __main__ - ✅ 所有 SQLAlchemy 模型导入成功
+2026-01-16 18:43:51,222 - INFO - __main__ -   - User: users
+2026-01-16 18:43:51,222 - INFO - __main__ -   - UserVip: user_vip
+2026-01-16 18:43:51,222 - INFO - __main__ -   - ChatSession: chat_sessions
+2026-01-16 18:43:51,222 - INFO - __main__ -   - ChatMessage: chat_messages
+2026-01-16 18:43:51,222 - INFO - __main__ -   - Announcement: announcements
+2026-01-16 18:43:51,222 - INFO - __main__ -   - UserConnection: user_connections
+2026-01-16 18:43:51,222 - INFO - __main__ -   - UserDevice: user_devices
+2026-01-16 18:43:51,222 - INFO - __main__ -   - MessageQueue: message_queue
+2026-01-16 18:43:51,222 - INFO - __main__ -   - PasswordResetToken: password_reset_tokens
+2026-01-16 18:43:51,222 - INFO - __main__ -   - AgentStatus: agent_status
+2026-01-16 18:43:51,222 - INFO - __main__ - 
+2026-01-16 18:43:51,222 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,222 - INFO - __main__ - 测试 7: Pydantic Schemas
+2026-01-16 18:43:51,222 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,357 - INFO - __main__ - ✅ 所有 Pydantic schemas 导入成功
+2026-01-16 18:43:51,357 - INFO - __main__ - ✅ LoginRequest 模型创建成功: test@example.com
+2026-01-16 18:43:51,357 - INFO - __main__ - ✅ UserInfo 模型创建成功: test_user
+2026-01-16 18:43:51,357 - INFO - __main__ - 
+2026-01-16 18:43:51,357 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,357 - INFO - __main__ - 测试 1: 数据库连接
+2026-01-16 18:43:51,357 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,357 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:51,360 - INFO - __main__ - 
+2026-01-16 18:43:51,360 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,360 - INFO - __main__ - 测试 2: 会员服务
+2026-01-16 18:43:51,360 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,360 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:51,361 - INFO - __main__ - 
+2026-01-16 18:43:51,361 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,361 - INFO - __main__ - 测试 3: WebSocket 管理器
+2026-01-16 18:43:51,361 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,361 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:51,362 - INFO - __main__ - 
+2026-01-16 18:43:51,362 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,362 - INFO - __main__ - 测试 5: 异步链接预览
+2026-01-16 18:43:51,362 - INFO - __main__ - ==================================================
+2026-01-16 18:43:51,510 - INFO - __main__ - ✅ 简单预览测试通过: example.com
+2026-01-16 18:43:52,413 - INFO - httpx - HTTP Request: GET https://example.com "HTTP/1.1 200 OK"
+2026-01-16 18:43:52,415 - INFO - __main__ - ✅ 异步链接预览测试通过: True
+2026-01-16 18:43:52,415 - INFO - __main__ - 
+2026-01-16 18:43:52,415 - INFO - __main__ - ==================================================
+2026-01-16 18:43:52,415 - INFO - __main__ - 测试 4: FastAPI 应用
+2026-01-16 18:43:52,415 - INFO - __main__ - ==================================================
+2026-01-16 18:43:52,672 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:52,673 - INFO - __main__ - 
+2026-01-16 18:43:52,674 - INFO - __main__ - ==================================================
+2026-01-16 18:43:52,674 - INFO - __main__ - 测试结果汇总
+2026-01-16 18:43:52,674 - INFO - __main__ - ==================================================
+2026-01-16 18:43:52,674 - INFO - __main__ - ✅ 通过 - SQLAlchemy 模型
+2026-01-16 18:43:52,674 - INFO - __main__ - ✅ 通过 - Pydantic Schemas
+2026-01-16 18:43:52,674 - INFO - __main__ - ❌ 失败 - 数据库连接
+2026-01-16 18:43:52,674 - INFO - __main__ - ❌ 失败 - 会员服务
+2026-01-16 18:43:52,674 - INFO - __main__ - ❌ 失败 - WebSocket 管理器
+2026-01-16 18:43:52,674 - INFO - __main__ - ✅ 通过 - 异步链接预览
+2026-01-16 18:43:52,674 - INFO - __main__ - ❌ 失败 - FastAPI 应用
+2026-01-16 18:43:52,674 - INFO - __main__ - 
+2026-01-16 18:43:52,674 - INFO - __main__ - 总计: 3 通过, 0 跳过, 4 失败 (共 7 个测试)
+2026-01-16 18:43:52,674 - WARNING - __main__ - ⚠️  有 4 个测试失败，请检查上述错误信息
+2026-01-16 18:46:16,532 - INFO - __main__ - 
+==================================================
+2026-01-16 18:46:16,533 - INFO - __main__ - 开始 FastAPI 迁移测试
+2026-01-16 18:46:16,533 - INFO - __main__ - ==================================================
+
+2026-01-16 18:46:16,533 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,533 - INFO - __main__ - 测试 6: SQLAlchemy 模型
+2026-01-16 18:46:16,533 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,533 - INFO - __main__ - ✅ 所有 SQLAlchemy 模型导入成功
+2026-01-16 18:46:16,533 - INFO - __main__ -   - User: users
+2026-01-16 18:46:16,533 - INFO - __main__ -   - UserVip: user_vip
+2026-01-16 18:46:16,533 - INFO - __main__ -   - ChatSession: chat_sessions
+2026-01-16 18:46:16,533 - INFO - __main__ -   - ChatMessage: chat_messages
+2026-01-16 18:46:16,533 - INFO - __main__ -   - Announcement: announcements
+2026-01-16 18:46:16,533 - INFO - __main__ -   - UserConnection: user_connections
+2026-01-16 18:46:16,533 - INFO - __main__ -   - UserDevice: user_devices
+2026-01-16 18:46:16,533 - INFO - __main__ -   - MessageQueue: message_queue
+2026-01-16 18:46:16,533 - INFO - __main__ -   - PasswordResetToken: password_reset_tokens
+2026-01-16 18:46:16,533 - INFO - __main__ -   - AgentStatus: agent_status
+2026-01-16 18:46:16,533 - INFO - __main__ - 
+2026-01-16 18:46:16,533 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,533 - INFO - __main__ - 测试 7: Pydantic Schemas
+2026-01-16 18:46:16,534 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,666 - INFO - __main__ - ✅ 所有 Pydantic schemas 导入成功
+2026-01-16 18:46:16,666 - INFO - __main__ - ✅ LoginRequest 模型创建成功: test@example.com
+2026-01-16 18:46:16,666 - INFO - __main__ - ✅ UserInfo 模型创建成功: test_user
+2026-01-16 18:46:16,666 - INFO - __main__ - 
+2026-01-16 18:46:16,666 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,666 - INFO - __main__ - 测试 1: 数据库连接
+2026-01-16 18:46:16,666 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,666 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:46:16,668 - INFO - __main__ - 
+2026-01-16 18:46:16,668 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,668 - INFO - __main__ - 测试 2: 会员服务
+2026-01-16 18:46:16,668 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,668 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:46:16,669 - INFO - __main__ - 
+2026-01-16 18:46:16,669 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,669 - INFO - __main__ - 测试 3: WebSocket 管理器
+2026-01-16 18:46:16,669 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,669 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:46:16,670 - INFO - __main__ - 
+2026-01-16 18:46:16,670 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,670 - INFO - __main__ - 测试 5: 异步链接预览
+2026-01-16 18:46:16,670 - INFO - __main__ - ==================================================
+2026-01-16 18:46:16,796 - INFO - __main__ - ✅ 简单预览测试通过: example.com
+2026-01-16 18:46:17,718 - INFO - httpx - HTTP Request: GET https://example.com "HTTP/1.1 200 OK"
+2026-01-16 18:46:17,721 - INFO - __main__ - ✅ 异步链接预览测试通过: True
+2026-01-16 18:46:17,721 - INFO - __main__ - 
+2026-01-16 18:46:17,721 - INFO - __main__ - ==================================================
+2026-01-16 18:46:17,721 - INFO - __main__ - 测试 4: FastAPI 应用
+2026-01-16 18:46:17,721 - INFO - __main__ - ==================================================
+2026-01-16 18:46:18,165 - WARNING - backend.api_server_fastapi - 数据库管理器初始化失败（可能缺少 .env 配置）: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:46:18,190 - INFO - __main__ - ✅ FastAPI 应用导入成功
+2026-01-16 18:46:18,190 - INFO - __main__ - ✅ FastAPI 应用标题: Voice Change API
+2026-01-16 18:46:18,191 - INFO - __main__ - ✅ FastAPI 应用版本: 2.0.0
+2026-01-16 18:46:18,191 - INFO - __main__ - ✅ 已注册路由数量: 18
+2026-01-16 18:46:18,191 - INFO - __main__ - 已注册的路由:
+2026-01-16 18:46:18,191 - INFO - __main__ -   - GET, HEAD  /openapi.json
+2026-01-16 18:46:18,191 - INFO - __main__ -   - GET, HEAD  /docs
+2026-01-16 18:46:18,191 - INFO - __main__ -   - GET, HEAD  /docs/oauth2-redirect
+2026-01-16 18:46:18,191 - INFO - __main__ -   - GET, HEAD  /redoc
+2026-01-16 18:46:18,191 - INFO - __main__ -   - GET        /api/health
+2026-01-16 18:46:18,191 - INFO - __main__ -   - POST       /api/send_verification_code
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/register
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/login
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/forgot_password
+2026-01-16 18:46:18,192 - INFO - __main__ -   - GET        /api/reset_password
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/reset_password
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/check_token
+2026-01-16 18:46:18,192 - INFO - __main__ -   - GET        /api/announcement/latest
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/user/change_password
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/vip/purchase
+2026-01-16 18:46:18,192 - INFO - __main__ -   - POST       /api/customer_service/register
+2026-01-16 18:46:18,193 - INFO - __main__ -   - POST       /api/customer_service/login
+2026-01-16 18:46:18,193 - INFO - __main__ -   - POST       /api/customer_service/verify_token
+2026-01-16 18:46:18,193 - INFO - __main__ - 
+2026-01-16 18:46:18,193 - INFO - __main__ - ==================================================
+2026-01-16 18:46:18,193 - INFO - __main__ - 测试结果汇总
+2026-01-16 18:46:18,193 - INFO - __main__ - ==================================================
+2026-01-16 18:46:18,193 - INFO - __main__ - ✅ 通过 - SQLAlchemy 模型
+2026-01-16 18:46:18,193 - INFO - __main__ - ✅ 通过 - Pydantic Schemas
+2026-01-16 18:46:18,193 - INFO - __main__ - ❌ 失败 - 数据库连接
+2026-01-16 18:46:18,194 - INFO - __main__ - ❌ 失败 - 会员服务
+2026-01-16 18:46:18,194 - INFO - __main__ - ❌ 失败 - WebSocket 管理器
+2026-01-16 18:46:18,194 - INFO - __main__ - ✅ 通过 - 异步链接预览
+2026-01-16 18:46:18,194 - INFO - __main__ - ✅ 通过 - FastAPI 应用
+2026-01-16 18:46:18,194 - INFO - __main__ - 
+2026-01-16 18:46:18,194 - INFO - __main__ - 总计: 4 通过, 0 跳过, 3 失败 (共 7 个测试)
+2026-01-16 18:46:18,194 - WARNING - __main__ - ⚠️  有 3 个测试失败，请检查上述错误信息
+2026-01-16 19:20:21,813 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:20:21,814 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:20:30,672 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:20:30,673 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:20:30,733 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:20:30,733 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:20:30,751 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 19:20:30,752 - ERROR - backend.database.async_database_manager - 初始化数据库表结构失败: (pymysql.err.OperationalError) (1130, "Host 'host.docker.internal' is not allowed to connect to this MySQL server")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-01-16 19:26:35,340 - INFO - backend.database.async_database_manager - 数据库配置: host=172.16.37.39, port=3306, user=root, database=voice
+2026-01-16 19:26:35,353 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:26:35,354 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:26:35,412 - INFO - backend.database.async_database_manager - 数据库配置: host=172.16.37.39, port=3306, user=root, database=voice
+2026-01-16 19:26:35,412 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:26:35,413 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:26:35,422 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 19:26:35,422 - ERROR - backend.database.async_database_manager - 初始化数据库表结构失败: (pymysql.err.OperationalError) (1130, "Host 'host.docker.internal' is not allowed to connect to this MySQL server")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-01-16 19:29:38,276 - INFO - backend.database.async_database_manager - 数据库配置: host=172.16.37.39, port=3306, user=root, database=voice
+2026-01-16 19:29:38,277 - INFO - backend.database.async_database_manager - 数据库连接 URL: mysql+aiomysql://root:***@172.16.37.39:3306/voice
+2026-01-16 19:29:38,277 - INFO - backend.database.async_database_manager - 构建的数据库 URL (隐藏密码): mysql+aiomysql://root:***@172.16.37.39:3306/voice?charset=utf8mb4
+2026-01-16 19:29:38,290 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:29:38,291 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:29:38,332 - INFO - backend.database.async_database_manager - 数据库配置: host=172.16.37.39, port=3306, user=root, database=voice
+2026-01-16 19:29:38,333 - INFO - backend.database.async_database_manager - 数据库连接 URL: mysql+aiomysql://root:***@172.16.37.39:3306/voice
+2026-01-16 19:29:38,333 - INFO - backend.database.async_database_manager - 构建的数据库 URL (隐藏密码): mysql+aiomysql://root:***@172.16.37.39:3306/voice?charset=utf8mb4
+2026-01-16 19:29:38,333 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:29:38,334 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:29:38,342 - INFO - backend.database.async_database_manager - 尝试连接数据库，URL (隐藏密码): mysql+aiomysql://root:***@***
+2026-01-16 19:29:38,344 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 19:29:38,344 - ERROR - backend.database.async_database_manager - 初始化数据库表结构失败: (pymysql.err.OperationalError) (1130, "Host 'host.docker.internal' is not allowed to connect to this MySQL server")
+(Background on this error at: https://sqlalche.me/e/20/e3q8)
+2026-01-16 19:29:38,344 - ERROR - backend.database.async_database_manager - 失败时的数据库 URL (隐藏密码): mysql+aiomysql://root:***@***
+2026-01-16 19:37:34,196 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:37:34,197 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:37:35,067 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:37:35,068 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:37:35,133 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 19:37:35,134 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 19:37:35,134 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 19:50:04,349 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已停止
+2026-01-16 19:50:04,349 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 19:50:04,350 - INFO - backend.database.async_database_manager - 异步数据库连接已关闭
+2026-01-16 19:50:04,351 - INFO - api_server - FastAPI 应用关闭完成
+2026-01-16 19:50:10,168 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:50:10,169 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:50:10,228 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:50:10,228 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:50:10,265 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 19:50:10,266 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 19:50:10,266 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 19:50:15,893 - ERROR - backend.database.async_database_manager - 查询用户信息失败: 'user' is not among the defined enum values. Enum name: userrole. Possible values: USER, ADMIN, CUSTOMER_SE..
+2026-01-16 19:52:30,687 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:52:30,688 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:52:30,733 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:52:30,734 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:52:30,760 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 19:52:30,760 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 19:52:30,761 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 19:52:32,677 - ERROR - backend.database.async_database_manager - 查询用户信息失败: 'user' is not among the defined enum values. Enum name: userrole. Possible values: USER, ADMIN, CUSTOMER_SE..
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1709, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+KeyError: 'user'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 92, in get_user_by_email
+    result = await session.execute(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\engine\result.py", line 541, in _raw_all_rows
+    return [make_row(row) for row in rows]
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\engine\result.py", line 541, in <listcomp>
+    return [make_row(row) for row in rows]
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1829, in process
+    value = self._object_value_for_elem(value)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1711, in _object_value_for_elem
+    raise LookupError(
+LookupError: 'user' is not among the defined enum values. Enum name: userrole. Possible values: USER, ADMIN, CUSTOMER_SE..
+2026-01-16 19:54:22,091 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已停止
+2026-01-16 19:54:22,092 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 19:54:22,093 - INFO - backend.database.async_database_manager - 异步数据库连接已关闭
+2026-01-16 19:54:22,093 - INFO - api_server - FastAPI 应用关闭完成
+2026-01-16 19:54:24,576 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:54:24,577 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:54:24,630 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:54:24,630 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:54:24,669 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 19:54:24,669 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 19:54:24,669 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 19:54:48,324 - ERROR - backend.database.async_database_manager - 更新客服状态失败: 'offline' is not among the defined enum values. Enum name: agentstatusenum. Possible values: ONLINE, OFFLINE, AWAY, BUSY
+2026-01-16 19:54:48,326 - INFO - api_server - 客服 小旭 登录成功，ID: 2
+2026-01-16 19:54:48,390 - ERROR - backend.database.async_database_manager - 注册用户设备失败: 'web' is not among the defined enum values. Enum name: devicetype. Possible values: DESKTOP, MOBILE, WEB, OTHER
+2026-01-16 19:54:48,484 - ERROR - backend.database.async_database_manager - 更新客服状态失败: 'offline' is not among the defined enum values. Enum name: agentstatusenum. Possible values: ONLINE, OFFLINE, AWAY, BUSY
+2026-01-16 19:57:20,995 - ERROR - backend.database.async_database_manager - 更新客服状态失败: 'offline' is not among the defined enum values. Enum name: agentstatusenum. Possible values: ONLINE, OFFLINE, AWAY, BUSY
+2026-01-16 19:57:20,995 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 19:57:21,080 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已停止
+2026-01-16 19:57:21,080 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 19:57:21,081 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 19:57:21,081 - INFO - backend.database.async_database_manager - 异步数据库连接已关闭
+2026-01-16 19:57:21,081 - INFO - api_server - FastAPI 应用关闭完成
+2026-01-16 19:57:23,479 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:57:23,480 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:57:23,528 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 19:57:23,528 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 19:57:23,575 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 19:57:23,576 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 19:57:23,576 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 19:57:31,357 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 19:57:47,586 - INFO - api_server - 客服 小旭 登录成功，ID: 2
+2026-01-16 19:58:49,331 - INFO - backend.database.async_database_manager - 消息 826 已被用户 1 撤回
+2026-01-16 19:58:49,331 - INFO - api_server - 撤回消息数据库操作结果: message_id=826, user_id=1, success=True
+2026-01-16 19:58:53,814 - INFO - backend.database.async_database_manager - 消息 824 已被用户 1 撤回
+2026-01-16 19:58:53,815 - INFO - api_server - 撤回消息数据库操作结果: message_id=824, user_id=1, success=True
+2026-01-16 19:58:55,885 - INFO - backend.database.async_database_manager - 消息 825 已被用户 1 撤回
+2026-01-16 19:58:55,885 - INFO - api_server - 撤回消息数据库操作结果: message_id=825, user_id=1, success=True
+2026-01-16 20:04:52,168 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:04:52,254 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已停止
+2026-01-16 20:04:52,254 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 20:04:52,255 - ERROR - asyncio - An open stream object is being garbage collected; call "stream.close()" explicitly.
+2026-01-16 20:04:52,255 - INFO - backend.database.async_database_manager - 异步数据库连接已关闭
+2026-01-16 20:04:52,255 - INFO - api_server - FastAPI 应用关闭完成
+2026-01-16 20:04:54,444 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:04:54,445 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:04:54,501 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:04:54,503 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:04:54,545 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 20:04:54,545 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 20:04:54,546 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 20:10:24,537 - WARNING - backend.websocket.async_websocket_manager - 连接 cc908431-5c1a-44f5-8893-31cdeeaa5eef 心跳超时（距离上次心跳 311.8 秒），自动断开
+2026-01-16 20:11:59,068 - WARNING - backend.websocket.async_websocket_manager - 断开连接失败：未找到连接ID
+2026-01-16 20:12:00,048 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:12:02,771 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:12:02,772 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:12:02,819 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:12:02,820 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:12:02,841 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 20:12:02,841 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 20:12:02,841 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 20:12:49,711 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:13:11,604 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:13:30,527 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:17:32,982 - WARNING - backend.websocket.async_websocket_manager - 连接 5e8b4c25-4d40-46ac-a0cf-d542eaf3572a 心跳超时（距离上次心跳 319.1 秒），自动断开
+2026-01-16 20:18:21,001 - WARNING - backend.websocket.async_websocket_manager - 断开连接失败：未找到连接ID
+2026-01-16 20:18:21,879 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:18:25,199 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:18:25,200 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:18:25,245 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:18:25,246 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:18:25,266 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 20:18:25,266 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 20:18:25,266 - INFO - api_server - FastAPI 应用启动完成
+2026-01-16 20:18:32,519 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:18:37,358 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:18:53,528 - INFO - backend.database.async_database_manager - 消息 837 已被用户 2 撤回
+2026-01-16 20:18:53,529 - INFO - api_server - 撤回消息数据库操作结果: message_id=837, user_id=2, success=True
+2026-01-16 20:19:00,556 - INFO - backend.database.async_database_manager - 消息 838 已被用户 1 撤回
+2026-01-16 20:19:00,557 - INFO - api_server - 撤回消息数据库操作结果: message_id=838, user_id=1, success=True
+2026-01-16 20:25:56,076 - INFO - backend.websocket.async_websocket_manager - 客服 2 所有连接已断开，状态自动置为 offline
+2026-01-16 20:26:13,928 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:26:13,929 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:26:13,976 - INFO - backend.database.async_database_manager - 异步数据库管理器初始化完成
+2026-01-16 20:26:13,976 - INFO - backend.websocket.async_websocket_manager - 异步 WebSocket 管理器初始化完成
+2026-01-16 20:26:13,997 - INFO - backend.database.async_database_manager - 数据库表结构初始化完成
+2026-01-16 20:26:13,997 - INFO - backend.websocket.async_websocket_manager - WebSocket 心跳检测任务已启动
+2026-01-16 20:26:13,997 - INFO - api_server - FastAPI 应用启动完成

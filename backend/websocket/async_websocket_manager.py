@@ -1,31 +1,33 @@
 """
-WebSocket 连接管理器
+异步 WebSocket 连接管理器
 
 负责管理 WebSocket 连接、消息推送、心跳检测等功能。
+使用 asyncio 替代 threading，所有方法都是异步的。
 """
 
+import asyncio
 import logging
-import threading
-import time
-from typing import Dict, Optional, Set, Any
+from typing import Dict, Optional, Set, Any, TYPE_CHECKING
 from datetime import datetime
-from flask_socketio import SocketIO, emit, join_room, leave_room
+
+if TYPE_CHECKING:
+    import socketio
 
 logger = logging.getLogger(__name__)
 
 
-class WebSocketManager:
-    """WebSocket 连接管理器"""
+class AsyncWebSocketManager:
+    """异步 WebSocket 连接管理器"""
     
-    def __init__(self, socketio: SocketIO, db_manager):
+    def __init__(self, socketio_server: 'socketio.AsyncServer', db_manager):
         """
-        初始化 WebSocket 管理器
+        初始化异步 WebSocket 管理器
         
         Args:
-            socketio: Flask-SocketIO 实例
-            db_manager: 数据库管理器实例
+            socketio_server: python-socketio AsyncServer 实例
+            db_manager: 异步数据库管理器实例
         """
-        self.socketio = socketio
+        self.sio = socketio_server
         self.db = db_manager
         
         # 连接映射：{connection_id: {user_id, socket_id, device_id, ...}}
@@ -37,70 +39,81 @@ class WebSocketManager:
         # Socket ID 到 Connection ID 的映射
         self.socket_to_connection: Dict[str, str] = {}
         
-        # 心跳检测线程
-        self.heartbeat_thread = None
+        # 心跳检测任务
+        self.heartbeat_task: Optional[asyncio.Task] = None
         # 每 30 秒检查一次心跳
         self.heartbeat_interval = 30  # 秒
-        # 心跳超时时间适当放宽，避免浏览器 Tab 被暂挂或短暂网络抖动时误判掉线
-        # 300 秒 = 5 分钟，需与数据库中在线客服/连接超时规则保持一致
-        self.heartbeat_timeout = 300  # 秒，超过此时间未收到心跳则断开
+        # 心跳超时时间：300 秒 = 5 分钟
+        self.heartbeat_timeout = 300  # 秒
         self.running = False
         
-        # 锁
-        self.lock = threading.Lock()
+        # 异步锁
+        self.lock = asyncio.Lock()
         
-        logger.info("WebSocket 管理器初始化完成")
+        logger.info("异步 WebSocket 管理器初始化完成")
     
-    def start(self):
-        """启动心跳检测线程"""
+    async def start(self):
+        """启动心跳检测任务"""
         if not self.running:
             self.running = True
-            self.heartbeat_thread = threading.Thread(target=self._heartbeat_worker, daemon=True)
-            self.heartbeat_thread.start()
-            logger.info("WebSocket 心跳检测线程已启动")
+            self.heartbeat_task = asyncio.create_task(self._heartbeat_worker())
+            logger.info("WebSocket 心跳检测任务已启动")
     
-    def stop(self):
-        """停止心跳检测线程"""
+    async def stop(self):
+        """停止心跳检测任务"""
         self.running = False
-        if self.heartbeat_thread:
-            self.heartbeat_thread.join(timeout=5)
-        logger.info("WebSocket 心跳检测线程已停止")
+        if self.heartbeat_task:
+            self.heartbeat_task.cancel()
+            try:
+                await self.heartbeat_task
+            except asyncio.CancelledError:
+                pass
+        logger.info("WebSocket 心跳检测任务已停止")
     
-    def _heartbeat_worker(self):
-        """心跳检测工作线程"""
+    async def _heartbeat_worker(self):
+        """心跳检测工作协程"""
         while self.running:
             try:
-                time.sleep(self.heartbeat_interval)
-                self._check_connections()
+                await asyncio.sleep(self.heartbeat_interval)
+                await self._check_connections()
+            except asyncio.CancelledError:
+                break
             except Exception as e:
                 logger.error(f"心跳检测异常: {e}", exc_info=True)
     
-    def _check_connections(self):
-        """检查所有连接的心跳状态"""
-        now = time.time()
+    async def _check_connections(self):
+        """检查所有连接的心跳状态（异步）"""
+        now = asyncio.get_event_loop().time()
         stale_connections = []
         
-        with self.lock:
+        async with self.lock:
             for conn_id, conn_info in self.connections.items():
                 last_heartbeat = conn_info.get('last_heartbeat', 0)
                 time_since_heartbeat = now - last_heartbeat
                 if time_since_heartbeat > self.heartbeat_timeout:
                     stale_connections.append((conn_id, time_since_heartbeat))
-                    logger.debug(f"连接 {conn_id} 心跳超时: 距离上次心跳 {time_since_heartbeat:.1f} 秒 (超时阈值: {self.heartbeat_timeout} 秒)")
+                    logger.debug(f"连接 {conn_id} 心跳超时: 距离上次心跳 {time_since_heartbeat:.1f} 秒")
         
         # 断开过期连接
         for conn_id, time_since_heartbeat in stale_connections:
             logger.warning(f"连接 {conn_id} 心跳超时（距离上次心跳 {time_since_heartbeat:.1f} 秒），自动断开")
-            self.disconnect(conn_id)
+            await self.disconnect(connection_id=conn_id)
         
         # 清理数据库中的过期连接
         if stale_connections:
-            self.db.cleanup_stale_connections(timeout_minutes=2)
+            await self.db.cleanup_stale_connections(timeout_minutes=2)
     
-    def connect(self, user_id: int, socket_id: str, connection_id: str, 
-                device_id: str = None, ip_address: str = None, user_agent: str = None) -> bool:
+    async def connect(
+        self,
+        user_id: int,
+        socket_id: str,
+        connection_id: str,
+        device_id: str = None,
+        ip_address: str = None,
+        user_agent: str = None
+    ) -> bool:
         """
-        注册新连接
+        注册新连接（异步）
         
         Args:
             user_id: 用户ID
@@ -114,7 +127,7 @@ class WebSocketManager:
             bool: 是否成功
         """
         try:
-            with self.lock:
+            async with self.lock:
                 # 创建连接信息
                 conn_info = {
                     'user_id': user_id,
@@ -122,8 +135,8 @@ class WebSocketManager:
                     'device_id': device_id,
                     'ip_address': ip_address,
                     'user_agent': user_agent,
-                    'connected_at': time.time(),
-                    'last_heartbeat': time.time(),
+                    'connected_at': asyncio.get_event_loop().time(),
+                    'last_heartbeat': asyncio.get_event_loop().time(),
                 }
                 
                 # 保存连接映射
@@ -136,7 +149,7 @@ class WebSocketManager:
                 self.user_connections[user_id].add(connection_id)
             
             # 保存到数据库
-            self.db.create_user_connection(
+            await self.db.create_user_connection(
                 user_id=user_id,
                 connection_id=connection_id,
                 socket_id=socket_id,
@@ -146,24 +159,22 @@ class WebSocketManager:
             )
             
             # 加入用户房间（用于广播）
-            # 使用 SocketIO.server.enter_room 显式指定 socket_id，避免依赖请求上下文
             try:
                 room_name = f"user_{user_id}"
-                self.socketio.server.enter_room(socket_id, room_name, namespace="/")
+                await self.sio.enter_room(socket_id, room_name, namespace="/")
                 logger.debug(f"成功将 socket {socket_id} 加入房间 {room_name}")
             except Exception as e:
                 logger.error(f"将 socket {socket_id} 加入房间 user_{user_id} 失败: {e}", exc_info=True)
             
             logger.debug(f"用户 {user_id} 建立连接: {connection_id} (socket: {socket_id})")
-            
             return True
         except Exception as e:
             logger.error(f"注册连接失败: {e}", exc_info=True)
             return False
     
-    def disconnect(self, connection_id: str = None, socket_id: str = None) -> bool:
+    async def disconnect(self, connection_id: str = None, socket_id: str = None) -> bool:
         """
-        断开连接
+        断开连接（异步）
         
         Args:
             connection_id: 连接ID
@@ -175,17 +186,17 @@ class WebSocketManager:
         try:
             # 如果只提供了 socket_id，查找对应的 connection_id
             if not connection_id and socket_id:
-                with self.lock:
+                async with self.lock:
                     connection_id = self.socket_to_connection.get(socket_id)
             
             if not connection_id:
                 logger.warning("断开连接失败：未找到连接ID")
                 return False
             
-            # 标记该用户是否还有其他活跃连接，用于决定是否自动标记为离线
+            # 标记该用户是否还有其他活跃连接
             no_more_connections = False
             
-            with self.lock:
+            async with self.lock:
                 conn_info = self.connections.get(connection_id)
                 if not conn_info:
                     logger.warning(f"连接 {connection_id} 不存在")
@@ -203,29 +214,26 @@ class WebSocketManager:
                 if user_id in self.user_connections:
                     self.user_connections[user_id].discard(connection_id)
                     if not self.user_connections[user_id]:
-                        # 该用户已经没有任何活跃连接
                         del self.user_connections[user_id]
                         no_more_connections = True
                     else:
                         no_more_connections = False
                 else:
-                    # 理论上不应该出现，如果出现则视为无其他连接
                     no_more_connections = True
             
             # 更新数据库中的连接状态
-            self.db.disconnect_user_connection(connection_id)
+            await self.db.disconnect_user_connection(connection_id)
             
             # 离开用户房间
-            # 使用 SocketIO.server.leave_room 显式指定 socket_id，避免依赖请求上下文
             try:
-                self.socketio.server.leave_room(socket_id, f"user_{user_id}", namespace="/")
+                await self.sio.leave_room(socket_id, f"user_{user_id}", namespace="/")
             except Exception as e:
                 logger.error(f"将 socket {socket_id} 从房间 user_{user_id} 移除失败: {e}", exc_info=True)
             
             # 如果这是客服账号，并且已经没有任何活跃连接，则自动将其状态标记为 offline
             if no_more_connections:
                 try:
-                    user_row = self.db.get_user_by_id(user_id)
+                    user_row = await self.db.get_user_by_id(user_id)
                 except Exception as e:
                     logger.error(f"获取用户 {user_id} 信息失败: {e}", exc_info=True)
                     user_row = None
@@ -233,12 +241,8 @@ class WebSocketManager:
                 if user_row:
                     role = user_row.get("role", "user")
                     if role in ("customer_service", "admin"):
-                        # 后台线程中更新客服状态，避免阻塞断开流程
-                        threading.Thread(
-                            target=self.db.update_agent_status,
-                            args=(user_id, "offline"),
-                            daemon=True,
-                        ).start()
+                        # 异步更新客服状态
+                        await self.db.update_agent_status(user_id, "offline")
                         logger.info(f"客服 {user_id} 所有连接已断开，状态自动置为 offline")
             
             logger.debug(f"用户 {user_id} 断开连接: {connection_id}")
@@ -247,9 +251,9 @@ class WebSocketManager:
             logger.error(f"断开连接失败: {e}", exc_info=True)
             return False
     
-    def update_heartbeat(self, connection_id: str = None, socket_id: str = None) -> bool:
+    async def update_heartbeat(self, connection_id: str = None, socket_id: str = None) -> bool:
         """
-        更新连接心跳
+        更新连接心跳（异步）
         
         Args:
             connection_id: 连接ID
@@ -261,7 +265,7 @@ class WebSocketManager:
         try:
             # 如果只提供了 socket_id，查找对应的 connection_id
             if not connection_id and socket_id:
-                with self.lock:
+                async with self.lock:
                     connection_id = self.socket_to_connection.get(socket_id)
                     if not connection_id:
                         logger.debug(f"通过 socket_id 查找 connection_id 失败: socket_id={socket_id}")
@@ -270,22 +274,18 @@ class WebSocketManager:
                 logger.debug(f"更新心跳失败: connection_id 和 socket_id 都为空")
                 return False
             
-            with self.lock:
+            async with self.lock:
                 if connection_id in self.connections:
                     old_heartbeat = self.connections[connection_id].get('last_heartbeat', 0)
-                    self.connections[connection_id]['last_heartbeat'] = time.time()
-                    time_since_last = time.time() - old_heartbeat if old_heartbeat > 0 else 0
+                    self.connections[connection_id]['last_heartbeat'] = asyncio.get_event_loop().time()
+                    time_since_last = asyncio.get_event_loop().time() - old_heartbeat if old_heartbeat > 0 else 0
                     logger.debug(f"更新心跳成功: connection_id={connection_id}, 距离上次心跳 {time_since_last:.1f} 秒")
                 else:
                     logger.debug(f"更新心跳失败: connection_id={connection_id} 不在连接列表中")
                     return False
             
-            # 更新数据库（异步，不阻塞）
-            threading.Thread(
-                target=self.db.update_connection_heartbeat,
-                args=(connection_id,),
-                daemon=True
-            ).start()
+            # 更新数据库（异步）
+            await self.db.update_connection_heartbeat(connection_id)
             
             return True
         except Exception as e:
@@ -302,8 +302,10 @@ class WebSocketManager:
         Returns:
             list: 连接ID列表
         """
-        with self.lock:
-            return list(self.user_connections.get(user_id, set()))
+        # 注意：这个方法不是异步的，因为它只是读取内存中的数据
+        # 但在异步环境中，应该使用异步锁
+        # 为了保持兼容性，这里暂时保持同步，但应该用 asyncio.run_coroutine_threadsafe 包装
+        return list(self.user_connections.get(user_id, set()))
     
     def is_user_online(self, user_id: int) -> bool:
         """
@@ -315,12 +317,11 @@ class WebSocketManager:
         Returns:
             bool: 是否在线
         """
-        with self.lock:
-            return user_id in self.user_connections and len(self.user_connections[user_id]) > 0
+        return user_id in self.user_connections and len(self.user_connections[user_id]) > 0
     
-    def send_message_to_user(self, user_id: int, event: str, data: dict) -> int:
+    async def send_message_to_user(self, user_id: int, event: str, data: dict) -> int:
         """
-        向指定用户的所有连接发送消息
+        向指定用户的所有连接发送消息（异步）
         
         Args:
             user_id: 用户ID
@@ -334,12 +335,11 @@ class WebSocketManager:
             connections = self.get_user_connections(user_id)
             message_id = data.get("id", "unknown")
             
-            # 即使 connections 为空，也尝试发送一次（因为房间可能已经加入了）
             # 使用房间广播（更高效）
             try:
                 room_name = f"user_{user_id}"
-                logger.debug(f"准备发送消息到房间: {room_name}, event={event}, message_id={message_id}, namespace=/")
-                self.socketio.emit(event, data, room=room_name, namespace="/")
+                logger.debug(f"准备发送消息到房间: {room_name}, event={event}, message_id={message_id}")
+                await self.sio.emit(event, data, room=room_name, namespace="/")
                 logger.debug(f"消息已发送到房间: {room_name}, event={event}, message_id={message_id}")
                 
                 if connections:
@@ -347,7 +347,6 @@ class WebSocketManager:
                 else:
                     logger.debug(f"向用户 {user_id} 发送消息（房间广播，连接记录为空）: {event}, message_id={message_id}")
                 
-                # 返回连接数，如果没有记录则返回1（假设至少有一个连接在房间中）
                 return len(connections) if connections else 1
             except Exception as emit_error:
                 logger.error(f"发送消息到房间 user_{user_id} 失败: {emit_error}, message_id={message_id}", exc_info=True)
@@ -356,9 +355,9 @@ class WebSocketManager:
             logger.error(f"发送消息失败: {e}, user_id={user_id}, event={event}", exc_info=True)
             return 0
     
-    def send_message_to_connection(self, connection_id: str, event: str, data: dict) -> bool:
+    async def send_message_to_connection(self, connection_id: str, event: str, data: dict) -> bool:
         """
-        向指定连接发送消息
+        向指定连接发送消息（异步）
         
         Args:
             connection_id: 连接ID
@@ -369,7 +368,7 @@ class WebSocketManager:
             bool: 是否成功
         """
         try:
-            with self.lock:
+            async with self.lock:
                 conn_info = self.connections.get(connection_id)
                 if not conn_info:
                     logger.warning(f"连接 {connection_id} 不存在")
@@ -378,7 +377,7 @@ class WebSocketManager:
                 socket_id = conn_info['socket_id']
             
             # 向特定 socket 发送消息
-            self.socketio.emit(event, data, room=socket_id, namespace="/")
+            await self.sio.emit(event, data, room=socket_id, namespace="/")
             
             logger.debug(f"向连接 {connection_id} 发送消息: {event}")
             return True
@@ -386,9 +385,9 @@ class WebSocketManager:
             logger.error(f"发送消息失败: {e}", exc_info=True)
             return False
     
-    def push_session_list_update(self, user_id: int, session_type: str, sessions: list):
+    async def push_session_list_update(self, user_id: int, session_type: str, sessions: list):
         """
-        推送会话列表更新给指定用户
+        推送会话列表更新给指定用户（异步）
         
         Args:
             user_id: 用户ID
@@ -400,32 +399,32 @@ class WebSocketManager:
                 "type": session_type,
                 "sessions": sessions
             }
-            self.send_message_to_user(user_id, "session_list_updated", data)
+            await self.send_message_to_user(user_id, "session_list_updated", data)
             logger.debug(f"推送会话列表更新给用户 {user_id}: type={session_type}, count={len(sessions)}")
         except Exception as e:
             logger.error(f"推送会话列表更新失败: {e}", exc_info=True)
     
-    def push_new_pending_session(self, session_data: dict):
+    async def push_new_pending_session(self, session_data: dict):
         """
-        推送新待接入会话给所有订阅的客服
+        推送新待接入会话给所有订阅的客服（异步）
         
         Args:
             session_data: 会话数据
         """
         try:
             # 获取所有在线的客服
-            online_agents = self.db.get_online_agents()
+            online_agents = await self.db.get_online_agents()
             for agent in online_agents:
                 agent_id = agent.get('id')
                 if agent_id:
-                    self.send_message_to_user(agent_id, "new_pending_session", session_data)
+                    await self.send_message_to_user(agent_id, "new_pending_session", session_data)
             logger.debug(f"推送新待接入会话给所有客服: session_id={session_data.get('id')}")
         except Exception as e:
             logger.error(f"推送新待接入会话失败: {e}", exc_info=True)
     
-    def push_pending_session_accepted(self, session_id: str, agent_id: int):
+    async def push_pending_session_accepted(self, session_id: str, agent_id: int):
         """
-        推送待接入会话被接入给所有订阅的客服
+        推送待接入会话被接入给所有订阅的客服（异步）
         
         Args:
             session_id: 会话ID
@@ -437,18 +436,24 @@ class WebSocketManager:
                 "agent_id": agent_id
             }
             # 获取所有在线的客服
-            online_agents = self.db.get_online_agents()
+            online_agents = await self.db.get_online_agents()
             for agent in online_agents:
                 target_agent_id = agent.get('id')
                 if target_agent_id:
-                    self.send_message_to_user(target_agent_id, "pending_session_accepted", data)
+                    await self.send_message_to_user(target_agent_id, "pending_session_accepted", data)
             logger.debug(f"推送待接入会话被接入: session_id={session_id}, agent_id={agent_id}")
         except Exception as e:
             logger.error(f"推送待接入会话被接入失败: {e}", exc_info=True)
-
-    def push_session_accepted_for_user(self, user_id: int, session_id: str, agent_id: int, agent_name: Optional[str] = None):
+    
+    async def push_session_accepted_for_user(
+        self,
+        user_id: int,
+        session_id: str,
+        agent_id: int,
+        agent_name: Optional[str] = None
+    ):
         """
-        推送“会话已被客服接入”事件给最终用户
+        推送"会话已被客服接入"事件给最终用户（异步）
         
         Args:
             user_id: 用户ID（最终用户）
@@ -463,14 +468,14 @@ class WebSocketManager:
                 "agent_id": agent_id,
                 "agent_name": agent_name,
             }
-            self.send_message_to_user(user_id, "session_accepted_for_user", data)
+            await self.send_message_to_user(user_id, "session_accepted_for_user", data)
             logger.debug(f"推送会话已被客服接入给用户 {user_id}: session_id={session_id}, agent_id={agent_id}")
         except Exception as e:
             logger.error(f"推送会话已被客服接入事件失败: {e}", exc_info=True)
     
-    def push_agent_status_changed(self, agent_id: int, status: str):
+    async def push_agent_status_changed(self, agent_id: int, status: str):
         """
-        推送客服状态变化给所有订阅的客服
+        推送客服状态变化给所有订阅的客服（异步）
         
         Args:
             agent_id: 客服ID
@@ -482,18 +487,18 @@ class WebSocketManager:
                 "status": status
             }
             # 获取所有在线的客服
-            online_agents = self.db.get_online_agents()
+            online_agents = await self.db.get_online_agents()
             for agent in online_agents:
                 target_agent_id = agent.get('id')
                 if target_agent_id:
-                    self.send_message_to_user(target_agent_id, "agent_status_changed", data)
+                    await self.send_message_to_user(target_agent_id, "agent_status_changed", data)
             logger.debug(f"推送客服状态变化: agent_id={agent_id}, status={status}")
         except Exception as e:
             logger.error(f"推送客服状态变化失败: {e}", exc_info=True)
     
-    def push_vip_status_update(self, user_id: int, vip_info: dict):
+    async def push_vip_status_update(self, user_id: int, vip_info: dict):
         """
-        推送 VIP 状态更新给指定用户
+        推送 VIP 状态更新给指定用户（异步）
         
         Args:
             user_id: 用户ID
@@ -504,14 +509,14 @@ class WebSocketManager:
                 "user_id": user_id,
                 "vip_info": vip_info
             }
-            self.send_message_to_user(user_id, "vip_status_updated", data)
+            await self.send_message_to_user(user_id, "vip_status_updated", data)
             logger.debug(f"推送 VIP 状态更新给用户 {user_id}: is_vip={vip_info.get('is_vip')}, diamonds={vip_info.get('diamonds')}")
         except Exception as e:
             logger.error(f"推送 VIP 状态更新失败: {e}", exc_info=True)
     
-    def push_diamond_balance_update(self, user_id: int, balance: int):
+    async def push_diamond_balance_update(self, user_id: int, balance: int):
         """
-        推送钻石余额更新给指定用户
+        推送钻石余额更新给指定用户（异步）
         
         Args:
             user_id: 用户ID
@@ -522,14 +527,14 @@ class WebSocketManager:
                 "user_id": user_id,
                 "balance": balance
             }
-            self.send_message_to_user(user_id, "diamond_balance_updated", data)
+            await self.send_message_to_user(user_id, "diamond_balance_updated", data)
             logger.debug(f"推送钻石余额更新给用户 {user_id}: balance={balance}")
         except Exception as e:
             logger.error(f"推送钻石余额更新失败: {e}", exc_info=True)
     
-    def push_user_profile_update(self, user_id: int, profile_data: dict):
+    async def push_user_profile_update(self, user_id: int, profile_data: dict):
         """
-        推送用户资料更新给指定用户
+        推送用户资料更新给指定用户（异步）
         
         Args:
             user_id: 用户ID
@@ -540,14 +545,20 @@ class WebSocketManager:
                 "user_id": user_id,
                 "profile": profile_data
             }
-            self.send_message_to_user(user_id, "user_profile_updated", data)
+            await self.send_message_to_user(user_id, "user_profile_updated", data)
             logger.debug(f"推送用户资料更新给用户 {user_id}")
         except Exception as e:
             logger.error(f"推送用户资料更新失败: {e}", exc_info=True)
     
-    def push_message_edited(self, session_id: str, message_id: int, new_content: str, edited_at: str):
+    async def push_message_edited(
+        self,
+        session_id: str,
+        message_id: int,
+        new_content: str,
+        edited_at: str
+    ):
         """
-        推送消息编辑给会话中的所有用户
+        推送消息编辑给会话中的所有用户（异步）
         
         Args:
             session_id: 会话ID
@@ -557,7 +568,7 @@ class WebSocketManager:
         """
         try:
             # 获取会话信息
-            session = self.db.get_chat_session_by_id(session_id)
+            session = await self.db.get_chat_session_by_id(session_id)
             if not session:
                 logger.warning(f"推送消息编辑失败：会话不存在: session_id={session_id}")
                 return
@@ -574,17 +585,23 @@ class WebSocketManager:
             
             # 推送给用户和客服
             if user_id:
-                self.send_message_to_user(user_id, "message_edited", data)
+                await self.send_message_to_user(user_id, "message_edited", data)
             if agent_id:
-                self.send_message_to_user(agent_id, "message_edited", data)
+                await self.send_message_to_user(agent_id, "message_edited", data)
             
             logger.debug(f"推送消息编辑: session_id={session_id}, message_id={message_id}")
         except Exception as e:
             logger.error(f"推送消息编辑失败: {e}", exc_info=True)
     
-    def push_session_status_update(self, session_id: str, status: str, user_id: int = None, agent_id: int = None):
+    async def push_session_status_update(
+        self,
+        session_id: str,
+        status: str,
+        user_id: int = None,
+        agent_id: int = None
+    ):
         """
-        推送会话状态更新给会话相关用户
+        推送会话状态更新给会话相关用户（异步）
         
         Args:
             session_id: 会话ID
@@ -595,7 +612,7 @@ class WebSocketManager:
         try:
             # 如果未提供 user_id 或 agent_id，从数据库获取
             if user_id is None or agent_id is None:
-                session = self.db.get_chat_session_by_id(session_id)
+                session = await self.db.get_chat_session_by_id(session_id)
                 if session:
                     user_id = user_id or session.get('user_id')
                     agent_id = agent_id or session.get('agent_id')
@@ -609,17 +626,17 @@ class WebSocketManager:
             
             # 推送给用户和客服
             if user_id:
-                self.send_message_to_user(user_id, "session_status_updated", data)
+                await self.send_message_to_user(user_id, "session_status_updated", data)
             if agent_id:
-                self.send_message_to_user(agent_id, "session_status_updated", data)
+                await self.send_message_to_user(agent_id, "session_status_updated", data)
             
             logger.debug(f"推送会话状态更新: session_id={session_id}, status={status}")
         except Exception as e:
             logger.error(f"推送会话状态更新失败: {e}", exc_info=True)
     
-    def handle_message_status(self, message_id: int, status: str, user_id: int = None):
+    async def handle_message_status(self, message_id: int, status: str, user_id: int = None):
         """
-        处理消息状态更新并推送回执
+        处理消息状态更新并推送回执（异步）
         
         Args:
             message_id: 消息ID
@@ -630,26 +647,24 @@ class WebSocketManager:
             # 检查消息是否存在（最多重试3次，每次间隔100ms）
             message = None
             for retry in range(3):
-                message = self.db.get_message_by_id(message_id)
+                message = await self.db.get_message_by_id(message_id)
                 if message:
                     break
                 if retry < 2:  # 不是最后一次重试
-                    import time
-                    time.sleep(0.1)  # 等待100ms后重试
+                    await asyncio.sleep(0.1)  # 等待100ms后重试
             
             if not message:
                 logger.warning(f"消息 {message_id} 不存在，无法更新状态（已重试3次）")
                 return
             
             # 更新数据库中的消息状态
-            success = self.db.update_message_status(message_id, status)
+            success = await self.db.update_message_status(message_id, status)
             if not success:
-                # 如果更新失败，可能是消息不存在或字段不存在，记录调试日志但不中断流程
                 logger.debug(f"更新消息 {message_id} 状态失败（可能消息不存在或字段未创建，已忽略）")
                 return
             
             # 获取消息详情
-            message = self.db.get_message_by_id(message_id)
+            message = await self.db.get_message_by_id(message_id)
             if not message:
                 logger.warning(f"消息 {message_id} 不存在")
                 return
@@ -662,7 +677,7 @@ class WebSocketManager:
                     'status': status,
                     'timestamp': datetime.now().isoformat(),
                 }
-                self.send_message_to_user(from_user_id, 'message_status', status_data)
+                await self.send_message_to_user(from_user_id, 'message_status', status_data)
                 logger.debug(f"消息 {message_id} 状态更新为 {status}，已推送回执给用户 {from_user_id}")
         
         except Exception as e:
@@ -678,8 +693,7 @@ class WebSocketManager:
         Returns:
             dict: 连接信息，如果不存在则返回 None
         """
-        with self.lock:
-            return self.connections.get(connection_id)
+        return self.connections.get(connection_id)
     
     def get_stats(self) -> Dict[str, Any]:
         """
@@ -688,13 +702,12 @@ class WebSocketManager:
         Returns:
             dict: 统计信息
         """
-        with self.lock:
-            return {
-                'total_connections': len(self.connections),
-                'online_users': len(self.user_connections),
-                'connections_by_user': {
-                    user_id: len(conns) 
-                    for user_id, conns in self.user_connections.items()
-                },
-            }
+        return {
+            'total_connections': len(self.connections),
+            'online_users': len(self.user_connections),
+            'connections_by_user': {
+                user_id: len(conns) 
+                for user_id, conns in self.user_connections.items()
+            },
+        }
 

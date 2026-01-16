@@ -33,6 +33,7 @@ export interface WebSocketMessage {
   to_user_id?: number;
   text: string;
   time: string;
+  created_at?: string;  // ISO 格式的时间戳（用于判断撤回时限）
   avatar?: string;
   message_type?: 'text' | 'image' | 'file';
   reply_to_message_id?: number;
@@ -265,6 +266,7 @@ class WebSocketClient {
           to_user_id: undefined,
           text: '',
           time: data.time || '',
+          created_at: data.created_at || data.time || undefined,  // 保留原始时间戳用于撤回判断
           avatar: undefined,
           message_type: 'text',
           reply_to_message_id: undefined,

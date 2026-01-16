@@ -1,0 +1,455 @@
+2026-01-16 16:51:24,566 - ERROR - __main__ - ❌ AsyncDatabaseManager 初始化失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 62, in test_async_db_manager_init
+    db_manager = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 16:51:24,568 - ERROR - __main__ - ❌ 方法检查失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 84, in test_async_db_manager_methods
+    db_manager = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 16:51:24,585 - ERROR - __main__ - ❌ AsyncWebSocketManager 测试失败: No module named 'socketio'
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 133, in test_async_websocket_manager
+    from backend.websocket.async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 12, in <module>
+    import socketio
+ModuleNotFoundError: No module named 'socketio'
+2026-01-16 16:51:24,586 - ERROR - __main__ - ❌ 数据库配置读取失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 260, in test_database_connection
+    config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 16:52:38,180 - ERROR - __main__ - ❌ AsyncWebSocketManager 测试失败: partially initialized module 'socketio' from 'D:\anaconda3\Lib\site-packages\socketio\__init__.py' has no attribute 'AsyncServer' (most likely due to a circular import)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 144, in test_async_websocket_manager
+    from backend.websocket.async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\__init__.py", line 11, in <module>
+    from .async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 12, in <module>
+    import socketio
+  File "D:\anaconda3\Lib\site-packages\socketio\__init__.py", line 1, in <module>
+    from .client import Client
+  File "D:\anaconda3\Lib\site-packages\socketio\client.py", line 3, in <module>
+    import engineio
+  File "D:\anaconda3\Lib\site-packages\engineio\__init__.py", line 1, in <module>
+    from .client import Client
+  File "D:\anaconda3\Lib\site-packages\engineio\client.py", line 16, in <module>
+    import websocket
+  File "D:\Desktop\work\change_voice\backend\websocket\__init__.py", line 11, in <module>
+    from .async_websocket_manager import AsyncWebSocketManager
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 17, in <module>
+    class AsyncWebSocketManager:
+    ...<692 lines>...
+            }
+  File "D:\Desktop\work\change_voice\backend\websocket\async_websocket_manager.py", line 20, in AsyncWebSocketManager
+    def __init__(self, socketio_server: socketio.AsyncServer, db_manager):
+                                        ^^^^^^^^^^^^^^^^^^^^
+AttributeError: partially initialized module 'socketio' from 'D:\anaconda3\Lib\site-packages\socketio\__init__.py' has no attribute 'AsyncServer' (most likely due to a circular import)
+2026-01-16 16:52:38,194 - ERROR - __main__ - ❌ 数据库配置读取失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_migration.py", line 271, in test_database_connection
+    config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:17,607 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'UserResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 206, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'UserResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:09:17,608 - ERROR - __main__ - ❌ 数据库连接失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:17,610 - ERROR - __main__ - ❌ 会员服务测试失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 60, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:17,610 - ERROR - __main__ - ❌ WebSocket 管理器测试失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 85, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:09:19,119 - ERROR - __main__ - ❌ FastAPI 应用测试失败: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 114, in test_fastapi_app
+    from backend.api_server_fastapi import app, db, ws_manager
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:23,883 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'UserBase' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 227, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'UserBase' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:11:23,885 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:23,887 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:23,889 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:24,978 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:52,052 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'TokenResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 227, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'TokenResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:11:52,054 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:52,055 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:52,056 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:11:53,269 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 267, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:13,837 - ERROR - __main__ - ❌ Pydantic schemas 测试失败: cannot import name 'MessageResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 227, in test_pydantic_schemas
+    from backend.api.schemas import (
+    ...<2 lines>...
+    )
+ImportError: cannot import name 'MessageResponse' from 'backend.api.schemas' (D:\Desktop\work\change_voice\backend\api\schemas.py)
+2026-01-16 18:12:13,838 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:13,840 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:13,841 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:12:14,950 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:52,970 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:52,972 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:52,973 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:42:54,078 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:51,357 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:51,360 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:51,361 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:43:52,672 - ERROR - __main__ - ❌ 测试 'FastAPI 应用' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 129, in test_fastapi_app
+    from backend.api_server_fastapi import app
+  File "D:\Desktop\work\change_voice\backend\api_server_fastapi.py", line 75, in <module>
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:46:16,666 - ERROR - __main__ - ❌ 测试 '数据库连接' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 38, in test_database_connection
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:46:16,668 - ERROR - __main__ - ❌ 测试 '会员服务' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 65, in test_membership_service
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 18:46:16,669 - ERROR - __main__ - ❌ 测试 'WebSocket 管理器' 执行异常: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 275, in run_all_tests
+    result = await test_func()
+             ^^^^^^^^^^^^^^^^^
+  File "D:\Desktop\work\change_voice\backend\test_fastapi.py", line 95, in test_websocket_manager
+    db = AsyncDatabaseManager()
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 38, in __init__
+    db_config = get_database_config()
+  File "D:\Desktop\work\change_voice\backend\config\database_config.py", line 34, in get_database_config
+    raise ValueError(f"缺少必需的数据库配置项: {', '.join(missing_keys)}。请检查 .env 文件或环境变量设置。")
+ValueError: 缺少必需的数据库配置项: host, user, password, database。请检查 .env 文件或环境变量设置。
+2026-01-16 19:52:32,677 - ERROR - backend.database.async_database_manager - 查询用户信息失败: 'user' is not among the defined enum values. Enum name: userrole. Possible values: USER, ADMIN, CUSTOMER_SE..
+Traceback (most recent call last):
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1709, in _object_value_for_elem
+    return self._object_lookup[elem]  # type: ignore[return-value]
+KeyError: 'user'
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "D:\Desktop\work\change_voice\backend\database\async_database_manager.py", line 92, in get_user_by_email
+    result = await session.execute(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\ext\asyncio\session.py", line 449, in execute
+    result = await greenlet_spawn(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\util\_concurrency_py3k.py", line 203, in greenlet_spawn
+    result = context.switch(value)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\session.py", line 2351, in execute
+    return self._execute_internal(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\session.py", line 2249, in _execute_internal
+    result: Result[Any] = compile_state_cls.orm_execute_statement(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\context.py", line 309, in orm_execute_statement
+    return cls.orm_setup_cursor_result(
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\context.py", line 616, in orm_setup_cursor_result
+    return loading.instances(result, querycontext)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\loading.py", line 262, in instances
+    _prebuffered = list(chunks(None))
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\orm\loading.py", line 220, in chunks
+    fetch = cursor._raw_all_rows()
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\engine\result.py", line 541, in _raw_all_rows
+    return [make_row(row) for row in rows]
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\engine\result.py", line 541, in <listcomp>
+    return [make_row(row) for row in rows]
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 22, in sqlalchemy.cyextension.resultproxy.BaseRow.__init__
+  File "lib/sqlalchemy/cyextension/resultproxy.pyx", line 79, in sqlalchemy.cyextension.resultproxy._apply_processors
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1829, in process
+    value = self._object_value_for_elem(value)
+  File "D:\anaconda3\envs\change_voice\lib\site-packages\sqlalchemy\sql\sqltypes.py", line 1711, in _object_value_for_elem
+    raise LookupError(
+LookupError: 'user' is not among the defined enum values. Enum name: userrole. Possible values: USER, ADMIN, CUSTOMER_SE..
